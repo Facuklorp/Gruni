@@ -78,7 +78,7 @@ export class Agent {
                         this.isAttacking = true;
                         // 70% chance de acertar el golpe
                         if (Math.random() > 0.3) {
-                            e.hp--;
+                            e.takeDamage(1);
                         }
                         this.swordDurability--;
                         attacked = true;
@@ -102,18 +102,18 @@ export class Agent {
             this.happyTimer = 5;
             this.emergencyMission = null; 
         }
+        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
+            this.inventory.wood -= 2;
+            this.inventory.rock -= 2;
+            this.swordDurability = 2;
+            this.happyTimer = 5;
+        }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
             this.inventory.pickaxes++;
             this.happyTimer = 5;
             this.emergencyMission = null; 
-        }
-        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
-            this.inventory.wood -= 2;
-            this.inventory.rock -= 2;
-            this.swordDurability = 2;
-            this.happyTimer = 5;
         }
     }
 
