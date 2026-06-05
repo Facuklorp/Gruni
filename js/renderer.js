@@ -42,10 +42,15 @@ export class Renderer {
             case RESOURCES.WATER: this.ctx.fillText('💧', cx, cy - 2); break;
             case RESOURCES.WOOD: this.ctx.fillText('🌳', cx, cy - 2); break;
             case RESOURCES.ROCK: this.ctx.fillText('🪨', cx, cy - 2); break;
+            case RESOURCES.BRIDGE:
+                // Fondo de agua porque es un puente sobre ella
+                this.ctx.fillStyle = '#0f172a'; // O podrías usar un azul oscuro
+                this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                this.ctx.fillText('🌉', cx, cy - 2);
+                break;
         }
 
-        // Indicadores de capacidad
-        if (cell.capacity > 0) {
+        if (cell.capacity > 0 && cell.type !== RESOURCES.BRIDGE) {
             let dotRadius = 2;
             let startX = cx - (cell.capacity * 6) / 2 + 3;
             for (let i = 0; i < cell.capacity; i++) {
@@ -70,7 +75,6 @@ export class Renderer {
         this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 1.5;
 
-        // Dibujar cara según emoción
         if (agent.emotion === 'HAPPY') {
             this.ctx.beginPath();
             this.ctx.arc(px - 4, py - 4, 3, Math.PI, 0);

@@ -8,7 +8,8 @@ export const RESOURCES = {
     FOOD: 1,
     WATER: 2,
     WOOD: 3,
-    ROCK: 4
+    ROCK: 4,
+    BRIDGE: 5
 };
 
 export class World {
@@ -47,7 +48,7 @@ export class World {
         if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
             let cap = capacity;
             if (cap === null) {
-                cap = (type === RESOURCES.EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
+                cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE) ? 0 : Math.floor(Math.random() * 3) + 1;
             }
             this.grid[y][x] = { type: type, capacity: cap };
         }
@@ -56,7 +57,7 @@ export class World {
     consumeResource(x, y) {
         if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
             let cell = this.grid[y][x];
-            if (cell.type !== RESOURCES.EMPTY) {
+            if (cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.BRIDGE) {
                 cell.capacity--;
                 if (cell.capacity <= 0) {
                     cell.type = RESOURCES.EMPTY;

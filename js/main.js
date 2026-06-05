@@ -16,6 +16,8 @@ const barThirst = document.getElementById('bar-thirst');
 const stateText = document.getElementById('agent-state');
 const invWood = document.getElementById('inv-wood');
 const invRock = document.getElementById('inv-rock');
+const invBridges = document.getElementById('inv-bridges');
+const invPickaxes = document.getElementById('inv-pickaxes');
 
 let lastTime = 0;
 const TICK_RATE = 500; // Milisegundos por cada tick lógico del agente
@@ -26,6 +28,8 @@ function updateUI() {
     stateText.innerText = agent.state;
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
+    invBridges.innerText = agent.inventory.bridges;
+    invPickaxes.innerText = agent.inventory.pickaxes;
 }
 
 function gameLoop(timestamp) {
