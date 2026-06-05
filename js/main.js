@@ -19,6 +19,12 @@ const invRock = document.getElementById('inv-rock');
 const invBridges = document.getElementById('inv-bridges');
 const invPickaxes = document.getElementById('inv-pickaxes');
 
+const craftBridgeText = document.getElementById('craft-bridge-text');
+const barCraftBridge = document.getElementById('bar-craft-bridge');
+const craftPickW = document.getElementById('craft-pick-w');
+const craftPickR = document.getElementById('craft-pick-r');
+const barCraftPickaxe = document.getElementById('bar-craft-pickaxe');
+
 let lastTime = 0;
 const TICK_RATE = 500; // Milisegundos por cada tick lógico del agente
 
@@ -30,6 +36,17 @@ function updateUI() {
     invRock.innerText = agent.inventory.rock;
     invBridges.innerText = agent.inventory.bridges;
     invPickaxes.innerText = agent.inventory.pickaxes;
+
+    let bridgeWood = Math.min(agent.inventory.wood, 3);
+    craftBridgeText.innerText = bridgeWood;
+    barCraftBridge.style.width = `${(bridgeWood / 3) * 100}%`;
+
+    let pickWood = Math.min(agent.inventory.wood, 2);
+    let pickRock = Math.min(agent.inventory.rock, 2);
+    craftPickW.innerText = pickWood;
+    craftPickR.innerText = pickRock;
+    let pickProgress = ((pickWood / 2) * 50) + ((pickRock / 2) * 50);
+    barCraftPickaxe.style.width = `${pickProgress}%`;
 }
 
 function gameLoop(timestamp) {

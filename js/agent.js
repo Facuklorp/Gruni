@@ -32,6 +32,9 @@ export class Agent {
         this.target = null;
         this.emotion = 'NEUTRAL';
         this.happyTimer = 0;
+
+        this.stuckTimer = 0;
+        this.emergencyMission = null; // 'BRIDGE' o 'PICKAXE'
     }
 
     update() {
@@ -52,18 +55,18 @@ export class Agent {
     }
 
     craft() {
-        // Craftear puente (máximo 2 a la vez)
-        if (this.inventory.wood >= 1 && this.inventory.bridges < 2) {
-            this.inventory.wood--;
+        if (this.inventory.wood >= 3 && this.inventory.bridges < 2) {
+            this.inventory.wood -= 3;
             this.inventory.bridges++;
             this.happyTimer = 5;
+            this.emergencyMission = null; 
         }
-        // Craftear pico (máximo 2 a la vez)
-        if (this.inventory.wood >= 1 && this.inventory.rock >= 1 && this.inventory.pickaxes < 2) {
-            this.inventory.wood--;
-            this.inventory.rock--;
+        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
+            this.inventory.wood -= 2;
+            this.inventory.rock -= 2;
             this.inventory.pickaxes++;
             this.happyTimer = 5;
+            this.emergencyMission = null; 
         }
     }
 
@@ -80,13 +83,34 @@ export class Agent {
     }
 
     decideState() {
+        // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
+        if (this.emergencyMission) {
+            if (this.emergencyMission === 'BRIDGE') {
+                if (this.inventory.wood >= 3) {
+                    this.emergencyMission = null; 
+                } else {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                }
+            } else if (this.emergencyMission === 'PICKAXE') {
+                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
+                    this.emergencyMission = null;
+                } else if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                }
+            }
+        }
+
         let waterTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER);
         let foodTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD);
 
         let waterPriority = this.thirst > 60 ? this.thirst : 0;
         let foodPriority = this.hunger > 60 ? this.hunger : 0;
 
-        // Supervivencia prioritaria
         if (waterPriority > 0 || foodPriority > 0) {
             if (waterPriority >= foodPriority) {
                 if (waterTarget) {
@@ -114,14 +138,14 @@ export class Agent {
             return;
         }
 
-        // Tiempo libre: Recolección proactiva
         let woodTarget = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
         let rockTarget = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
 
-        if (this.inventory.wood < 3 && woodTarget) {
+        // Límites más altos para poder craftear herramientas caras
+        if (this.inventory.wood < 5 && woodTarget) {
             this.state = STATES.SEEK_WOOD;
             this.target = woodTarget;
-        } else if (this.inventory.rock < 3 && rockTarget) {
+        } else if (this.inventory.rock < 4 && rockTarget) {
             this.state = STATES.SEEK_ROCK;
             this.target = rockTarget;
         } else {
@@ -175,7 +199,8 @@ export class Agent {
         else if (this.y > ty && this.tryStep(this.x, this.y - 1)) this.y--;
 
         if (this.x === oldX && this.y === oldY) {
-            // Atascado, intentar usar herramientas en la dirección que queremos ir
+            this.stuckTimer++;
+            
             let dx = 0, dy = 0;
             if (this.x < tx) dx = 1;
             else if (this.x > tx) dx = -1;
@@ -187,26 +212,36 @@ export class Agent {
 
             if (this.isValidCoord(nx, ny)) {
                 let cell = this.world.getCell(nx, ny);
-                if (cell && cell.type === RESOURCES.ROCK && this.inventory.pickaxes > 0) {
-                    // Minar roca
-                    this.inventory.pickaxes--;
-                    this.world.setCell(nx, ny, RESOURCES.EMPTY);
-                    this.happyTimer = 5;
-                } else if (cell && cell.type === RESOURCES.WATER && this.inventory.bridges > 0) {
-                    // Evitar poner puente justo en el agua de la que queremos beber
-                    if (!(this.state === STATES.SEEK_WATER && this.target && this.target.x === nx && this.target.y === ny)) {
-                        this.inventory.bridges--;
-                        this.world.setCell(nx, ny, RESOURCES.BRIDGE);
+                if (cell && cell.type === RESOURCES.ROCK) {
+                    if (this.inventory.pickaxes > 0) {
+                        this.inventory.pickaxes--;
+                        this.world.setCell(nx, ny, RESOURCES.EMPTY);
                         this.happyTimer = 5;
-                    } else {
-                        this.wander(); // Solo queremos beber de ella
+                        this.stuckTimer = 0;
+                    } else if (this.stuckTimer > 2) {
+                        this.emergencyMission = 'PICKAXE';
+                    }
+                } else if (cell && cell.type === RESOURCES.WATER) {
+                    if (this.inventory.bridges > 0) {
+                        if (!(this.state === STATES.SEEK_WATER && this.target && this.target.x === nx && this.target.y === ny)) {
+                            this.inventory.bridges--;
+                            this.world.setCell(nx, ny, RESOURCES.BRIDGE);
+                            this.happyTimer = 5;
+                            this.stuckTimer = 0;
+                        } else {
+                            this.wander(); 
+                        }
+                    } else if (this.stuckTimer > 2) {
+                        this.emergencyMission = 'BRIDGE';
                     }
                 } else {
-                    this.wander(); // No podemos escapar, deambulamos
+                    this.wander(); 
                 }
             } else {
                 this.wander();
             }
+        } else {
+            this.stuckTimer = 0;
         }
     }
 
@@ -214,7 +249,6 @@ export class Agent {
         if (!this.isValidCoord(nx, ny)) return false;
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
-        // El agua y las rocas ahora son obstáculos sólidos
         if (cell.type === RESOURCES.ROCK || cell.type === RESOURCES.WATER) return false;
         return true;
     }
