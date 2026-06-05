@@ -1,0 +1,176 @@
+:root {
+    --bg-color: #0f172a;
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    --color-hunger: #eab308;
+    --color-thirst: #0ea5e9;
+    --color-health: #22c55e;
+    --color-danger: #ef4444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at 50% 50%, #1e293b, var(--bg-color));
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    max-width: 1200px;
+    padding: 24px;
+    align-items: center;
+}
+
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+    flex: 1;
+    min-width: 250px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-panel h2 {
+    font-weight: 800;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+.canvas-container {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    background: #020617;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--glass-border);
+    cursor: crosshair;
+}
+
+/* Stats UI */
+.stat-group {
+    margin-bottom: 16px;
+}
+
+.stat-group label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: #334155;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 50%;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.warning { background: var(--color-hunger); }
+.progress-fill.danger { background: var(--color-thirst); }
+
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #3b82f6;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Inventory */
+.inventory h3 {
+    font-size: 1rem;
+    margin: 20px 0 10px;
+    color: var(--text-muted);
+}
+.inventory ul {
+    list-style: none;
+}
+.inventory li {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+/* Tools UI */
+.tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+button {
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.tool-btn {
+    background: #334155;
+    color: var(--text-main);
+    padding: 10px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tool-btn:hover { background: #475569; }
+.tool-btn.active {
+    background: #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.global-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-btn {
+    padding: 12px;
+    font-weight: 600;
+    color: white;
+}
+
+.action-btn.primary { background: #0ea5e9; }
+.action-btn.primary:hover { background: #0284c7; }
+.action-btn.danger { background: #ef4444; }
+.action-btn.danger:hover { background: #dc2626; }
