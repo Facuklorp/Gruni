@@ -6,7 +6,9 @@ export class Enemy {
         this.world = world;
         this.x = x;
         this.y = y;
-        this.hp = 2;
+        this.hp = 4;
+        this.maxHp = 4;
+        this.hurtTimer = 0;
         this.swordDurability = 2;
         this.inventory = { wood: 0, rock: 0 };
         this.isAttacking = false;
@@ -16,14 +18,20 @@ export class Enemy {
         this.isAttacking = false;
         if (this.hp <= 0) return;
 
+        if (this.hurtTimer > 0) {
+            this.hurtTimer--;
+        }
+
         this.craft();
         
         if (this.swordDurability > 0) {
             // Fase de Ataque
             let dist = Math.abs(this.x - gruni.x) + Math.abs(this.y - gruni.y);
             if (dist <= 1) {
-                // Atacar a Gruni (Gruni no pierde vida según requerimiento)
                 this.isAttacking = true;
+                if (Math.random() > 0.3) {
+                    gruni.takeDamage(1);
+                }
                 this.swordDurability--;
             } else {
                 this.moveTowards(gruni.x, gruni.y);
@@ -50,6 +58,11 @@ export class Enemy {
             this.inventory.rock -= 2;
             this.swordDurability = 2;
         }
+    }
+
+    takeDamage(amount) {
+        this.hp -= amount;
+        this.hurtTimer = 5; // 5 ticks de cara X X
     }
 
     moveAndGather(tx, ty, resType) {

@@ -16,6 +16,7 @@ const controls = new GodControls(world, canvas, enemies);
 // Elementos de la UI
 const barHunger = document.getElementById('bar-hunger');
 const barThirst = document.getElementById('bar-thirst');
+const barHp = document.getElementById('bar-hp');
 const stateText = document.getElementById('agent-state');
 const invWood = document.getElementById('inv-wood');
 const invRock = document.getElementById('inv-rock');
@@ -39,6 +40,7 @@ const TICK_RATE = 500; // Milisegundos por cada tick lógico del agente
 function updateUI() {
     barHunger.style.width = `${agent.hunger}%`;
     barThirst.style.width = `${agent.thirst}%`;
+    barHp.style.width = `${(agent.hp / agent.maxHp) * 100}%`;
     stateText.innerText = agent.state;
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
@@ -91,6 +93,7 @@ function gameLoop(timestamp) {
         }
 
         world.regenLoop();
+        agent.updateEmotion(enemies);
         renderer.draw(world, agent, enemies);
         updateUI();
         lastTime = timestamp;

@@ -31,6 +31,11 @@ export class Agent {
         this.swordDurability = 0; // max 2
         this.isAttacking = false;
 
+        this.hp = 10;
+        this.maxHp = 10;
+        this.applesEaten = 0;
+        this.koTimer = 0;
+
         this.state = STATES.WANDERING;
         this.target = null;
         this.emotion = 'NEUTRAL';
@@ -41,6 +46,15 @@ export class Agent {
     }
 
     update(enemies) {
+        if (this.koTimer > 0) {
+            this.koTimer--;
+            this.emotion = 'KO';
+            if (this.koTimer <= 0) {
+                this.hp = this.maxHp; // Revive
+            }
+            return;
+        }
+
         this.isAttacking = false;
         this.hunger += 0.5;
         this.thirst += 0.8;
@@ -103,8 +117,41 @@ export class Agent {
         }
     }
 
-    updateEmotion() {
-        if (this.hunger > 80 || this.thirst > 80) {
+    takeDamage(amount) {
+        if (this.koTimer > 0) return;
+        this.hp -= amount;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.koTimer = 10; // KO state for 10 ticks (5 secs)
+            this.inventory = { wood: 0, rock: 0, bridges: 0, pickaxes: 0 };
+            this.swordDurability = 0;
+            this.target = null;
+            this.emergencyMission = null;
+        }
+    }
+
+    updateEmotion(enemies) {
+        if (this.koTimer > 0) {
+            this.emotion = 'KO';
+            return;
+        }
+
+        let seeEnemy = false;
+        if (enemies) {
+            for (let e of enemies) {
+                if (e.hp > 0) {
+                    let dist = Math.abs(this.x - e.x) + Math.abs(this.y - e.y);
+                    if (dist <= 4) {
+                        seeEnemy = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (this.isAttacking || seeEnemy) {
+            this.emotion = 'ANGRY';
+        } else if (this.hunger > 80 || this.thirst > 80) {
             this.emotion = 'ANGRY';
         } else if ((this.state === STATES.SEEK_WATER || this.state === STATES.SEEK_FOOD) && !this.target) {
             this.emotion = 'SAD';
@@ -202,6 +249,11 @@ export class Agent {
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.EATING;
                     this.happyTimer = 5;
+                    this.applesEaten++;
+                    if (this.applesEaten >= 3) {
+                        this.hp = Math.min(this.maxHp, this.hp + 3);
+                        this.applesEaten = 0;
+                    }
                 } else if (this.state === STATES.SEEK_WOOD) {
                     this.inventory.wood++;
                     this.world.consumeResource(this.target.x, this.target.y);

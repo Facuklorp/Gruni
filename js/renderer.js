@@ -81,13 +81,23 @@ export class Renderer {
         this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 1.5;
 
-        if (agent.emotion === 'HAPPY') {
+        if (agent.emotion === 'KO') {
+            this.ctx.beginPath(); this.ctx.moveTo(px - 6, py - 6); this.ctx.lineTo(px - 2, py - 2); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(px - 2, py - 6); this.ctx.lineTo(px - 6, py - 2); this.ctx.stroke();
+
+            this.ctx.beginPath(); this.ctx.moveTo(px + 2, py - 6); this.ctx.lineTo(px + 6, py - 2); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(px + 6, py - 6); this.ctx.lineTo(px + 2, py - 2); this.ctx.stroke();
+
+            this.ctx.beginPath(); this.ctx.arc(px, py + 3, 2, 0, Math.PI * 2); this.ctx.stroke();
+
+            this.ctx.font = '12px Arial';
+            this.ctx.fillStyle = '#f8fafc';
+            this.ctx.fillText('Zzz', px + 10, py - 10);
+        } else if (agent.emotion === 'HAPPY') {
             this.ctx.beginPath();
-            this.ctx.arc(px - 4, py - 4, 3, Math.PI, 0);
-            this.ctx.stroke();
-            this.ctx.beginPath();
-            this.ctx.arc(px + 4, py - 4, 3, Math.PI, 0);
-            this.ctx.stroke();
+            this.ctx.arc(px - 4, py - 4, 1.5, 0, Math.PI * 2);
+            this.ctx.arc(px + 4, py - 4, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
             this.ctx.beginPath();
             this.ctx.arc(px, py + 2, 4, 0, Math.PI);
             this.ctx.stroke();
@@ -137,15 +147,38 @@ export class Renderer {
         this.ctx.arc(px, py, CELL_SIZE / 2.5, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Dibujar Vida (2 puntitos)
-        this.ctx.fillStyle = enemy.hp >= 2 ? '#ef4444' : '#475569';
-        this.ctx.beginPath();
-        this.ctx.arc(px - 4, py - 12, 2, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.fillStyle = enemy.hp >= 1 ? '#ef4444' : '#475569';
-        this.ctx.beginPath();
-        this.ctx.arc(px + 4, py - 12, 2, 0, Math.PI * 2);
-        this.ctx.fill();
+        this.ctx.fillStyle = '#020617';
+        this.ctx.strokeStyle = '#020617';
+        this.ctx.lineWidth = 1.5;
+
+        // Cara del enemigo
+        if (enemy.hurtTimer > 0) {
+            // X X eyes
+            this.ctx.beginPath(); this.ctx.moveTo(px - 6, py - 6); this.ctx.lineTo(px - 2, py - 2); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(px - 2, py - 6); this.ctx.lineTo(px - 6, py - 2); this.ctx.stroke();
+
+            this.ctx.beginPath(); this.ctx.moveTo(px + 2, py - 6); this.ctx.lineTo(px + 6, py - 2); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(px + 6, py - 6); this.ctx.lineTo(px + 2, py - 2); this.ctx.stroke();
+
+            // Boca recta
+            this.ctx.beginPath(); this.ctx.moveTo(px - 3, py + 4); this.ctx.lineTo(px + 3, py + 4); this.ctx.stroke();
+        } else {
+            // Angry face
+            this.ctx.beginPath(); this.ctx.moveTo(px - 6, py - 6); this.ctx.lineTo(px - 2, py - 4); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(px + 6, py - 6); this.ctx.lineTo(px + 2, py - 4); this.ctx.stroke();
+            this.ctx.fillRect(px - 5, py - 3, 2, 2);
+            this.ctx.fillRect(px + 3, py - 3, 2, 2);
+            this.ctx.beginPath(); this.ctx.moveTo(px - 3, py + 4); this.ctx.lineTo(px + 3, py + 4); this.ctx.stroke();
+        }
+
+        // Draw Health bar (4 segments)
+        let barWidth = 16;
+        let segWidth = barWidth / 4;
+        this.ctx.fillStyle = '#475569';
+        this.ctx.fillRect(px - barWidth/2, py - 14, barWidth, 3);
+        
+        this.ctx.fillStyle = '#22c55e'; // verde
+        this.ctx.fillRect(px - barWidth/2, py - 14, segWidth * enemy.hp, 3);
 
         if (enemy.isAttacking) {
             this.ctx.font = '16px Arial';
