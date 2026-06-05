@@ -35,6 +35,9 @@ const craftSwordW = document.getElementById('craft-sword-w');
 const craftSwordR = document.getElementById('craft-sword-r');
 const barCraftSword = document.getElementById('bar-craft-sword');
 
+const craftHouseText = document.getElementById('craft-house-text');
+const barCraftHouse = document.getElementById('bar-craft-house');
+
 let lastTime = 0;
 let spawnTimer = 0;
 const TICK_RATE = 500; // Milisegundos por cada tick lógico del agente
@@ -79,6 +82,16 @@ function updateUI() {
     } else {
         barCraftSword.style.width = `${swordProgress}%`;
         barCraftSword.style.background = '#a16207';
+    }
+
+    let houseWood = Math.min(agent.inventory.wood, 5);
+    craftHouseText.innerText = houseWood;
+    if (agent.home) {
+        barCraftHouse.style.width = `100%`;
+        barCraftHouse.style.background = '#22c55e'; // Verde si está construida
+    } else {
+        barCraftHouse.style.width = `${(houseWood / 5) * 100}%`;
+        barCraftHouse.style.background = '#f43f5e'; // Rojo mientras junta madera
     }
 }
 
