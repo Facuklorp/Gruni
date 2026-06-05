@@ -30,7 +30,7 @@ export class Agent {
             pickaxes: 0
         };
 
-        this.swordDurability = 0; // max 2
+        this.swordDurability = 0; // max 5
         this.isAttacking = false;
 
         this.hp = 10;
@@ -113,7 +113,7 @@ export class Agent {
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
-            this.swordDurability = 2;
+            this.swordDurability = 5;
             this.happyTimer = 5;
         }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
@@ -209,8 +209,11 @@ export class Agent {
             }
         }
 
-        // Si hay una amenaza y no tenemos espada, misión urgente: fabricar espada
-        if (enemyThreat && this.swordDurability === 0 && this.emergencyMission !== 'BUILD_HOUSE') {
+        // Si hay una amenaza y no tenemos espada, misión urgente: fabricar espada (si no estamos atascados)
+        if (enemyThreat && this.swordDurability === 0 && 
+            this.emergencyMission !== 'BUILD_HOUSE' && 
+            this.emergencyMission !== 'PICKAXE' && 
+            this.emergencyMission !== 'BRIDGE') {
             this.emergencyMission = 'SWORD';
         }
 
@@ -393,6 +396,7 @@ export class Agent {
                         this.stuckTimer = 0;
                     } else if (this.stuckTimer > 2) {
                         this.emergencyMission = 'PICKAXE';
+                        this.wander();
                     }
                 } else if (cell && cell.type === RESOURCES.WATER) {
                     if (this.inventory.bridges > 0) {
@@ -406,6 +410,7 @@ export class Agent {
                         }
                     } else if (this.stuckTimer > 2) {
                         this.emergencyMission = 'BRIDGE';
+                        this.wander();
                     }
                 } else {
                     this.wander(); 

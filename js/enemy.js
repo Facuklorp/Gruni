@@ -9,8 +9,8 @@ export class Enemy {
         this.hp = 4;
         this.maxHp = 4;
         this.hurtTimer = 0;
-        this.swordDurability = 2;
         this.inventory = { wood: 0, rock: 0 };
+        this.swordDurability = 5; // Empieza con espada (durabilidad 5)
         this.isAttacking = false;
     }
 
@@ -71,7 +71,7 @@ export class Enemy {
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
-            this.swordDurability = 2;
+            this.swordDurability = 5;
         }
     }
 
