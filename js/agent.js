@@ -28,6 +28,9 @@ export class Agent {
             pickaxes: 0
         };
 
+        this.swordDurability = 0; // max 2
+        this.isAttacking = false;
+
         this.state = STATES.WANDERING;
         this.target = null;
         this.emotion = 'NEUTRAL';
@@ -37,7 +40,8 @@ export class Agent {
         this.emergencyMission = null; // 'BRIDGE' o 'PICKAXE'
     }
 
-    update() {
+    update(enemies) {
+        this.isAttacking = false;
         this.hunger += 0.5;
         this.thirst += 0.8;
 
@@ -49,8 +53,31 @@ export class Agent {
         }
 
         this.craft();
-        this.decideState();
-        this.act();
+
+        // Lógica de Combate Defensivo
+        let attacked = false;
+        if (this.swordDurability > 0) {
+            for (let e of enemies) {
+                if (e.hp > 0) {
+                    let dist = Math.abs(this.x - e.x) + Math.abs(this.y - e.y);
+                    if (dist <= 1) {
+                        this.isAttacking = true;
+                        // 70% chance de acertar el golpe
+                        if (Math.random() > 0.3) {
+                            e.hp--;
+                        }
+                        this.swordDurability--;
+                        attacked = true;
+                        break; // Solo un ataque por turno
+                    }
+                }
+            }
+        }
+
+        if (!attacked) {
+            this.decideState();
+            this.act();
+        }
         this.updateEmotion();
     }
 
@@ -67,6 +94,12 @@ export class Agent {
             this.inventory.pickaxes++;
             this.happyTimer = 5;
             this.emergencyMission = null; 
+        }
+        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
+            this.inventory.wood -= 2;
+            this.inventory.rock -= 2;
+            this.swordDurability = 2;
+            this.happyTimer = 5;
         }
     }
 

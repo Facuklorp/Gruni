@@ -7,7 +7,7 @@ export class Renderer {
         this.ctx = canvas.getContext('2d');
     }
 
-    draw(world, agent) {
+    draw(world, agent, enemies) {
         this.ctx.fillStyle = '#020617';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -15,6 +15,12 @@ export class Renderer {
             for (let x = 0; x < WORLD_WIDTH; x++) {
                 let cell = world.getCell(x, y);
                 this.drawCell(x, y, cell);
+            }
+        }
+
+        if (enemies) {
+            for (let e of enemies) {
+                this.drawEnemy(e);
             }
         }
 
@@ -113,6 +119,37 @@ export class Renderer {
             this.ctx.moveTo(px - 2, py + 3);
             this.ctx.lineTo(px + 2, py + 3);
             this.ctx.stroke();
+        }
+
+        if (agent.isAttacking) {
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText('🗡️', px + 12, py);
+        }
+    }
+
+    drawEnemy(enemy) {
+        if (enemy.hp <= 0) return;
+        let px = enemy.x * CELL_SIZE + CELL_SIZE / 2;
+        let py = enemy.y * CELL_SIZE + CELL_SIZE / 2;
+
+        this.ctx.fillStyle = '#ef4444'; // Rojo malo
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, CELL_SIZE / 2.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Dibujar Vida (2 puntitos)
+        this.ctx.fillStyle = enemy.hp >= 2 ? '#ef4444' : '#475569';
+        this.ctx.beginPath();
+        this.ctx.arc(px - 4, py - 12, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = enemy.hp >= 1 ? '#ef4444' : '#475569';
+        this.ctx.beginPath();
+        this.ctx.arc(px + 4, py - 12, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        if (enemy.isAttacking) {
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText('🗡️', px + 12, py);
         }
     }
 }

@@ -1,10 +1,13 @@
 // js/god_controls.js
 import { RESOURCES, CELL_SIZE } from './world.js';
 
+import { Enemy } from './enemy.js';
+
 export class GodControls {
-    constructor(world, canvas) {
+    constructor(world, canvas, enemiesArray) {
         this.world = world;
         this.canvas = canvas;
+        this.enemies = enemiesArray;
         this.currentTool = RESOURCES.FOOD;
 
         this.initEvents();
@@ -17,13 +20,13 @@ export class GodControls {
                 buttons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
-                const toolName = btn.dataset.tool;
-                switch (toolName) {
-                    case 'food': this.currentTool = RESOURCES.FOOD; break;
-                    case 'water': this.currentTool = RESOURCES.WATER; break;
-                    case 'wood': this.currentTool = RESOURCES.WOOD; break;
-                    case 'rock': this.currentTool = RESOURCES.ROCK; break;
-                    case 'clear': this.currentTool = RESOURCES.EMPTY; break;
+                let tool = btn.dataset.tool;
+                if (tool === 'ENEMY') {
+                    this.currentTool = 'ENEMY';
+                } else if (tool === 'clear') {
+                    this.currentTool = RESOURCES.EMPTY;
+                } else {
+                    this.currentTool = parseInt(tool);
                 }
             });
         });
@@ -52,12 +55,15 @@ export class GodControls {
 
     handleCanvasClick(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const gridX = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+        const gridY = Math.floor((e.clientY - rect.top) / CELL_SIZE);
 
-        const gridX = Math.floor(x / CELL_SIZE);
-        const gridY = Math.floor(y / CELL_SIZE);
-
-        this.world.setCell(gridX, gridY, this.currentTool);
+        if (this.currentTool === 'ENEMY') {
+            if (e.type === 'mousedown') {
+                this.enemies.push(new Enemy(this.world, gridX, gridY));
+            }
+        } else {
+            this.world.setCell(gridX, gridY, this.currentTool);
+        }
     }
 }
