@@ -22,6 +22,7 @@ const invWood = document.getElementById('inv-wood');
 const invRock = document.getElementById('inv-rock');
 const invBridges = document.getElementById('inv-bridges');
 const invPickaxes = document.getElementById('inv-pickaxes');
+const invSword = document.getElementById('inv-sword');
 
 const craftBridgeText = document.getElementById('craft-bridge-text');
 const barCraftBridge = document.getElementById('bar-craft-bridge');
@@ -46,6 +47,11 @@ function updateUI() {
     invRock.innerText = agent.inventory.rock;
     invBridges.innerText = agent.inventory.bridges;
     invPickaxes.innerText = agent.inventory.pickaxes;
+    
+    // Sword durability shows as 1 sword if durability > 0, or just show durability (uses left)
+    // The user asked "falta la Espada", showing 1 or 0 is good enough. Or showing durability.
+    // Let's show durability as number of swords, wait... if durability is >0 he has 1 sword.
+    invSword.innerText = agent.swordDurability > 0 ? "1" : "0";
 
     let bridgeWood = Math.min(agent.inventory.wood, 3);
     craftBridgeText.innerText = bridgeWood;
