@@ -48,6 +48,7 @@ export class Renderer {
             case RESOURCES.WATER: this.ctx.fillText('💧', cx, cy - 2); break;
             case RESOURCES.WOOD: this.ctx.fillText('🌳', cx, cy - 2); break;
             case RESOURCES.ROCK: this.ctx.fillText('🪨', cx, cy - 2); break;
+            case RESOURCES.HOUSE: this.ctx.fillText('🏠', cx, cy - 2); break;
             case RESOURCES.BRIDGE:
                 // Fondo de agua porque es un puente sobre ella
                 this.ctx.fillStyle = '#0f172a'; // O podrías usar un azul oscuro
@@ -56,7 +57,17 @@ export class Renderer {
                 break;
         }
 
-        if (cell.capacity > 0 && cell.type !== RESOURCES.BRIDGE) {
+        if (cell.type === RESOURCES.HOUSE) {
+            // Dibujar barra de vida de la casa si está dañada
+            if (cell.capacity < 10) {
+                let barWidth = 20;
+                let segWidth = barWidth / 10;
+                this.ctx.fillStyle = '#475569';
+                this.ctx.fillRect(cx - barWidth/2, py + CELL_SIZE - 6, barWidth, 4);
+                this.ctx.fillStyle = '#22c55e';
+                this.ctx.fillRect(cx - barWidth/2, py + CELL_SIZE - 6, segWidth * cell.capacity, 4);
+            }
+        } else if (cell.capacity > 0 && cell.type !== RESOURCES.BRIDGE) {
             let dotRadius = 2;
             let startX = cx - (cell.capacity * 6) / 2 + 3;
             for (let i = 0; i < cell.capacity; i++) {

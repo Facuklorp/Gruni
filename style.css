@@ -34,8 +34,24 @@ body {
     width: 100%;
     max-width: 1200px;
     padding: 24px;
-    align-items: center;
+    align-items: flex-start;
+    overflow-x: auto;
 }
+
+#rotate-message {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg-color);
+    z-index: 9999;
+    padding: 20px;
+}
+#rotate-message h1 { font-size: 4rem; margin-bottom: 20px; }
+#rotate-message p { font-size: 1.2rem; color: var(--text-muted); }
 
 .glass-panel {
     background: var(--glass-bg);
@@ -71,6 +87,35 @@ canvas {
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
     border: 2px solid var(--glass-border);
     cursor: crosshair;
+    max-width: 100%;
+    height: auto;
+    max-height: 90vh;
+    object-fit: contain;
+}
+
+/* RESPONSIVENESS PARA CELULARES */
+@media (max-width: 1024px) {
+    .app-container {
+        gap: 12px;
+        padding: 12px;
+    }
+    .glass-panel {
+        min-width: 200px;
+        padding: 16px;
+    }
+    .tool-btn {
+        font-size: 0.8rem;
+        padding: 8px;
+    }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+    .app-container {
+        display: none !important;
+    }
+    #rotate-message {
+        display: flex !important;
+    }
 }
 
 /* Stats UI */

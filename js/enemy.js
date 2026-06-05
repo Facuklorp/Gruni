@@ -25,16 +25,31 @@ export class Enemy {
         this.craft();
         
         if (this.swordDurability > 0) {
-            // Fase de Ataque
-            let dist = Math.abs(this.x - gruni.x) + Math.abs(this.y - gruni.y);
-            if (dist <= 1) {
-                this.isAttacking = true;
-                if (Math.random() > 0.3) {
-                    gruni.takeDamage(1);
+            let houseTarget = this.world.findNearest(this.x, this.y, RESOURCES.HOUSE);
+            if (houseTarget) {
+                // Asedio a la Casa
+                let distToHouse = Math.abs(this.x - houseTarget.x) + Math.abs(this.y - houseTarget.y);
+                if (distToHouse <= 1) {
+                    this.isAttacking = true;
+                    if (Math.random() > 0.3) {
+                        this.world.consumeResource(houseTarget.x, houseTarget.y);
+                    }
+                    this.swordDurability--;
+                } else {
+                    this.moveTowards(houseTarget.x, houseTarget.y);
                 }
-                this.swordDurability--;
             } else {
-                this.moveTowards(gruni.x, gruni.y);
+                // Cazar a Gruni
+                let dist = Math.abs(this.x - gruni.x) + Math.abs(this.y - gruni.y);
+                if (dist <= 1) {
+                    this.isAttacking = true;
+                    if (Math.random() > 0.3) {
+                        gruni.takeDamage(1);
+                    }
+                    this.swordDurability--;
+                } else {
+                    this.moveTowards(gruni.x, gruni.y);
+                }
             }
         } else {
             // Fase de Crafteo (buscar materiales)

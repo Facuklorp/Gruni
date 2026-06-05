@@ -9,7 +9,8 @@ export const RESOURCES = {
     WATER: 2,
     WOOD: 3,
     ROCK: 4,
-    BRIDGE: 5
+    BRIDGE: 5,
+    HOUSE: 6
 };
 
 export class World {
@@ -48,7 +49,11 @@ export class World {
         if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
             let cap = capacity;
             if (cap === null) {
-                cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE) ? 0 : Math.floor(Math.random() * 3) + 1;
+                if (type === RESOURCES.HOUSE) {
+                    cap = 10; // La casa tiene 10 de vida
+                } else {
+                    cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE) ? 0 : Math.floor(Math.random() * 3) + 1;
+                }
             }
             this.grid[y][x] = { type: type, capacity: cap };
         }

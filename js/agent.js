@@ -9,7 +9,9 @@ export const STATES = {
     SEEK_ROCK: 'Buscando Roca',
     GATHERING: 'Recolectando',
     DRINKING: 'Bebiendo',
-    EATING: 'Comiendo'
+    EATING: 'Comiendo',
+    BUILDING_HOUSE: 'Construyendo Casa',
+    DEFENDING: '¡Defendiendo Casa!'
 };
 
 export class Agent {
@@ -42,7 +44,8 @@ export class Agent {
         this.happyTimer = 0;
 
         this.stuckTimer = 0;
-        this.emergencyMission = null; // 'BRIDGE' o 'PICKAXE'
+        this.emergencyMission = null; // 'BRIDGE', 'PICKAXE' o 'BUILD_HOUSE'
+        this.home = null;
     }
 
     update(enemies) {
@@ -89,13 +92,18 @@ export class Agent {
         }
 
         if (!attacked) {
-            this.decideState();
+            this.decideState(enemies);
             this.act();
         }
         this.updateEmotion();
     }
 
     craft() {
+        if (this.inventory.wood >= 5 && !this.home && this.emergencyMission !== 'BUILD_HOUSE') {
+            this.inventory.wood -= 5;
+            this.emergencyMission = 'BUILD_HOUSE';
+            this.happyTimer = 5;
+        }
         if (this.inventory.wood >= 3 && this.inventory.bridges < 2) {
             this.inventory.wood -= 3;
             this.inventory.bridges++;
@@ -149,7 +157,7 @@ export class Agent {
             }
         }
 
-        if (this.isAttacking || seeEnemy) {
+        if (this.isAttacking || seeEnemy || this.state === STATES.DEFENDING) {
             this.emotion = 'ANGRY';
         } else if (this.hunger > 80 || this.thirst > 80) {
             this.emotion = 'ANGRY';
@@ -162,10 +170,45 @@ export class Agent {
         }
     }
 
-    decideState() {
+    decideState(enemies) {
+        if (this.home) {
+            let homeCell = this.world.getCell(this.home.x, this.home.y);
+            if (!homeCell || homeCell.type !== RESOURCES.HOUSE) {
+                this.home = null; // La casa fue destruida
+                this.emotion = 'SAD';
+            } else {
+                let targetEnemy = null;
+                let closestDist = Infinity;
+                for (let e of enemies) {
+                    if (e.hp > 0) {
+                        let distToHouse = Math.abs(e.x - this.home.x) + Math.abs(e.y - this.home.y);
+                        if (distToHouse <= 6) { // Enemigo cerca de la casa
+                            let distToGruni = Math.abs(this.x - e.x) + Math.abs(this.y - e.y);
+                            if (distToGruni < closestDist) {
+                                closestDist = distToGruni;
+                                targetEnemy = e;
+                            }
+                        }
+                    }
+                }
+                if (targetEnemy) {
+                    this.state = STATES.DEFENDING;
+                    this.target = { x: targetEnemy.x, y: targetEnemy.y };
+                    return;
+                }
+            }
+        }
+
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
-            if (this.emergencyMission === 'BRIDGE') {
+            if (this.emergencyMission === 'BUILD_HOUSE') {
+                let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY);
+                if (empty) { 
+                    this.state = STATES.BUILDING_HOUSE; 
+                    this.target = empty; 
+                    return; 
+                }
+            } else if (this.emergencyMission === 'BRIDGE') {
                 if (this.inventory.wood >= 3) {
                     this.emergencyMission = null; 
                 } else {
@@ -264,6 +307,19 @@ export class Agent {
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
+                } else if (this.state === STATES.BUILDING_HOUSE) {
+                    if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
+                        this.world.setCell(this.target.x, this.target.y, RESOURCES.HOUSE);
+                        this.home = {x: this.target.x, y: this.target.y};
+                    } else {
+                        // Reembolsar si el bloque ya no está vacío
+                        this.inventory.wood += 5; 
+                    }
+                    this.emergencyMission = null;
+                    this.state = STATES.WANDERING;
+                    this.happyTimer = 10;
+                } else if (this.state === STATES.DEFENDING) {
+                    this.state = STATES.WANDERING;
                 }
                 this.target = null;
             } else {
