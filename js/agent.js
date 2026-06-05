@@ -171,14 +171,16 @@ export class Agent {
     }
 
     decideState(enemies) {
+        let enemyThreat = false;
+        let targetEnemy = null;
+        let closestDist = Infinity;
+
         if (this.home) {
             let homeCell = this.world.getCell(this.home.x, this.home.y);
             if (!homeCell || homeCell.type !== RESOURCES.HOUSE) {
                 this.home = null; // La casa fue destruida
                 this.emotion = 'SAD';
             } else {
-                let targetEnemy = null;
-                let closestDist = Infinity;
                 for (let e of enemies) {
                     if (e.hp > 0) {
                         let distToHouse = Math.abs(e.x - this.home.x) + Math.abs(e.y - this.home.y);
@@ -187,21 +189,51 @@ export class Agent {
                             if (distToGruni < closestDist) {
                                 closestDist = distToGruni;
                                 targetEnemy = e;
+                                enemyThreat = true;
                             }
                         }
                     }
                 }
-                if (targetEnemy) {
-                    this.state = STATES.DEFENDING;
-                    this.target = { x: targetEnemy.x, y: targetEnemy.y };
-                    return;
+            }
+        }
+
+        if (!enemyThreat && enemies) {
+            for (let e of enemies) {
+                if (e.hp > 0) {
+                    let dist = Math.abs(this.x - e.x) + Math.abs(this.y - e.y);
+                    if (dist <= 4) {
+                        enemyThreat = true;
+                        break;
+                    }
                 }
             }
         }
 
+        // Si hay una amenaza y no tenemos espada, misión urgente: fabricar espada
+        if (enemyThreat && this.swordDurability === 0 && this.emergencyMission !== 'BUILD_HOUSE') {
+            this.emergencyMission = 'SWORD';
+        }
+
+        // Si la casa está bajo ataque y TENEMOS espada, defendemos
+        if (targetEnemy && this.swordDurability > 0) {
+            this.state = STATES.DEFENDING;
+            this.target = { x: targetEnemy.x, y: targetEnemy.y };
+            return;
+        }
+
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
-            if (this.emergencyMission === 'BUILD_HOUSE') {
+            if (this.emergencyMission === 'SWORD') {
+                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
+                    this.emergencyMission = null; // Ya tenemos los mats, se crafteará en craft()
+                } else if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                }
+            } else if (this.emergencyMission === 'BUILD_HOUSE') {
                 let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY);
                 if (empty) { 
                     this.state = STATES.BUILDING_HOUSE; 
