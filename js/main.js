@@ -21,7 +21,14 @@ let isEclipse = false;
 let firstEnemySpawned = false;
 let lastStateDesc = '';
 let bookSpawned = false;
-let bookCooldownTimer = 0;
+let bookCooldownTimer = 120; // Starts at 60 seconds
+
+const BRANCH_DESCRIPTIONS = {
+    'ASTRONOMY': '🔭 ASTRONOMÍA: Puede construir telescopios y murallas.',
+    'BIOLOGY': '🐺 BIOLOGÍA: Gruni tiene una mascota lobo que lo ayuda.',
+    'BLACKSMITH': '⚒️ HERRERÍA: Forja espadas más fuertes que duran más.'
+};
+let lastBranchesCount = 0;
 
 // Elementos de la UI
 const barHunger = document.getElementById('bar-hunger');
@@ -105,17 +112,12 @@ function updateUI() {
     barHunger.style.width = `${agent.hunger}%`;
     barThirst.style.width = `${agent.thirst}%`;
     barHp.style.width = `${(agent.hp / agent.maxHp) * 100}%`;
+    
     let stateDesc = agent.state;
     if (agent.state === STATES.SEEK_WOOD || agent.state === STATES.SEEK_ROCK) {
-        if (agent.emergencyMission === 'BUILD_HOUSE') stateDesc += ' para construir su casa';
-        else if (agent.emergencyMission === 'SWORD') stateDesc += ' para forjar una espada';
-        else if (agent.emergencyMission === 'BUILD_TELESCOPE') stateDesc += ' para armar un telescopio';
-        else if (agent.emergencyMission === 'BUILD_WALLS') stateDesc += ' para levantar murallas';
-        else if (agent.emergencyMission === 'BRIDGE') stateDesc += ' para hacer un puente';
-        else if (agent.emergencyMission === 'PICKAXE') stateDesc += ' para crear un pico';
-        else stateDesc += ' para almacenar reservas';
+        stateDesc += ' para hacer una herramienta';
     } else if (agent.state === STATES.SEEK_FOOD) {
-        stateDesc += ' para calmar su hambre';
+        stateDesc += ' para comer';
     } else if (agent.state === STATES.SEEK_WATER) {
         stateDesc += ' para saciar su sed';
     } else if (agent.state === STATES.BUILDING_HOUSE) {
@@ -136,6 +138,26 @@ function updateUI() {
     invPickaxes.innerText = agent.inventory.pickaxes;
     invSword.innerText = agent.swordDurability > 0 ? `Sí (${agent.swordDurability})` : 'No';
     invHouse.innerText = agent.home ? 'Sí' : 'No';
+    invTelescope.innerText = agent.hasTelescope ? 'Sí' : 'No';
+    
+    let wallsCount = 0;
+    for (let y = 0; y < world.height; y++) {
+        for (let x = 0; x < world.width; x++) {
+            if (world.grid[y][x].type === RESOURCES.WALL) wallsCount++;
+        }
+    }
+    invWall.innerText = wallsCount;
+
+    if (agent.branches.length > lastBranchesCount) {
+        document.getElementById('knowledge-log').style.display = 'block';
+        let newBranch = agent.branches[agent.branches.length - 1];
+        let desc = BRANCH_DESCRIPTIONS[newBranch] || newBranch;
+        let li = document.createElement('li');
+        li.innerText = desc;
+        li.style.marginBottom = '5px';
+        document.getElementById('knowledge-list').appendChild(li);
+        lastBranchesCount = agent.branches.length;
+    }
 
     let pw = Math.min(agent.inventory.wood, 2);
     let pr = Math.min(agent.inventory.rock, 2);
@@ -205,17 +227,15 @@ function gameLoop(timestamp) {
 
             let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120; // 20 ticks of warning (10 segundos)
             
-            agent.update(enemies, eclipseWarning);
-
-            if (bookCooldownTimer > 0) bookCooldownTimer--;
-
+            // Control Modal de libros
             if (agent.bookFound && agent.branches.length < 3) {
-                gamePaused = true;
                 modal.style.display = 'flex';
                 agent.bookFound = false; // Reset to avoid infinite loop
                 bookSpawned = false; // Allow a new book to spawn later
-                bookCooldownTimer = 180; // 90 seconds cooldown
+                bookCooldownTimer = 180; // 90 seconds cooldown after reading
             }
+
+            agent.update(enemies, eclipseWarning);
 
             if (wolf) wolf.update(agent, enemies);
 
@@ -268,13 +288,33 @@ function gameLoop(timestamp) {
                 }
             }
             
-            // Spawn del libro (sólo si tiene casa y no hay cooldown)
-            if (!bookSpawned && agent.home && bookCooldownTimer === 0 && Math.random() < 0.05 && agent.branches.length < 3) { 
-                let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
-                let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
-                if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
-                    world.setCell(emptyX, emptyY, RESOURCES.BOOK);
-                    bookSpawned = true;
+            // Countdown visual logic & spawning
+            let countdownEl = document.getElementById('book-countdown');
+            if (agent.branches.length >= 3) {
+                countdownEl.style.display = 'none';
+            } else {
+                countdownEl.style.display = 'block';
+                if (!agent.home) {
+                    countdownEl.innerText = "Próximo libro: Requiere Casa";
+                } else if (bookSpawned) {
+                    countdownEl.innerText = "¡Libro en el mundo!";
+                } else {
+                    if (bookCooldownTimer > 0) bookCooldownTimer--;
+                    if (bookCooldownTimer === 0) {
+                        let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
+                        let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
+                        if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
+                            world.setCell(emptyX, emptyY, RESOURCES.BOOK);
+                            bookSpawned = true;
+                        } else {
+                            bookCooldownTimer = 1; // Try again next tick
+                        }
+                    } else {
+                        let seconds = Math.ceil(bookCooldownTimer / 2);
+                        let m = Math.floor(seconds / 60);
+                        let s = seconds % 60;
+                        countdownEl.innerText = `Próximo libro en: ${m}:${s.toString().padStart(2, '0')}`;
+                    }
                 }
             }
 
