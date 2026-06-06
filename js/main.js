@@ -238,7 +238,13 @@ function gameLoop(timestamp) {
                 bookCooldownTimer = 180; // 90 seconds cooldown after reading
             }
 
-            agent.update(enemies, eclipseWarning);
+            try {
+                agent.update(enemies, eclipseWarning);
+            } catch(e) {
+                document.title = 'ERROR: ' + e.message;
+                console.error('Agent update error:', e);
+                document.getElementById('gruni-dialogue-text').innerText = 'ERROR: ' + e.message + ' at ' + e.stack?.split('\n')[1];
+            }
 
             if (wolf) wolf.update(agent, enemies);
 
