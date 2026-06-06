@@ -127,7 +127,10 @@ function updateUI() {
     }
     
     if (dialogueTimer <= 0) {
-        dialogueText.innerText = stateDesc || "...";
+        let debugInfo = ` [pos:${agent.x},${agent.y}`;
+        if (agent.target) debugInfo += ` tgt:${agent.target.x},${agent.target.y}`;
+        debugInfo += ` wt:${agent.wanderTimer} st:${agent.stuckTimer} em:${agent.emergencyMission}]`;
+        dialogueText.innerText = (stateDesc || "...") + debugInfo;
         dialogueBubble.style.display = 'block';
     }
     
