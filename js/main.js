@@ -98,7 +98,25 @@ function updateUI() {
     barHunger.style.width = `${agent.hunger}%`;
     barThirst.style.width = `${agent.thirst}%`;
     barHp.style.width = `${(agent.hp / agent.maxHp) * 100}%`;
-    stateText.innerText = agent.state;
+    let stateDesc = agent.state;
+    if (agent.state === STATES.SEEK_WOOD || agent.state === STATES.SEEK_ROCK) {
+        if (agent.emergencyMission === 'BUILD_HOUSE') stateDesc += ' para construir su casa';
+        else if (agent.emergencyMission === 'SWORD') stateDesc += ' para forjar una espada';
+        else if (agent.emergencyMission === 'BUILD_TELESCOPE') stateDesc += ' para armar un telescopio';
+        else if (agent.emergencyMission === 'BUILD_WALLS') stateDesc += ' para levantar murallas';
+        else if (agent.emergencyMission === 'BRIDGE') stateDesc += ' para hacer un puente';
+        else if (agent.emergencyMission === 'PICKAXE') stateDesc += ' para crear un pico';
+        else stateDesc += ' para almacenar reservas';
+    } else if (agent.state === STATES.SEEK_FOOD) {
+        stateDesc += ' para calmar su hambre';
+    } else if (agent.state === STATES.SEEK_WATER) {
+        stateDesc += ' para saciar su sed';
+    } else if (agent.state === STATES.BUILDING_HOUSE) {
+        stateDesc = 'Construyendo el hogar de sus sueños...';
+    } else if (agent.state === STATES.SEEK_BOOK) {
+        stateDesc = '¡Intrigado por un misterioso libro mágico!';
+    }
+    stateText.innerText = stateDesc;
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
     invBridges.innerText = agent.inventory.bridges;
@@ -189,6 +207,16 @@ function gameLoop(timestamp) {
 
             if (eclipseTimer === 100) { 
                 isEclipse = true;
+                
+                // Spawn inmediato de 2 enemigos al comenzar el eclipse
+                let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
+                let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
+                enemies.push(new Enemy(world, edgeX, edgeY));
+                
+                let edgeX2 = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
+                let edgeY2 = Math.floor(Math.random() * WORLD_HEIGHT);
+                enemies.push(new Enemy(world, edgeX2, edgeY2));
+
                 if (!agent.branches.includes('ASTRONOMY')) {
                     showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
                 }
@@ -199,19 +227,12 @@ function gameLoop(timestamp) {
             }
 
             spawnTimer++;
-            let spawnRate = isEclipse ? 60 : 120; // Doble spawn si es eclipse (o spawn de a 2)
+            let spawnRate = isEclipse ? 20 : 60; // Más rápido en eclipse (10 seg), normal (30 seg)
             if (spawnTimer >= spawnRate) { 
                 spawnTimer = 0;
                 let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
                 let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
                 enemies.push(new Enemy(world, edgeX, edgeY));
-                
-                if (isEclipse) {
-                    // Enemigo extra en eclipse
-                    let edgeX2 = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-                    let edgeY2 = Math.floor(Math.random() * WORLD_HEIGHT);
-                    enemies.push(new Enemy(world, edgeX2, edgeY2));
-                }
             }
             
             // Spawn del libro
