@@ -131,6 +131,7 @@ export class Agent {
             this.swordDurability = this.branches.includes('BLACKSMITH') ? 15 : 5; // Herrería da más durabilidad
             this.craftedFirstSword = true;
             this.happyTimer = 5;
+            if (this.emergencyMission === 'SWORD') this.emergencyMission = null;
         }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
             this.inventory.wood -= 2;
@@ -138,6 +139,7 @@ export class Agent {
             this.inventory.pickaxes++;
             this.craftedFirstPickaxe = true;
             this.happyTimer = 10;
+            if (this.emergencyMission === 'PICKAXE') this.emergencyMission = null;
         }
     }
 
@@ -273,6 +275,26 @@ export class Agent {
             this.state = STATES.DEFENDING;
             this.target = { x: targetEnemy.x, y: targetEnemy.y };
             return;
+        }
+
+        // Extreme Thirst/Hunger overrides emergency missions
+        if (!enemyThreat) {
+            if (this.thirst > 80) {
+                let wTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER);
+                if (wTarget) {
+                    this.state = STATES.SEEK_WATER;
+                    this.target = wTarget;
+                    return;
+                }
+            }
+            if (this.hunger > 80) {
+                let fTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD);
+                if (fTarget) {
+                    this.state = STATES.SEEK_FOOD;
+                    this.target = fTarget;
+                    return;
+                }
+            }
         }
 
         // Secuencia Tutorial
