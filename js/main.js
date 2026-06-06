@@ -320,7 +320,7 @@ function gameLoop(timestamp) {
                 }
             }
 
-            world.regenLoop();
+            world.regenLoop(agent);
             agent.updateEmotion(enemies);
         }
         renderer.draw(world, agent, enemies, wolf, isEclipse);

@@ -153,11 +153,22 @@ export class World {
         return nearest;
     }
 
-    regenLoop() {
+    regenLoop(agent) {
         for (let i = 0; i < 2; i++) {
             if (Math.random() < 0.2) { // 20% de probabilidad por intento
                 let x = Math.floor(Math.random() * WORLD_WIDTH);
                 let y = Math.floor(Math.random() * WORLD_HEIGHT);
+                
+                // Evitar spawnear recursos muy cerca de la casa para dejar espacio a las murallas
+                if (agent && agent.home) {
+                    let hx = agent.home.x;
+                    let hy = agent.home.y;
+                    // La casa ocupa (hx, hy) hasta (hx+1, hy+1). Dejamos 2 casilleros de margen.
+                    if (x >= hx - 2 && x <= hx + 3 && y >= hy - 2 && y <= hy + 3) {
+                        continue;
+                    }
+                }
+
                 if (this.grid[y][x].type === RESOURCES.EMPTY) {
                     const r = Math.random();
                     let type = RESOURCES.FOOD; // 30% comida
