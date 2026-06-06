@@ -1,6 +1,6 @@
 // js/main.js
 import { World } from './world.js';
-import { Agent } from './agent.js';
+import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
 import { GodControls } from './god_controls.js';
 import { Enemy } from './enemy.js';
