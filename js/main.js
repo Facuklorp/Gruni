@@ -127,10 +127,7 @@ function updateUI() {
     }
     
     if (dialogueTimer <= 0) {
-        let debugInfo = ` [pos:${agent.x},${agent.y}`;
-        if (agent.target) debugInfo += ` tgt:${agent.target.x},${agent.target.y}`;
-        debugInfo += ` wt:${agent.wanderTimer} st:${agent.stuckTimer} em:${agent.emergencyMission}]`;
-        dialogueText.innerText = (stateDesc || "...") + debugInfo;
+        dialogueText.innerText = stateDesc || "...";
         dialogueBubble.style.display = 'block';
     }
     
@@ -238,13 +235,7 @@ function gameLoop(timestamp) {
                 bookCooldownTimer = 180; // 90 seconds cooldown after reading
             }
 
-            try {
-                agent.update(enemies, eclipseWarning);
-            } catch(e) {
-                document.title = 'ERROR: ' + e.message;
-                console.error('Agent update error:', e);
-                document.getElementById('gruni-dialogue-text').innerText = 'ERROR: ' + e.message + ' at ' + e.stack?.split('\n')[1];
-            }
+            agent.update(enemies, eclipseWarning);
 
             if (wolf) wolf.update(agent, enemies);
 
