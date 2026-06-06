@@ -58,7 +58,19 @@ export class Renderer {
             case RESOURCES.WOOD: this.ctx.fillText('🌳', cx, cy - 2); break;
             case RESOURCES.ROCK: this.ctx.fillText('🪨', cx, cy - 2); break;
             case RESOURCES.HOUSE: this.ctx.fillText('🏠', cx, cy - 2); break;
-            case RESOURCES.BOOK: this.ctx.fillText('📖', cx, cy - 2); break;
+            case RESOURCES.BOOK: 
+                let time = Date.now() / 200;
+                let pulse = Math.abs(Math.sin(time)) * 4;
+                this.ctx.fillStyle = 'rgba(234, 179, 8, 0.5)';
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, (CELL_SIZE / 2.5) + pulse, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.shadowColor = '#eab308';
+                this.ctx.shadowBlur = 15;
+                this.ctx.fillText('📖', cx, cy - 2); 
+                this.ctx.shadowBlur = 0;
+                break;
             case RESOURCES.TELESCOPE: this.ctx.fillText('🔭', cx, cy - 2); break;
             case RESOURCES.WALL: this.ctx.fillText('🧱', cx, cy - 2); break;
             case RESOURCES.BRIDGE:
@@ -165,7 +177,7 @@ export class Renderer {
         let px = enemy.x * CELL_SIZE + CELL_SIZE / 2;
         let py = enemy.y * CELL_SIZE + CELL_SIZE / 2;
 
-        this.ctx.fillStyle = '#ef4444'; // Rojo malo
+        this.ctx.fillStyle = '#a855f7'; // Morado malo
         this.ctx.beginPath();
         this.ctx.arc(px, py, CELL_SIZE / 2.5, 0, Math.PI * 2);
         this.ctx.fill();

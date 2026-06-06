@@ -67,8 +67,16 @@ document.getElementById('btn-branch-bio').onclick = () => { selectBranch('BIOLOG
 document.getElementById('btn-branch-smith').onclick = () => { selectBranch('BLACKSMITH'); };
 
 function selectBranch(branch) {
-    agent.branch = branch;
-    branchText.innerText = branch === 'ASTRONOMY' ? '🔭 Astronomía' : branch === 'BIOLOGY' ? '🐺 Biología' : '⚒️ Herrería';
+    if (!agent.branches.includes(branch)) {
+        agent.branches.push(branch);
+    }
+    
+    let text = [];
+    if (agent.branches.includes('ASTRONOMY')) text.push('🔭 Astronomía');
+    if (agent.branches.includes('BIOLOGY')) text.push('🐺 Biología');
+    if (agent.branches.includes('BLACKSMITH')) text.push('⚒️ Herrería');
+    branchText.innerText = text.join(' | ');
+
     if (branch === 'BIOLOGY') {
         wolf = new Wolf(world, agent.x, agent.y);
         showDialogue("¡Un lobo amistoso! Lo llamaré Firulais.", 15);
@@ -77,6 +85,11 @@ function selectBranch(branch) {
     } else if (branch === 'BLACKSMITH') {
         showDialogue("¡Siento el poder del metal en mis manos!", 15);
     }
+
+    if (agent.branches.includes('ASTRONOMY')) document.getElementById('btn-branch-astro').style.display = 'none';
+    if (agent.branches.includes('BIOLOGY')) document.getElementById('btn-branch-bio').style.display = 'none';
+    if (agent.branches.includes('BLACKSMITH')) document.getElementById('btn-branch-smith').style.display = 'none';
+
     modal.style.display = 'none';
     gamePaused = false;
 }
@@ -151,10 +164,11 @@ function gameLoop(timestamp) {
             
             agent.update(enemies, eclipseWarning);
 
-            if (agent.bookFound && agent.branch === 'NONE') {
+            if (agent.bookFound && agent.branches.length < 3) {
                 gamePaused = true;
                 modal.style.display = 'flex';
                 agent.bookFound = false; // Reset to avoid infinite loop
+                bookSpawned = false; // Allow a new book to spawn later
             }
 
             if (wolf) wolf.update(agent, enemies);
@@ -169,13 +183,13 @@ function gameLoop(timestamp) {
             // Eclipse logic (Ciclo de 70 segundos: 50s luz, 20s eclipse)
             eclipseTimer++;
 
-            if (eclipseTimer === 80 && agent.branch === 'ASTRONOMY' && agent.hasTelescope) {
+            if (eclipseTimer === 80 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
                 showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
             }
 
             if (eclipseTimer === 100) { 
                 isEclipse = true;
-                if (agent.branch !== 'ASTRONOMY') {
+                if (!agent.branches.includes('ASTRONOMY')) {
                     showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
                 }
             }
@@ -201,7 +215,7 @@ function gameLoop(timestamp) {
             }
             
             // Spawn del libro
-            if (!bookSpawned && Math.random() < 0.05) { 
+            if (!bookSpawned && Math.random() < 0.05 && agent.branches.length < 3) { 
                 let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
                 let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
                 if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {

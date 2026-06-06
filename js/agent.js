@@ -51,7 +51,7 @@ export class Agent {
         this.emergencyMission = null; // 'BRIDGE', 'PICKAXE' o 'BUILD_HOUSE'
         this.home = null;
         
-        this.branch = 'NONE'; // 'ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'
+        this.branches = []; 
         this.hasTelescope = false;
         this.eclipseWarning = false;
     }
@@ -109,7 +109,6 @@ export class Agent {
 
     craft() {
         if (this.inventory.wood >= 5 && !this.home && this.emergencyMission !== 'BUILD_HOUSE') {
-            this.inventory.wood -= 5;
             this.emergencyMission = 'BUILD_HOUSE';
             this.happyTimer = 5;
         }
@@ -122,7 +121,7 @@ export class Agent {
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
-            this.swordDurability = this.branch === 'BLACKSMITH' ? 15 : 5; // Herrería da más durabilidad
+            this.swordDurability = this.branches.includes('BLACKSMITH') ? 15 : 5; // Herrería da más durabilidad
             this.happyTimer = 5;
         }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
@@ -185,7 +184,7 @@ export class Agent {
         let closestDist = Infinity;
 
         let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
-        if (bookTarget && !enemyThreat && this.branch === 'NONE') {
+        if (bookTarget && !enemyThreat && this.branches.length < 3) {
             this.state = STATES.SEEK_BOOK;
             this.target = bookTarget;
             return;
@@ -223,7 +222,7 @@ export class Agent {
                 }
                 
                 // Eclipse preparation
-                if (!enemyThreat && this.branch === 'ASTRONOMY' && this.hasTelescope && this.eclipseWarning && homeCell.capacity >= 10) {
+                if (!enemyThreat && this.branches.includes('ASTRONOMY') && this.hasTelescope && this.eclipseWarning && homeCell.capacity >= 10) {
                     this.emergencyMission = 'BUILD_WALLS';
                 }
             }
@@ -242,7 +241,7 @@ export class Agent {
         }
 
         // Proactive Telescope
-        if (!enemyThreat && this.branch === 'ASTRONOMY' && !this.hasTelescope && !this.emergencyMission) {
+        if (!enemyThreat && this.branches.includes('ASTRONOMY') && !this.hasTelescope && !this.emergencyMission) {
             this.emergencyMission = 'BUILD_TELESCOPE';
         }
 
@@ -438,11 +437,11 @@ export class Agent {
                     this.bookFound = true; 
                 } else if (this.state === STATES.BUILDING_HOUSE) {
                     if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
-                        this.world.setCell(this.target.x, this.target.y, RESOURCES.HOUSE);
-                        this.home = {x: this.target.x, y: this.target.y};
-                    } else {
-                        // Reembolsar si el bloque ya no está vacío
-                        this.inventory.wood += 5; 
+                        if (this.inventory.wood >= 5) {
+                            this.world.setCell(this.target.x, this.target.y, RESOURCES.HOUSE);
+                            this.home = {x: this.target.x, y: this.target.y};
+                            this.inventory.wood -= 5;
+                        }
                     }
                     this.emergencyMission = null;
                     this.state = STATES.WANDERING;
