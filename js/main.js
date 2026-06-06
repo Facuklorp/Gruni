@@ -39,6 +39,8 @@ const invRock = document.getElementById('inv-rock');
 const invPickaxes = document.getElementById('inv-pickaxes');
 const invSword = document.getElementById('inv-sword');
 const invHouse = document.getElementById('inv-house');
+const invTelescope = document.getElementById('inv-telescope');
+const invWall = document.getElementById('inv-wall');
 
 const statTelescope = document.getElementById('stat-telescope');
 const craftTeleW = document.getElementById('craft-tele-w');
