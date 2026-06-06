@@ -116,6 +116,13 @@ export class Agent {
     }
 
     craft(type = null) {
+        // Auto-craft: check if we should start building a house
+        if (this.inventory.wood >= 5 && !this.home && this.emergencyMission !== 'BUILD_HOUSE' && this.craftedFirstSword) {
+            this.emergencyMission = 'BUILD_HOUSE';
+            this.happyTimer = 5;
+        }
+
+        // Typed craft from emergency missions
         if (type === 'PICKAXE' && this.inventory.wood >= 2 && this.inventory.rock >= 2) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
@@ -393,10 +400,6 @@ export class Agent {
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
-                }
-                } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
-                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             }
         }

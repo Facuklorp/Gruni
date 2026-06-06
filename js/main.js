@@ -141,8 +141,8 @@ function updateUI() {
     invTelescope.innerText = agent.hasTelescope ? 'Sí' : 'No';
     
     let wallsCount = 0;
-    for (let y = 0; y < world.height; y++) {
-        for (let x = 0; x < world.width; x++) {
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+        for (let x = 0; x < WORLD_WIDTH; x++) {
             if (world.grid[y][x].type === RESOURCES.WALL) wallsCount++;
         }
     }
