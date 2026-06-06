@@ -46,6 +46,10 @@ export class Agent {
         this.target = null;
         this.emotion = 'NEUTRAL';
         this.happyTimer = 0;
+        this.bookFound = false;
+        
+        // Timer to escape local minima
+        this.wanderTimer = 0;
 
         this.stuckTimer = 0;
         this.emergencyMission = null;
@@ -419,6 +423,12 @@ export class Agent {
     }
 
     act() {
+        if (this.wanderTimer > 0) {
+            this.wanderTimer--;
+            this.wander();
+            return;
+        }
+
         if (this.state !== STATES.WANDERING && this.target) {
             let dist = Math.abs(this.x - this.target.x) + Math.abs(this.y - this.target.y);
             
@@ -455,7 +465,7 @@ export class Agent {
                     // El evento modal es disparado desde main.js al detectar que el libro desaparece o por el inventario.
                     // Para simplificar, main.js revisará si el agente se comió el libro comprobando this.branch
                     // o usando una flag. Añadiremos una flag.
-                    this.bookFound = true; 
+                    this.bookFound = true;
                 } else if (this.state === STATES.BUILDING_HOUSE) {
                     let tx = this.target.x;
                     let ty = this.target.y;
@@ -553,10 +563,14 @@ export class Agent {
                         this.world.setCell(nx, ny, RESOURCES.EMPTY);
                         this.happyTimer = 5;
                         this.stuckTimer = 0;
-                    } else if (this.stuckTimer > 2) {
-                        this.emergencyMission = 'PICKAXE';
-                        this.wander();
+                    } else if (this.stuckTimer > 3) {
+                        this.wanderTimer = 8; // Escape the obstacle
+                        this.stuckTimer = 0;
+                        if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
                     }
+                } else if (this.stuckTimer > 3) {
+                    this.wanderTimer = 8; // Escape the obstacle
+                    this.stuckTimer = 0;
                 } else {
                     this.wander(); 
                 }
