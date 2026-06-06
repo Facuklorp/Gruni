@@ -135,14 +135,6 @@ export class Agent {
             this.craftedFirstPickaxe = true;
             this.happyTimer = 10;
         }
-
-        if (this.inventory.wood >= 1 && this.inventory.rock >= 2 && this.inventory.bridges < 2) {
-            this.inventory.wood -= 1;
-            this.inventory.rock -= 2;
-            this.inventory.bridges++;
-            this.craftedFirstBridge = true;
-            this.happyTimer = 10;
-        }
     }
 
     takeDamage(amount) {
@@ -151,7 +143,7 @@ export class Agent {
         if (this.hp <= 0) {
             this.hp = 0;
             this.koTimer = 10; // KO state for 10 ticks (5 secs)
-            this.inventory = { wood: 0, rock: 0, bridges: 0, pickaxes: 0 };
+            this.inventory = { wood: 0, rock: 0, pickaxes: 0 };
             this.swordDurability = 0;
             this.target = null;
             this.emergencyMission = null;
@@ -276,7 +268,6 @@ export class Agent {
         if (this.swordDurability === 0 && 
             this.emergencyMission !== 'BUILD_HOUSE' && 
             this.emergencyMission !== 'PICKAXE' && 
-            this.emergencyMission !== 'BRIDGE' &&
             this.emergencyMission !== 'SWORD') {
             this.emergencyMission = 'SWORD';
         }
@@ -319,15 +310,18 @@ export class Agent {
             } else if (this.emergencyMission === 'BUILD_WALLS') {
                 if (this.inventory.wood >= 1) {
                     let emptyWallPos = null;
-                    let moves = [{dx:-1,dy:-1},{dx:0,dy:-1},{dx:1,dy:-1},{dx:-1,dy:0},{dx:1,dy:0},{dx:-1,dy:1},{dx:0,dy:1},{dx:1,dy:1}];
-                    for (let m of moves) {
-                        let nx = this.home.x + m.dx;
-                        let ny = this.home.y + m.dy;
-                        let cell = this.world.getCell(nx, ny);
-                        if (cell && cell.type === RESOURCES.EMPTY) {
-                            emptyWallPos = {x: nx, y: ny};
-                            break;
+                    let hx = this.home.x, hy = this.home.y;
+                    for (let y = hy - 1; y <= hy + 2; y++) {
+                        for (let x = hx - 1; x <= hx + 2; x++) {
+                            // Skip the 2x2 house itself
+                            if (x >= hx && x <= hx + 1 && y >= hy && y <= hy + 1) continue;
+                            let cell = this.world.getCell(x, y);
+                            if (cell && cell.type === RESOURCES.EMPTY) {
+                                emptyWallPos = {x, y};
+                                break;
+                            }
                         }
+                        if (emptyWallPos) break;
                     }
                     if (emptyWallPos) {
                         this.state = STATES.BUILDING_WALL;
@@ -354,16 +348,6 @@ export class Agent {
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
-                }
-            } else if (this.emergencyMission === 'BRIDGE') {
-                if (this.inventory.wood >= 1 && this.inventory.rock >= 2) {
-                    this.emergencyMission = null; 
-                } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
-                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
-                } else if (this.inventory.wood < 1) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
-                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'PICKAXE') {
                 if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {

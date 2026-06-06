@@ -29,13 +29,18 @@ const barThirst = document.getElementById('bar-thirst');
 const barHp = document.getElementById('bar-hp');
 const invWood = document.getElementById('inv-wood');
 const invRock = document.getElementById('inv-rock');
-const invBridges = document.getElementById('inv-bridges');
 const invPickaxes = document.getElementById('inv-pickaxes');
 const invSword = document.getElementById('inv-sword');
 const invHouse = document.getElementById('inv-house');
 
-const craftBridgeText = document.getElementById('craft-bridge-text');
-const barCraftBridge = document.getElementById('bar-craft-bridge');
+const statTelescope = document.getElementById('stat-telescope');
+const craftTeleW = document.getElementById('craft-tele-w');
+const craftTeleR = document.getElementById('craft-tele-r');
+const barCraftTele = document.getElementById('bar-craft-tele');
+
+const statWall = document.getElementById('stat-wall');
+const craftWallW = document.getElementById('craft-wall-w');
+const barCraftWall = document.getElementById('bar-craft-wall');
 const craftPickW = document.getElementById('craft-pick-w');
 const craftPickR = document.getElementById('craft-pick-r');
 const barCraftPickaxe = document.getElementById('bar-craft-pickaxe');
@@ -126,26 +131,21 @@ function updateUI() {
     
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
-    invBridges.innerText = agent.inventory.bridges;
     invPickaxes.innerText = agent.inventory.pickaxes;
-    
-    // Sword durability shows as 1 sword if durability > 0, or just show durability (uses left)
-    // The user asked "falta la Espada", showing 1 or 0 is good enough. Or showing durability.
-    // Let's show durability as number of swords, wait... if durability is >0 he has 1 sword.
-    invSword.innerText = agent.swordDurability > 0 ? "1" : "0";
-    
-    invHouse.innerText = agent.home ? "🏠 Sí" : "No";
+    invSword.innerText = agent.swordDurability > 0 ? `Sí (${agent.swordDurability})` : 'No';
+    invHouse.innerText = agent.home ? 'Sí' : 'No';
 
-    let bridgeWood = Math.min(agent.inventory.wood, 3);
-    craftBridgeText.innerText = bridgeWood;
-    barCraftBridge.style.width = `${(bridgeWood / 3) * 100}%`;
-
-    let pickWood = Math.min(agent.inventory.wood, 2);
-    let pickRock = Math.min(agent.inventory.rock, 2);
-    craftPickW.innerText = pickWood;
-    craftPickR.innerText = pickRock;
-    let pickProgress = ((pickWood / 2) * 50) + ((pickRock / 2) * 50);
-    barCraftPickaxe.style.width = `${pickProgress}%`;
+    let pw = Math.min(agent.inventory.wood, 2);
+    let pr = Math.min(agent.inventory.rock, 2);
+    craftPickW.innerText = pw;
+    craftPickR.innerText = pr;
+    if (agent.inventory.pickaxes > 0) {
+        barCraftPickaxe.style.width = '100%';
+        barCraftPickaxe.style.background = '#22c55e';
+    } else {
+        barCraftPickaxe.style.width = `${((pw + pr) / 4) * 100}%`;
+        barCraftPickaxe.style.background = '#78716c';
+    }
 
     let swordWood = Math.min(agent.inventory.wood, 2);
     let swordRock = Math.min(agent.inventory.rock, 2);
@@ -171,6 +171,37 @@ function updateUI() {
     } else {
         barCraftHouse.style.width = `${(houseWood / 5) * 100}%`;
         barCraftHouse.style.background = '#f43f5e'; // Rojo mientras junta madera
+    }
+
+    // Telescopio
+    if (agent.branches.includes('ASTRONOMY')) {
+        statTelescope.style.display = 'block';
+        if (agent.hasTelescope) {
+            craftTeleW.innerText = '2';
+            craftTeleR.innerText = '2';
+            barCraftTele.style.width = '100%';
+            barCraftTele.style.background = '#22c55e';
+        } else {
+            let tw = Math.min(agent.inventory.wood, 2);
+            let tr = Math.min(agent.inventory.rock, 2);
+            craftTeleW.innerText = tw;
+            craftTeleR.innerText = tr;
+            barCraftTele.style.width = `${((tw + tr) / 4) * 100}%`;
+            barCraftTele.style.background = '#3b82f6';
+        }
+    } else {
+        statTelescope.style.display = 'none';
+    }
+
+    // Muralla
+    if (agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
+        statWall.style.display = 'block';
+        let ww = Math.min(agent.inventory.wood, 1);
+        craftWallW.innerText = ww;
+        barCraftWall.style.width = `${ww * 100}%`;
+        barCraftWall.style.background = agent.emergencyMission === 'BUILD_WALLS' ? '#f43f5e' : '#64748b';
+    } else {
+        statWall.style.display = 'none';
     }
 }
 

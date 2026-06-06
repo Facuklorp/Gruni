@@ -264,34 +264,18 @@ button {
 
 /* Dialogue Bubble */
 .dialogue-bubble {
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
     background: #ffffff;
     color: #0f172a;
     padding: 12px 24px;
     border-radius: 20px;
     font-weight: 600;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-    z-index: 100;
-    animation: popIn 0.3s ease-out;
-    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     font-size: 0.95rem;
     text-align: center;
     max-width: 80%;
-}
-.dialogue-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 10px 10px 0;
-    border-style: solid;
-    border-color: #ffffff transparent transparent transparent;
+    margin: 15px auto 0;
 }
 @keyframes popIn {
-    0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
-    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
 }

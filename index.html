@@ -37,7 +37,6 @@
                 <ul id="agent-inventory">
                     <li>Madera: <span id="inv-wood">0</span></li>
                     <li>Roca: <span id="inv-rock">0</span></li>
-                    <li>Puentes: <span id="inv-bridges">0</span></li>
                     <li>Picos: <span id="inv-pickaxes">0</span></li>
                     <li>Espadas: <span id="inv-sword">0</span></li>
                     <li>Casa: <span id="inv-house">No</span></li>
@@ -45,12 +44,6 @@
 
                 <h3 style="margin-top: 15px; font-size: 0.9rem; color: var(--text-muted);">Progreso de Crafteo</h3>
                 <div class="stat-group" style="margin-top: 10px;">
-                    <div class="stat">
-                        <div class="stat-label">Puente <span style="font-size: 0.75rem">(Madera: <span id="craft-bridge-text">0</span>/3)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-bridge" style="background: #a8a29e; width: 0%;"></div>
-                        </div>
-                    </div>
                     <div class="stat" style="margin-top: 10px;">
                         <div class="stat-label">Pico <span style="font-size: 0.75rem">(M: <span id="craft-pick-w">0</span>/2 | R: <span id="craft-pick-r">0</span>/2)</span></div>
                         <div class="bar-container">
@@ -69,16 +62,28 @@
                             <div class="bar" id="bar-craft-house" style="background: #f43f5e; width: 0%;"></div>
                         </div>
                     </div>
+                    <div class="stat" style="margin-top: 10px; display: none;" id="stat-telescope">
+                        <div class="stat-label">Telescopio <span style="font-size: 0.75rem">(M: <span id="craft-tele-w">0</span>/2 | R: <span id="craft-tele-r">0</span>/2)</span></div>
+                        <div class="bar-container">
+                            <div class="bar" id="bar-craft-tele" style="background: #3b82f6; width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat" style="margin-top: 10px; display: none;" id="stat-wall">
+                        <div class="stat-label">Muralla <span style="font-size: 0.75rem">(Madera: <span id="craft-wall-w">0</span>/1)</span></div>
+                        <div class="bar-container">
+                            <div class="bar" id="bar-craft-wall" style="background: #64748b; width: 0%;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
 
         <!-- Centro: El Mundo (Canvas) -->
-        <main class="canvas-container" style="position: relative;">
-            <div id="gruni-dialogue" class="dialogue-bubble" style="display: none;">
+        <main class="canvas-container" style="position: relative; display: flex; flex-direction: column; align-items: center;">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <div id="gruni-dialogue" class="dialogue-bubble" style="display: none; width: 100%;">
                 <span id="gruni-dialogue-text"></span>
             </div>
-            <canvas id="gameCanvas" width="600" height="600"></canvas>
         </main>
 
         <!-- Panel Derecho: Controles de Dios -->

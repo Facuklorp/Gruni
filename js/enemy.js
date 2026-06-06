@@ -152,7 +152,11 @@ export class Enemy {
     tryStep(nx, ny) {
         if (nx < 0 || nx >= WORLD_WIDTH || ny < 0 || ny >= WORLD_HEIGHT) return false;
         let cell = this.world.getCell(nx, ny);
-        if (cell && (cell.type === RESOURCES.ROCK || cell.type === RESOURCES.WATER)) return false;
+        if (cell && cell.type === RESOURCES.WATER) {
+            this.world.consumeResource(nx, ny);
+            return true;
+        }
+        if (cell && cell.type === RESOURCES.ROCK) return false;
         return true;
     }
 
