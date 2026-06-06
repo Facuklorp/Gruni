@@ -32,6 +32,10 @@
                 <label>Estado Actual</label>
                 <div id="agent-state" class="badge">Deambulando</div>
             </div>
+            <div class="stat-group">
+                <label>Especialización</label>
+                <div id="agent-branch" class="badge" style="background: #8b5cf6;">Ninguna</div>
+            </div>
             <div class="stat-group inventory">
                 <h3>Inventario</h3>
                 <ul id="agent-inventory">
@@ -74,7 +78,10 @@
         </aside>
 
         <!-- Centro: El Mundo (Canvas) -->
-        <main class="canvas-container">
+        <main class="canvas-container" style="position: relative;">
+            <div id="gruni-dialogue" class="dialogue-bubble" style="display: none;">
+                <span id="gruni-dialogue-text"></span>
+            </div>
             <canvas id="gameCanvas" width="600" height="600"></canvas>
         </main>
 
@@ -96,6 +103,29 @@
             </div>
         </aside>
     </div>
+    
+    <!-- Modal del Libro -->
+    <div id="book-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-panel">
+            <h2>📖 El Libro de los Bosques</h2>
+            <p style="margin-bottom: 20px; color: #cbd5e1;">Gruni ha encontrado un libro antiguo. ¿Qué camino de sabiduría debería seguir?</p>
+            <div class="branch-options">
+                <button class="branch-btn" id="btn-branch-astro">
+                    <h3>🔭 Libro I: Astronomía</h3>
+                    <p>¿Qué misterios ocultarán las estrellas?</p>
+                </button>
+                <button class="branch-btn" id="btn-branch-bio">
+                    <h3>🐺 Libro II: Biología</h3>
+                    <p>¿Qué secretos aguardarán en la naturaleza?</p>
+                </button>
+                <button class="branch-btn" id="btn-branch-smith">
+                    <h3>⚒️ Libro III: Herrería</h3>
+                    <p>¿Qué poder esconderá el forjado de metales?</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

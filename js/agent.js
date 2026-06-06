@@ -11,7 +11,11 @@ export const STATES = {
     DRINKING: 'Bebiendo',
     EATING: 'Comiendo',
     BUILDING_HOUSE: 'Construyendo Casa',
-    DEFENDING: '¡Defendiendo Casa!'
+    DEFENDING: '¡Defendiendo Casa!',
+    RESTORING_HOUSE: 'Restaurando Casa',
+    SEEK_BOOK: 'Buscando Libro Mágico',
+    BUILDING_TELESCOPE: 'Construyendo Telescopio',
+    BUILDING_WALL: 'Construyendo Muralla'
 };
 
 export class Agent {
@@ -46,9 +50,14 @@ export class Agent {
         this.stuckTimer = 0;
         this.emergencyMission = null; // 'BRIDGE', 'PICKAXE' o 'BUILD_HOUSE'
         this.home = null;
+        
+        this.branch = 'NONE'; // 'ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'
+        this.hasTelescope = false;
+        this.eclipseWarning = false;
     }
 
-    update(enemies) {
+    update(enemies, eclipseWarning = false) {
+        this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
             this.emotion = 'KO';
@@ -113,7 +122,7 @@ export class Agent {
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
-            this.swordDurability = 5;
+            this.swordDurability = this.branch === 'BLACKSMITH' ? 15 : 5; // Herrería da más durabilidad
             this.happyTimer = 5;
         }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
@@ -175,6 +184,13 @@ export class Agent {
         let targetEnemy = null;
         let closestDist = Infinity;
 
+        let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
+        if (bookTarget && !enemyThreat && this.branch === 'NONE') {
+            this.state = STATES.SEEK_BOOK;
+            this.target = bookTarget;
+            return;
+        }
+
         if (this.home) {
             let homeCell = this.world.getCell(this.home.x, this.home.y);
             if (!homeCell || homeCell.type !== RESOURCES.HOUSE) {
@@ -194,6 +210,22 @@ export class Agent {
                         }
                     }
                 }
+                if (!enemyThreat && homeCell.capacity < 10) {
+                    if (this.swordDurability === 0) {
+                        if (this.emergencyMission !== 'SWORD') this.emergencyMission = 'SWORD';
+                    } else {
+                        if (this.emergencyMission !== 'RESTORE_HOUSE') this.emergencyMission = 'RESTORE_HOUSE';
+                    }
+                } else if (this.emergencyMission === 'RESTORE_HOUSE') {
+                    if (enemyThreat || homeCell.capacity >= 10) {
+                        this.emergencyMission = null;
+                    }
+                }
+                
+                // Eclipse preparation
+                if (!enemyThreat && this.branch === 'ASTRONOMY' && this.hasTelescope && this.eclipseWarning && homeCell.capacity >= 10) {
+                    this.emergencyMission = 'BUILD_WALLS';
+                }
             }
         }
 
@@ -209,11 +241,17 @@ export class Agent {
             }
         }
 
-        // Si hay una amenaza y no tenemos espada, misión urgente: fabricar espada (si no estamos atascados)
-        if (enemyThreat && this.swordDurability === 0 && 
+        // Proactive Telescope
+        if (!enemyThreat && this.branch === 'ASTRONOMY' && !this.hasTelescope && !this.emergencyMission) {
+            this.emergencyMission = 'BUILD_TELESCOPE';
+        }
+
+        // Prioridad: Siempre tener una espada lista (ya sea que haya amenaza o no)
+        if (this.swordDurability === 0 && 
             this.emergencyMission !== 'BUILD_HOUSE' && 
             this.emergencyMission !== 'PICKAXE' && 
-            this.emergencyMission !== 'BRIDGE') {
+            this.emergencyMission !== 'BRIDGE' &&
+            this.emergencyMission !== 'SWORD') {
             this.emergencyMission = 'SWORD';
         }
 
@@ -242,6 +280,54 @@ export class Agent {
                     this.state = STATES.BUILDING_HOUSE; 
                     this.target = empty; 
                     return; 
+                }
+            } else if (this.emergencyMission === 'RESTORE_HOUSE') {
+                if (this.inventory.wood >= 1) {
+                    this.state = STATES.RESTORING_HOUSE;
+                    this.target = { x: this.home.x, y: this.home.y };
+                    return;
+                } else {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                }
+            } else if (this.emergencyMission === 'BUILD_WALLS') {
+                if (this.inventory.wood >= 1) {
+                    let emptyWallPos = null;
+                    let moves = [{dx:-1,dy:-1},{dx:0,dy:-1},{dx:1,dy:-1},{dx:-1,dy:0},{dx:1,dy:0},{dx:-1,dy:1},{dx:0,dy:1},{dx:1,dy:1}];
+                    for (let m of moves) {
+                        let nx = this.home.x + m.dx;
+                        let ny = this.home.y + m.dy;
+                        let cell = this.world.getCell(nx, ny);
+                        if (cell && cell.type === RESOURCES.EMPTY) {
+                            emptyWallPos = {x: nx, y: ny};
+                            break;
+                        }
+                    }
+                    if (emptyWallPos) {
+                        this.state = STATES.BUILDING_WALL;
+                        this.target = emptyWallPos;
+                        return;
+                    } else {
+                        this.emergencyMission = null; // No hay más lugar para murallas
+                    }
+                } else {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                }
+            } else if (this.emergencyMission === 'BUILD_TELESCOPE') {
+                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
+                    let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY);
+                    if (empty) {
+                        this.state = STATES.BUILDING_TELESCOPE;
+                        this.target = empty;
+                        return;
+                    }
+                } else if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
             } else if (this.emergencyMission === 'BRIDGE') {
                 if (this.inventory.wood >= 3) {
@@ -342,6 +428,14 @@ export class Agent {
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
+                } else if (this.state === STATES.SEEK_BOOK) {
+                    this.world.consumeResource(this.target.x, this.target.y);
+                    this.state = STATES.WANDERING;
+                    this.happyTimer = 10;
+                    // El evento modal es disparado desde main.js al detectar que el libro desaparece o por el inventario.
+                    // Para simplificar, main.js revisará si el agente se comió el libro comprobando this.branch
+                    // o usando una flag. Añadiremos una flag.
+                    this.bookFound = true; 
                 } else if (this.state === STATES.BUILDING_HOUSE) {
                     if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
                         this.world.setCell(this.target.x, this.target.y, RESOURCES.HOUSE);
@@ -353,6 +447,34 @@ export class Agent {
                     this.emergencyMission = null;
                     this.state = STATES.WANDERING;
                     this.happyTimer = 10;
+                } else if (this.state === STATES.RESTORING_HOUSE) {
+                    let homeCell = this.world.getCell(this.target.x, this.target.y);
+                    if (homeCell && homeCell.type === RESOURCES.HOUSE && homeCell.capacity < 10) {
+                        if (this.inventory.wood > 0) {
+                            this.inventory.wood--;
+                            homeCell.capacity = Math.min(10, homeCell.capacity + 5);
+                        }
+                    }
+                    this.emergencyMission = null;
+                    this.state = STATES.WANDERING;
+                    this.happyTimer = 5;
+                } else if (this.state === STATES.BUILDING_TELESCOPE) {
+                    if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
+                        this.world.setCell(this.target.x, this.target.y, RESOURCES.TELESCOPE);
+                        this.inventory.wood -= 2;
+                        this.inventory.rock -= 2;
+                        this.hasTelescope = true;
+                    }
+                    this.emergencyMission = null;
+                    this.state = STATES.WANDERING;
+                    this.happyTimer = 10;
+                } else if (this.state === STATES.BUILDING_WALL) {
+                    if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
+                        this.world.setCell(this.target.x, this.target.y, RESOURCES.WALL);
+                        this.inventory.wood--;
+                    }
+                    this.state = STATES.WANDERING;
+                    this.happyTimer = 5;
                 } else if (this.state === STATES.DEFENDING) {
                     this.state = STATES.WANDERING;
                 }

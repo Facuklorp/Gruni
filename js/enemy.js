@@ -14,7 +14,7 @@ export class Enemy {
         this.isAttacking = false;
     }
 
-    update(gruni) {
+    update(gruni, wolf = null) {
         this.isAttacking = false;
         if (this.hp <= 0) return;
 
@@ -25,18 +25,47 @@ export class Enemy {
         this.craft();
         
         if (this.swordDurability > 0) {
+            let wallTarget = this.world.findNearest(this.x, this.y, RESOURCES.WALL);
             let houseTarget = this.world.findNearest(this.x, this.y, RESOURCES.HOUSE);
-            if (houseTarget) {
-                // Asedio a la Casa
-                let distToHouse = Math.abs(this.x - houseTarget.x) + Math.abs(this.y - houseTarget.y);
-                if (distToHouse <= 1) {
+            
+            let primaryTarget = wallTarget || houseTarget;
+
+            if (wolf && wolf.hp > 0) {
+                let distToWolf = Math.abs(this.x - wolf.x) + Math.abs(this.y - wolf.y);
+                if (distToWolf <= 1) {
+                    this.isAttacking = true;
+                    if (Math.random() > 0.3) wolf.takeDamage(1);
+                    this.swordDurability--;
+                    return;
+                }
+            }
+
+            if (primaryTarget) {
+                // Asedio a la Muralla/Casa
+                let distToTarget = Math.abs(this.x - primaryTarget.x) + Math.abs(this.y - primaryTarget.y);
+                if (distToTarget <= 1) {
                     this.isAttacking = true;
                     if (Math.random() > 0.3) {
-                        this.world.consumeResource(houseTarget.x, houseTarget.y);
+                        this.world.consumeResource(primaryTarget.x, primaryTarget.y);
                     }
                     this.swordDurability--;
                 } else {
-                    this.moveTowards(houseTarget.x, houseTarget.y);
+                    let adjacentWall = null;
+                    let moves = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+                    for (let m of moves) {
+                        let cell = this.world.getCell(this.x+m.dx, this.y+m.dy);
+                        if (cell && cell.type === RESOURCES.WALL) {
+                            adjacentWall = {x: this.x+m.dx, y: this.y+m.dy};
+                            break;
+                        }
+                    }
+                    if (adjacentWall) {
+                        this.isAttacking = true;
+                        if (Math.random() > 0.3) this.world.consumeResource(adjacentWall.x, adjacentWall.y);
+                        this.swordDurability--;
+                    } else {
+                        this.moveTowards(primaryTarget.x, primaryTarget.y);
+                    }
                 }
             } else {
                 // Cazar a Gruni
@@ -48,7 +77,22 @@ export class Enemy {
                     }
                     this.swordDurability--;
                 } else {
-                    this.moveTowards(gruni.x, gruni.y);
+                    let adjacentWall = null;
+                    let moves = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+                    for (let m of moves) {
+                        let cell = this.world.getCell(this.x+m.dx, this.y+m.dy);
+                        if (cell && cell.type === RESOURCES.WALL) {
+                            adjacentWall = {x: this.x+m.dx, y: this.y+m.dy};
+                            break;
+                        }
+                    }
+                    if (adjacentWall) {
+                        this.isAttacking = true;
+                        if (Math.random() > 0.3) this.world.consumeResource(adjacentWall.x, adjacentWall.y);
+                        this.swordDurability--;
+                    } else {
+                        this.moveTowards(gruni.x, gruni.y);
+                    }
                 }
             }
         } else {

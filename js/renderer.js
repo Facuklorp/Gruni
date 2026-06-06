@@ -7,7 +7,7 @@ export class Renderer {
         this.ctx = canvas.getContext('2d');
     }
 
-    draw(world, agent, enemies) {
+    draw(world, agent, enemies, wolf = null, isEclipse = false) {
         this.ctx.fillStyle = '#020617';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -24,7 +24,16 @@ export class Renderer {
             }
         }
 
+        if (wolf) {
+            this.drawWolf(wolf);
+        }
+
         this.drawAgent(agent);
+
+        if (isEclipse) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
     }
 
     drawCell(x, y, cell) {
@@ -49,6 +58,9 @@ export class Renderer {
             case RESOURCES.WOOD: this.ctx.fillText('🌳', cx, cy - 2); break;
             case RESOURCES.ROCK: this.ctx.fillText('🪨', cx, cy - 2); break;
             case RESOURCES.HOUSE: this.ctx.fillText('🏠', cx, cy - 2); break;
+            case RESOURCES.BOOK: this.ctx.fillText('📖', cx, cy - 2); break;
+            case RESOURCES.TELESCOPE: this.ctx.fillText('🔭', cx, cy - 2); break;
+            case RESOURCES.WALL: this.ctx.fillText('🧱', cx, cy - 2); break;
             case RESOURCES.BRIDGE:
                 // Fondo de agua porque es un puente sobre ella
                 this.ctx.fillStyle = '#0f172a'; // O podrías usar un azul oscuro
@@ -194,6 +206,31 @@ export class Renderer {
         if (enemy.isAttacking) {
             this.ctx.font = '16px Arial';
             this.ctx.fillText('🗡️', px + 12, py);
+        }
+    }
+
+    drawWolf(wolf) {
+        if (wolf.hp <= 0) return;
+        let px = wolf.x * CELL_SIZE + CELL_SIZE / 2;
+        let py = wolf.y * CELL_SIZE + CELL_SIZE / 2;
+
+        this.ctx.font = '20px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('🐺', px, py - 2);
+
+        // Barra de vida del lobo
+        let barWidth = 16;
+        let segWidth = barWidth / 10;
+        this.ctx.fillStyle = '#475569';
+        this.ctx.fillRect(px - barWidth/2, py - 14, barWidth, 3);
+        
+        this.ctx.fillStyle = '#3b82f6'; // Azul
+        this.ctx.fillRect(px - barWidth/2, py - 14, segWidth * wolf.hp, 3);
+
+        if (wolf.isAttacking) {
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText('💥', px + 12, py);
         }
     }
 }
