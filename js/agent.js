@@ -50,6 +50,7 @@ export class Agent {
         
         // Timer to escape local minima
         this.wanderTimer = 0;
+        this.ignoreTarget = null;
 
         this.stuckTimer = 0;
         this.emergencyMission = null;
@@ -114,32 +115,21 @@ export class Agent {
         this.updateEmotion();
     }
 
-    craft() {
-        if (this.inventory.wood >= 5 && !this.home && this.emergencyMission !== 'BUILD_HOUSE') {
-            this.emergencyMission = 'BUILD_HOUSE';
-            this.happyTimer = 5;
-        }
-        if (this.inventory.wood >= 3 && this.inventory.bridges < 2) {
-            this.inventory.wood -= 3;
-            this.inventory.bridges++;
-            this.happyTimer = 5;
-            this.emergencyMission = null; 
-        }
-        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
-            this.inventory.wood -= 2;
-            this.inventory.rock -= 2;
-            this.swordDurability = this.branches.includes('BLACKSMITH') ? 15 : 5; // Herrería da más durabilidad
-            this.craftedFirstSword = true;
-            this.happyTimer = 5;
-            if (this.emergencyMission === 'SWORD') this.emergencyMission = null;
-        }
-        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
+    craft(type = null) {
+        if (type === 'PICKAXE' && this.inventory.wood >= 2 && this.inventory.rock >= 2) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
             this.inventory.pickaxes++;
             this.craftedFirstPickaxe = true;
             this.happyTimer = 10;
-            if (this.emergencyMission === 'PICKAXE') this.emergencyMission = null;
+            this.emergencyMission = null;
+        } else if (type === 'SWORD' && this.inventory.wood >= 2 && this.inventory.rock >= 2) {
+            this.inventory.wood -= 2;
+            this.inventory.rock -= 2;
+            this.swordDurability = this.branches.includes('BLACKSMITH') ? 15 : 5;
+            this.craftedFirstSword = true;
+            this.happyTimer = 5;
+            this.emergencyMission = null;
         }
     }
 
@@ -192,6 +182,9 @@ export class Agent {
         let enemyThreat = false;
         let targetEnemy = null;
         let closestDist = Infinity;
+        
+        let ix = this.ignoreTarget ? this.ignoreTarget.x : -1;
+        let iy = this.ignoreTarget ? this.ignoreTarget.y : -1;
 
         let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
         if (bookTarget && !enemyThreat && !this.emergencyMission && this.branches.length < 3) {
@@ -280,7 +273,7 @@ export class Agent {
         // Extreme Thirst/Hunger overrides emergency missions
         if (!enemyThreat) {
             if (this.thirst > 80) {
-                let wTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER);
+                let wTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER, ix, iy);
                 if (wTarget) {
                     this.state = STATES.SEEK_WATER;
                     this.target = wTarget;
@@ -288,7 +281,7 @@ export class Agent {
                 }
             }
             if (this.hunger > 80) {
-                let fTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD);
+                let fTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD, ix, iy);
                 if (fTarget) {
                     this.state = STATES.SEEK_FOOD;
                     this.target = fTarget;
@@ -314,19 +307,31 @@ export class Agent {
 
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
-            if (this.emergencyMission === 'SWORD') {
-                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
-                    this.emergencyMission = null; // Ya tenemos los mats, se crafteará en craft()
-                } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
-                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
-                } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+            if (this.emergencyMission === 'PICKAXE') {
+                if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                } else {
+                    this.craft('PICKAXE');
+                    return;
+                }
+            } else if (this.emergencyMission === 'SWORD') {
+                if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                } else {
+                    this.craft('SWORD');
+                    return;
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
                 if (this.inventory.wood < 5) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else {
                     let empty = this.world.findNearest2x2Empty(this.x, this.y);
@@ -344,7 +349,7 @@ export class Agent {
                     this.target = { x: this.home.x, y: this.home.y };
                     return;
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_WALLS') {
@@ -389,12 +394,6 @@ export class Agent {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
-            } else if (this.emergencyMission === 'PICKAXE') {
-                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
-                    this.emergencyMission = null;
-                } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
-                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else if (this.inventory.wood < 2) {
                     let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
@@ -462,6 +461,7 @@ export class Agent {
             let dist = Math.abs(this.x - this.target.x) + Math.abs(this.y - this.target.y);
             
             if (dist <= 1) {
+                this.ignoreTarget = null;
                 if (this.state === STATES.SEEK_WATER) {
                     this.thirst = Math.max(0, this.thirst - 50);
                     this.world.consumeResource(this.target.x, this.target.y);
@@ -498,10 +498,7 @@ export class Agent {
                 } else if (this.state === STATES.BUILDING_HOUSE) {
                     let tx = this.target.x;
                     let ty = this.target.y;
-                    if (this.world.getCell(tx, ty).type === RESOURCES.EMPTY &&
-                        this.world.getCell(tx+1, ty).type === RESOURCES.EMPTY &&
-                        this.world.getCell(tx, ty+1).type === RESOURCES.EMPTY &&
-                        this.world.getCell(tx+1, ty+1).type === RESOURCES.EMPTY) {
+                    if (this.isValidCoord(tx, ty) && this.isValidCoord(tx+1, ty+1)) {
                         if (this.inventory.wood >= 5) {
                             this.world.setCell(tx, ty, RESOURCES.HOUSE);
                             this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
@@ -598,12 +595,20 @@ export class Agent {
                         if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
                     }
                 } else if (this.stuckTimer > 3) {
+                    if (this.stuckTimer > 5) {
+                        this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                    }
                     this.wanderTimer = 8; // Escape the obstacle
                     this.stuckTimer = 0;
                 } else {
                     this.wander(); 
                 }
             } else {
+                if (this.stuckTimer > 5) {
+                    this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                }
+                this.wanderTimer = 8;
+                this.stuckTimer = 0;
                 this.wander();
             }
         } else {

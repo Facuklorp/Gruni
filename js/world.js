@@ -77,12 +77,13 @@ export class World {
         }
     }
 
-    findNearest(startX, startY, resourceType) {
+    findNearest(startX, startY, resourceType, ignoreX = -1, ignoreY = -1) {
         let nearest = null;
         let minDistance = Infinity;
 
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
+                if (x === ignoreX && y === ignoreY) continue;
                 if (this.grid[y][x].type === resourceType) {
                     let dist = Math.abs(x - startX) + Math.abs(y - startY);
                     if (dist < minDistance) {
