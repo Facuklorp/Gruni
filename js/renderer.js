@@ -14,8 +14,18 @@ export class Renderer {
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
                 let cell = world.getCell(x, y);
-                this.drawCell(x, y, cell);
+                this.drawCell(x, y, cell, agent);
             }
+        }
+
+        // Draw big house if exists
+        if (agent.home) {
+            let hx = agent.home.x * CELL_SIZE;
+            let hy = agent.home.y * CELL_SIZE;
+            this.ctx.font = `${CELL_SIZE * 1.8}px "Segoe UI Emoji"`;
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('🏠', hx + CELL_SIZE, hy + CELL_SIZE * 1.5 - 2);
+            this.ctx.font = '20px Arial';
         }
 
         if (enemies) {
@@ -36,7 +46,7 @@ export class Renderer {
         }
     }
 
-    drawCell(x, y, cell) {
+    drawCell(x, y, cell, agent) {
         if (!cell) return;
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
@@ -57,7 +67,20 @@ export class Renderer {
             case RESOURCES.WATER: this.ctx.fillText('💧', cx, cy - 2); break;
             case RESOURCES.WOOD: this.ctx.fillText('🌳', cx, cy - 2); break;
             case RESOURCES.ROCK: this.ctx.fillText('🪨', cx, cy - 2); break;
-            case RESOURCES.HOUSE: this.ctx.fillText('🏠', cx, cy - 2); break;
+            case RESOURCES.HOUSE: 
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                
+                let isAgentHome = false;
+                if (agent && agent.home) {
+                    if (x >= agent.home.x && x <= agent.home.x + 1 && y >= agent.home.y && y <= agent.home.y + 1) {
+                        isAgentHome = true;
+                    }
+                }
+                if (!isAgentHome) {
+                    this.ctx.fillText('🏠', cx, cy - 2);
+                }
+                break;
             case RESOURCES.BOOK: 
                 let time = Date.now() / 200;
                 let pulse = Math.abs(Math.sin(time)) * 4;

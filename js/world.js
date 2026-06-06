@@ -95,6 +95,28 @@ export class World {
         return nearest;
     }
 
+    findNearest2x2Empty(startX, startY) {
+        let nearest = null;
+        let minDistance = Infinity;
+
+        for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
+            for (let x = 0; x < WORLD_WIDTH - 1; x++) {
+                if (this.grid[y][x].type === RESOURCES.EMPTY &&
+                    this.grid[y][x+1].type === RESOURCES.EMPTY &&
+                    this.grid[y+1][x].type === RESOURCES.EMPTY &&
+                    this.grid[y+1][x+1].type === RESOURCES.EMPTY) {
+                    
+                    let dist = Math.abs(x - startX) + Math.abs(y - startY);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        nearest = {x, y};
+                    }
+                }
+            }
+        }
+        return nearest;
+    }
+
     regenLoop() {
         if (Math.random() < 0.1) { // 10% de probabilidad por tick (cada 500ms)
             let x = Math.floor(Math.random() * WORLD_WIDTH);

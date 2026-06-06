@@ -191,9 +191,24 @@ export class Agent {
         }
 
         if (this.home) {
-            let homeCell = this.world.getCell(this.home.x, this.home.y);
-            if (!homeCell || homeCell.type !== RESOURCES.HOUSE) {
-                this.home = null; // La casa fue destruida
+            let hx = this.home.x, hy = this.home.y;
+            let cells = [
+                this.world.getCell(hx, hy),
+                this.world.getCell(hx+1, hy),
+                this.world.getCell(hx, hy+1),
+                this.world.getCell(hx+1, hy+1)
+            ];
+            let houseExists = false;
+            let totalCap = 0;
+            for (let c of cells) {
+                if (c && c.type === RESOURCES.HOUSE) {
+                    houseExists = true;
+                    totalCap += c.capacity;
+                }
+            }
+
+            if (!houseExists) {
+                this.home = null; // La casa fue destruida totalmente
                 this.emotion = 'SAD';
             } else {
                 for (let e of enemies) {
@@ -209,20 +224,20 @@ export class Agent {
                         }
                     }
                 }
-                if (!enemyThreat && homeCell.capacity < 10) {
+                if (!enemyThreat && totalCap < 40) {
                     if (this.swordDurability === 0) {
                         if (this.emergencyMission !== 'SWORD') this.emergencyMission = 'SWORD';
                     } else {
                         if (this.emergencyMission !== 'RESTORE_HOUSE') this.emergencyMission = 'RESTORE_HOUSE';
                     }
                 } else if (this.emergencyMission === 'RESTORE_HOUSE') {
-                    if (enemyThreat || homeCell.capacity >= 10) {
+                    if (enemyThreat || totalCap >= 40) {
                         this.emergencyMission = null;
                     }
                 }
                 
                 // Eclipse preparation
-                if (!enemyThreat && this.branches.includes('ASTRONOMY') && this.hasTelescope && this.eclipseWarning && homeCell.capacity >= 10) {
+                if (!enemyThreat && this.branches.includes('ASTRONOMY') && this.hasTelescope && this.eclipseWarning && totalCap >= 40) {
                     this.emergencyMission = 'BUILD_WALLS';
                 }
             }
@@ -274,7 +289,7 @@ export class Agent {
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
-                let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY);
+                let empty = this.world.findNearest2x2Empty(this.x, this.y);
                 if (empty) { 
                     this.state = STATES.BUILDING_HOUSE; 
                     this.target = empty; 
@@ -436,10 +451,18 @@ export class Agent {
                     // o usando una flag. Añadiremos una flag.
                     this.bookFound = true; 
                 } else if (this.state === STATES.BUILDING_HOUSE) {
-                    if (this.world.getCell(this.target.x, this.target.y).type === RESOURCES.EMPTY) {
+                    let tx = this.target.x;
+                    let ty = this.target.y;
+                    if (this.world.getCell(tx, ty).type === RESOURCES.EMPTY &&
+                        this.world.getCell(tx+1, ty).type === RESOURCES.EMPTY &&
+                        this.world.getCell(tx, ty+1).type === RESOURCES.EMPTY &&
+                        this.world.getCell(tx+1, ty+1).type === RESOURCES.EMPTY) {
                         if (this.inventory.wood >= 5) {
-                            this.world.setCell(this.target.x, this.target.y, RESOURCES.HOUSE);
-                            this.home = {x: this.target.x, y: this.target.y};
+                            this.world.setCell(tx, ty, RESOURCES.HOUSE);
+                            this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
+                            this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
+                            this.world.setCell(tx+1, ty+1, RESOURCES.HOUSE);
+                            this.home = {x: tx, y: ty};
                             this.inventory.wood -= 5;
                         }
                     }
@@ -447,11 +470,20 @@ export class Agent {
                     this.state = STATES.WANDERING;
                     this.happyTimer = 10;
                 } else if (this.state === STATES.RESTORING_HOUSE) {
-                    let homeCell = this.world.getCell(this.target.x, this.target.y);
-                    if (homeCell && homeCell.type === RESOURCES.HOUSE && homeCell.capacity < 10) {
-                        if (this.inventory.wood > 0) {
-                            this.inventory.wood--;
-                            homeCell.capacity = Math.min(10, homeCell.capacity + 5);
+                    let hx = this.target.x, hy = this.target.y;
+                    let coords = [[hx, hy], [hx+1, hy], [hx, hy+1], [hx+1, hy+1]];
+                    if (this.inventory.wood > 0) {
+                        for (let [cx, cy] of coords) {
+                            let c = this.world.getCell(cx, cy);
+                            if (!c || c.type !== RESOURCES.HOUSE) {
+                                this.world.setCell(cx, cy, RESOURCES.HOUSE);
+                                this.inventory.wood--;
+                                if (this.inventory.wood === 0) break;
+                            } else if (c.capacity < 10) {
+                                c.capacity = Math.min(10, c.capacity + 5);
+                                this.inventory.wood--;
+                                if (this.inventory.wood === 0) break;
+                            }
                         }
                     }
                     this.emergencyMission = null;
