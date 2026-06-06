@@ -24,7 +24,7 @@ let bookSpawned = false;
 let bookCooldownTimer = 120; // Starts at 60 seconds
 
 const BRANCH_DESCRIPTIONS = {
-    'ASTRONOMY': '🔭 ASTRONOMÍA: Puede construir telescopios y murallas.',
+    'ASTRONOMY': '🔭 ASTRONOMÍA: Puede construir telescopios para predecir eclipses.',
     'BIOLOGY': '🐺 BIOLOGÍA: Gruni tiene una mascota lobo que lo ayuda.',
     'BLACKSMITH': '⚒️ HERRERÍA: Forja espadas más fuertes que duran más.'
 };

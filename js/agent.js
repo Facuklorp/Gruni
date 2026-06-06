@@ -248,9 +248,15 @@ export class Agent {
                     }
                 }
                 
-                // Eclipse preparation
-                if (!enemyThreat && this.branches.includes('ASTRONOMY') && this.hasTelescope && this.eclipseWarning && totalCap >= 40) {
-                    this.emergencyMission = 'BUILD_WALLS';
+                // Tareas de tiempo libre cuando la casa está en perfectas condiciones
+                if (!enemyThreat && totalCap >= 40) {
+                    if (!this.emergencyMission || this.emergencyMission === 'RESTORE_HOUSE') {
+                        if (this.branches.includes('ASTRONOMY') && !this.hasTelescope) {
+                            this.emergencyMission = 'BUILD_TELESCOPE';
+                        } else {
+                            this.emergencyMission = 'BUILD_WALLS';
+                        }
+                    }
                 }
             }
         }
@@ -265,11 +271,6 @@ export class Agent {
                     }
                 }
             }
-        }
-
-        // Proactive Telescope
-        if (!enemyThreat && this.branches.includes('ASTRONOMY') && !this.hasTelescope && !this.emergencyMission) {
-            this.emergencyMission = 'BUILD_TELESCOPE';
         }
 
         // Si la casa está bajo ataque y TENEMOS espada, defendemos
