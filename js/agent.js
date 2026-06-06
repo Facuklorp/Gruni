@@ -196,10 +196,17 @@ export class Agent {
         this.ignoreTarget = null;
 
         let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
-        if (bookTarget && !enemyThreat && !this.emergencyMission && this.branches.length < 3) {
-            this.state = STATES.SEEK_BOOK;
-            this.target = bookTarget;
-            return;
+        if (bookTarget && !enemyThreat && this.branches.length < 3) {
+            // Cancelar misiones secundarias si aparece un libro
+            if (this.emergencyMission === 'BUILD_WALLS' || this.emergencyMission === 'BUILD_TELESCOPE') {
+                this.emergencyMission = null;
+            }
+            
+            if (!this.emergencyMission) {
+                this.state = STATES.SEEK_BOOK;
+                this.target = bookTarget;
+                return;
+            }
         }
 
         if (this.home) {
