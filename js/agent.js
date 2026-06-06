@@ -325,11 +325,18 @@ export class Agent {
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
-                let empty = this.world.findNearest2x2Empty(this.x, this.y);
-                if (empty) { 
-                    this.state = STATES.BUILDING_HOUSE; 
-                    this.target = empty; 
-                    return; 
+                if (this.inventory.wood < 5) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else {
+                    let empty = this.world.findNearest2x2Empty(this.x, this.y);
+                    if (empty) { 
+                        this.state = STATES.BUILDING_HOUSE; 
+                        this.target = empty; 
+                        return; 
+                    } else {
+                        this.emergencyMission = null;
+                    }
                 }
             } else if (this.emergencyMission === 'RESTORE_HOUSE') {
                 if (this.inventory.wood >= 1) {
