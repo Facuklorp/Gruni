@@ -118,17 +118,19 @@ export class World {
     }
 
     regenLoop() {
-        if (Math.random() < 0.1) { // 10% de probabilidad por tick (cada 500ms)
-            let x = Math.floor(Math.random() * WORLD_WIDTH);
-            let y = Math.floor(Math.random() * WORLD_HEIGHT);
-            if (this.grid[y][x].type === RESOURCES.EMPTY) {
-                const r = Math.random();
-                let type = RESOURCES.FOOD; // 30% comida
-                if (r < 0.25) type = RESOURCES.WOOD; // 25% madera
-                else if (r < 0.50) type = RESOURCES.ROCK; // 25% roca
-                else if (r < 0.70) type = RESOURCES.WATER; // 20% agua
-                
-                this.setCell(x, y, type);
+        for (let i = 0; i < 2; i++) {
+            if (Math.random() < 0.2) { // 20% de probabilidad por intento
+                let x = Math.floor(Math.random() * WORLD_WIDTH);
+                let y = Math.floor(Math.random() * WORLD_HEIGHT);
+                if (this.grid[y][x].type === RESOURCES.EMPTY) {
+                    const r = Math.random();
+                    let type = RESOURCES.FOOD; // 30% comida
+                    if (r < 0.25) type = RESOURCES.WOOD; // 25% madera
+                    else if (r < 0.50) type = RESOURCES.ROCK; // 25% roca
+                    else if (r < 0.70) type = RESOURCES.WATER; // 20% agua
+                    
+                    this.setCell(x, y, type);
+                }
             }
         }
     }

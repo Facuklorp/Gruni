@@ -97,11 +97,11 @@ export class Enemy {
             }
         } else {
             // Fase de Crafteo (buscar materiales)
-            if (this.inventory.wood < 2) {
+            if (this.inventory.wood < 1) {
                 let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
                 if (w) this.moveAndGather(w.x, w.y, RESOURCES.WOOD);
                 else this.wander();
-            } else if (this.inventory.rock < 2) {
+            } else if (this.inventory.rock < 1) {
                 let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                 if (r) this.moveAndGather(r.x, r.y, RESOURCES.ROCK);
                 else this.wander();
@@ -112,9 +112,9 @@ export class Enemy {
     }
 
     craft() {
-        if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.swordDurability === 0) {
-            this.inventory.wood -= 2;
-            this.inventory.rock -= 2;
+        if (this.inventory.wood >= 1 && this.inventory.rock >= 1 && this.swordDurability === 0) {
+            this.inventory.wood -= 1;
+            this.inventory.rock -= 1;
             this.swordDurability = 5;
         }
     }
