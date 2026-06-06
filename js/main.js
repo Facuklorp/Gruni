@@ -124,10 +124,12 @@ function updateUI() {
         stateDesc = '¡Intrigado por un misterioso libro mágico!';
     }
     
-    if (stateDesc !== lastStateDesc) {
-        showDialogue(stateDesc, 15);
-        lastStateDesc = stateDesc;
+    if (dialogueTimer <= 0) {
+        dialogueText.innerText = stateDesc || "...";
+        dialogueBubble.style.display = 'block';
     }
+    
+    lastStateDesc = stateDesc;
     
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
@@ -174,35 +176,23 @@ function updateUI() {
     }
 
     // Telescopio
-    if (agent.branches.includes('ASTRONOMY')) {
-        statTelescope.style.display = 'block';
-        if (agent.hasTelescope) {
-            craftTeleW.innerText = '2';
-            craftTeleR.innerText = '2';
-            barCraftTele.style.width = '100%';
-            barCraftTele.style.background = '#22c55e';
-        } else {
-            let tw = Math.min(agent.inventory.wood, 2);
-            let tr = Math.min(agent.inventory.rock, 2);
-            craftTeleW.innerText = tw;
-            craftTeleR.innerText = tr;
-            barCraftTele.style.width = `${((tw + tr) / 4) * 100}%`;
-            barCraftTele.style.background = '#3b82f6';
-        }
+    let tw = Math.min(agent.inventory.wood, 2);
+    let tr = Math.min(agent.inventory.rock, 2);
+    craftTeleW.innerText = tw;
+    craftTeleR.innerText = tr;
+    if (agent.hasTelescope) {
+        barCraftTele.style.width = '100%';
+        barCraftTele.style.background = '#22c55e';
     } else {
-        statTelescope.style.display = 'none';
+        barCraftTele.style.width = `${((tw + tr) / 4) * 100}%`;
+        barCraftTele.style.background = '#3b82f6';
     }
 
     // Muralla
-    if (agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
-        statWall.style.display = 'block';
-        let ww = Math.min(agent.inventory.wood, 1);
-        craftWallW.innerText = ww;
-        barCraftWall.style.width = `${ww * 100}%`;
-        barCraftWall.style.background = agent.emergencyMission === 'BUILD_WALLS' ? '#f43f5e' : '#64748b';
-    } else {
-        statWall.style.display = 'none';
-    }
+    let ww = Math.min(agent.inventory.wood, 1);
+    craftWallW.innerText = ww;
+    barCraftWall.style.width = `${ww * 100}%`;
+    barCraftWall.style.background = agent.emergencyMission === 'BUILD_WALLS' ? '#f43f5e' : '#64748b';
 }
 
 function gameLoop(timestamp) {
@@ -211,9 +201,6 @@ function gameLoop(timestamp) {
             
             if (dialogueTimer > 0) {
                 dialogueTimer--;
-                if (dialogueTimer === 0) {
-                    dialogueBubble.style.display = 'none';
-                }
             }
 
             let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120; // 20 ticks of warning (10 segundos)
