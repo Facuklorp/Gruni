@@ -48,7 +48,10 @@ export class Agent {
         this.happyTimer = 0;
 
         this.stuckTimer = 0;
-        this.emergencyMission = null; // 'BRIDGE', 'PICKAXE' o 'BUILD_HOUSE'
+        this.emergencyMission = null;
+        this.craftedFirstPickaxe = false;
+        this.craftedFirstSword = false;
+        this.craftedFirstBridge = false;
         this.home = null;
         
         this.branches = []; 
@@ -122,14 +125,23 @@ export class Agent {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
             this.swordDurability = this.branches.includes('BLACKSMITH') ? 15 : 5; // Herrería da más durabilidad
+            this.craftedFirstSword = true;
             this.happyTimer = 5;
         }
         if (this.inventory.wood >= 2 && this.inventory.rock >= 2 && this.inventory.pickaxes < 2) {
             this.inventory.wood -= 2;
             this.inventory.rock -= 2;
             this.inventory.pickaxes++;
-            this.happyTimer = 5;
-            this.emergencyMission = null; 
+            this.craftedFirstPickaxe = true;
+            this.happyTimer = 10;
+        }
+
+        if (this.inventory.wood >= 1 && this.inventory.rock >= 2 && this.inventory.bridges < 2) {
+            this.inventory.wood -= 1;
+            this.inventory.rock -= 2;
+            this.inventory.bridges++;
+            this.craftedFirstBridge = true;
+            this.happyTimer = 10;
         }
     }
 
@@ -279,14 +291,14 @@ export class Agent {
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
             if (this.emergencyMission === 'SWORD') {
-                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
+                if (this.inventory.wood >= 1 && this.inventory.rock >= 3) {
                     this.emergencyMission = null; // Ya tenemos los mats, se crafteará en craft()
-                } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
-                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
-                } else if (this.inventory.rock < 2) {
+                } else if (this.inventory.rock < 3) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                } else if (this.inventory.wood < 1) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
                 let empty = this.world.findNearest2x2Empty(this.x, this.y);
@@ -344,21 +356,24 @@ export class Agent {
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
             } else if (this.emergencyMission === 'BRIDGE') {
-                if (this.inventory.wood >= 3) {
+                if (this.inventory.wood >= 1 && this.inventory.rock >= 2) {
                     this.emergencyMission = null; 
-                } else {
+                } else if (this.inventory.rock < 2) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                } else if (this.inventory.wood < 1) {
                     let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'PICKAXE') {
                 if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
                     this.emergencyMission = null;
-                } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
-                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                } else if (this.inventory.wood < 2) {
+                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             }
         }

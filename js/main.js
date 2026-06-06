@@ -18,13 +18,14 @@ const controls = new GodControls(world, canvas, enemies);
 let gamePaused = false;
 let eclipseTimer = 0;
 let isEclipse = false;
+let firstEnemySpawned = false;
+let lastStateDesc = '';
 let bookSpawned = false;
 
 // Elementos de la UI
 const barHunger = document.getElementById('bar-hunger');
 const barThirst = document.getElementById('bar-thirst');
 const barHp = document.getElementById('bar-hp');
-const stateText = document.getElementById('agent-state');
 const invWood = document.getElementById('inv-wood');
 const invRock = document.getElementById('inv-rock');
 const invBridges = document.getElementById('inv-bridges');
@@ -116,7 +117,12 @@ function updateUI() {
     } else if (agent.state === STATES.SEEK_BOOK) {
         stateDesc = '¡Intrigado por un misterioso libro mágico!';
     }
-    stateText.innerText = stateDesc;
+    
+    if (stateDesc !== lastStateDesc) {
+        showDialogue(stateDesc, 15);
+        lastStateDesc = stateDesc;
+    }
+    
     invWood.innerText = agent.inventory.wood;
     invRock.innerText = agent.inventory.rock;
     invBridges.innerText = agent.inventory.bridges;
@@ -199,44 +205,49 @@ function gameLoop(timestamp) {
             }
 
             // Eclipse logic (Ciclo de 70 segundos: 50s luz, 20s eclipse)
-            eclipseTimer++;
+            if (firstEnemySpawned) {
+                eclipseTimer++;
 
-            if (eclipseTimer === 80 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
-                showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
-            }
+                if (eclipseTimer === 80 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
+                    showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
+                }
 
-            if (eclipseTimer === 100) { 
-                isEclipse = true;
-                
-                // Spawn inmediato de 2 enemigos al comenzar el eclipse
-                let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-                let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
-                enemies.push(new Enemy(world, edgeX, edgeY));
-                
-                let edgeX2 = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-                let edgeY2 = Math.floor(Math.random() * WORLD_HEIGHT);
-                enemies.push(new Enemy(world, edgeX2, edgeY2));
+                if (eclipseTimer === 100) { 
+                    isEclipse = true;
+                    
+                    // Spawn inmediato de 2 enemigos al comenzar el eclipse
+                    let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
+                    let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
+                    enemies.push(new Enemy(world, edgeX, edgeY));
+                    
+                    let edgeX2 = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
+                    let edgeY2 = Math.floor(Math.random() * WORLD_HEIGHT);
+                    enemies.push(new Enemy(world, edgeX2, edgeY2));
 
-                if (!agent.branches.includes('ASTRONOMY')) {
-                    showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
+                    if (!agent.branches.includes('ASTRONOMY')) {
+                        showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
+                    }
+                }
+                if (eclipseTimer >= 140) { 
+                    isEclipse = false;
+                    eclipseTimer = 0;
                 }
             }
-            if (eclipseTimer >= 140) { 
-                isEclipse = false;
-                eclipseTimer = 0;
-            }
 
-            spawnTimer++;
-            let spawnRate = isEclipse ? 20 : 60; // Más rápido en eclipse (10 seg), normal (30 seg)
-            if (spawnTimer >= spawnRate) { 
-                spawnTimer = 0;
-                let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-                let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
-                enemies.push(new Enemy(world, edgeX, edgeY));
+            if (agent.branches.length > 0) {
+                spawnTimer++;
+                let spawnRate = isEclipse ? 20 : 60; // Más rápido en eclipse (10 seg), normal (30 seg)
+                if (spawnTimer >= spawnRate) { 
+                    spawnTimer = 0;
+                    let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
+                    let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
+                    enemies.push(new Enemy(world, edgeX, edgeY));
+                    firstEnemySpawned = true;
+                }
             }
             
-            // Spawn del libro
-            if (!bookSpawned && Math.random() < 0.05 && agent.branches.length < 3) { 
+            // Spawn del libro (sólo si tiene casa)
+            if (!bookSpawned && agent.home && Math.random() < 0.05 && agent.branches.length < 3) { 
                 let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
                 let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
                 if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
