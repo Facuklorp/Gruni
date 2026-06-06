@@ -573,10 +573,10 @@ export class Agent {
         let oldX = this.x;
         let oldY = this.y;
 
-        if (this.x < tx && this.tryStep(this.x + 1, this.y)) this.x++;
-        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) this.x--;
-        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) this.y++;
-        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) this.y--;
+        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.stepOnCell(this.x, this.y); }
+        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.stepOnCell(this.x, this.y); }
+        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.stepOnCell(this.x, this.y); }
+        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.stepOnCell(this.x, this.y); }
 
         if (this.x === oldX && this.y === oldY) {
             this.stuckTimer++;
@@ -629,8 +629,17 @@ export class Agent {
         if (!this.isValidCoord(nx, ny)) return false;
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
-        if (cell.type === RESOURCES.ROCK || cell.type === RESOURCES.WATER) return false;
+        if (cell.type === RESOURCES.ROCK) return false;
+        // Water is walkable - agent drinks it when stepping on it
         return true;
+    }
+
+    stepOnCell(nx, ny) {
+        let cell = this.world.getCell(nx, ny);
+        if (cell && cell.type === RESOURCES.WATER) {
+            this.thirst = Math.max(0, this.thirst - 20);
+            this.world.consumeResource(nx, ny);
+        }
     }
 
     isValidCoord(x, y) {
@@ -652,6 +661,7 @@ export class Agent {
             if (this.tryStep(nx, ny)) {
                 this.x = nx;
                 this.y = ny;
+                this.stepOnCell(nx, ny);
                 break;
             }
         }
