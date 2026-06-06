@@ -264,14 +264,6 @@ export class Agent {
             this.emergencyMission = 'BUILD_TELESCOPE';
         }
 
-        // Prioridad: Siempre tener una espada lista (ya sea que haya amenaza o no)
-        if (this.swordDurability === 0 && 
-            this.emergencyMission !== 'BUILD_HOUSE' && 
-            this.emergencyMission !== 'PICKAXE' && 
-            this.emergencyMission !== 'SWORD') {
-            this.emergencyMission = 'SWORD';
-        }
-
         // Si la casa está bajo ataque y TENEMOS espada, defendemos
         if (targetEnemy && this.swordDurability > 0) {
             this.state = STATES.DEFENDING;
@@ -297,12 +289,12 @@ export class Agent {
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
             if (this.emergencyMission === 'SWORD') {
-                if (this.inventory.wood >= 1 && this.inventory.rock >= 3) {
+                if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
                     this.emergencyMission = null; // Ya tenemos los mats, se crafteará en craft()
-                } else if (this.inventory.rock < 3) {
+                } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
-                } else if (this.inventory.wood < 1) {
+                } else if (this.inventory.wood < 2) {
                     let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
@@ -563,20 +555,6 @@ export class Agent {
                         this.stuckTimer = 0;
                     } else if (this.stuckTimer > 2) {
                         this.emergencyMission = 'PICKAXE';
-                        this.wander();
-                    }
-                } else if (cell && cell.type === RESOURCES.WATER) {
-                    if (this.inventory.bridges > 0) {
-                        if (!(this.state === STATES.SEEK_WATER && this.target && this.target.x === nx && this.target.y === ny)) {
-                            this.inventory.bridges--;
-                            this.world.setCell(nx, ny, RESOURCES.BRIDGE);
-                            this.happyTimer = 5;
-                            this.stuckTimer = 0;
-                        } else {
-                            this.wander(); 
-                        }
-                    } else if (this.stuckTimer > 2) {
-                        this.emergencyMission = 'BRIDGE';
                         this.wander();
                     }
                 } else {
