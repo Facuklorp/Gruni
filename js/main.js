@@ -63,7 +63,15 @@ const barCraftHouse = document.getElementById('bar-craft-house');
 
 let lastTime = 0;
 let spawnTimer = 0;
-const TICK_RATE = 500; // Milisegundos por cada tick lógico del agente
+let currentTickRate = 500; // Milisegundos por cada tick lógico del agente
+
+document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentTickRate = parseInt(e.target.dataset.speed);
+    });
+});
 
 const modal = document.getElementById('book-modal');
 const branchText = document.getElementById('agent-branch');
@@ -229,7 +237,7 @@ function updateUI() {
 }
 
 function gameLoop(timestamp) {
-    if (timestamp - lastTime >= TICK_RATE) {
+    if (timestamp - lastTime >= currentTickRate) {
         if (!gamePaused) {
             
             if (dialogueTimer > 0) {
