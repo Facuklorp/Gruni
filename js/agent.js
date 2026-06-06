@@ -196,7 +196,7 @@ export class Agent {
         let closestDist = Infinity;
 
         let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
-        if (bookTarget && !enemyThreat && this.branches.length < 3) {
+        if (bookTarget && !enemyThreat && !this.emergencyMission && this.branches.length < 3) {
             this.state = STATES.SEEK_BOOK;
             this.target = bookTarget;
             return;

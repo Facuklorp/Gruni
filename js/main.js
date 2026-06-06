@@ -21,6 +21,7 @@ let isEclipse = false;
 let firstEnemySpawned = false;
 let lastStateDesc = '';
 let bookSpawned = false;
+let bookCooldownTimer = 0;
 
 // Elementos de la UI
 const barHunger = document.getElementById('bar-hunger');
@@ -188,11 +189,14 @@ function gameLoop(timestamp) {
             
             agent.update(enemies, eclipseWarning);
 
+            if (bookCooldownTimer > 0) bookCooldownTimer--;
+
             if (agent.bookFound && agent.branches.length < 3) {
                 gamePaused = true;
                 modal.style.display = 'flex';
                 agent.bookFound = false; // Reset to avoid infinite loop
                 bookSpawned = false; // Allow a new book to spawn later
+                bookCooldownTimer = 180; // 90 seconds cooldown
             }
 
             if (wolf) wolf.update(agent, enemies);
@@ -246,8 +250,8 @@ function gameLoop(timestamp) {
                 }
             }
             
-            // Spawn del libro (sólo si tiene casa)
-            if (!bookSpawned && agent.home && Math.random() < 0.05 && agent.branches.length < 3) { 
+            // Spawn del libro (sólo si tiene casa y no hay cooldown)
+            if (!bookSpawned && agent.home && bookCooldownTimer === 0 && Math.random() < 0.05 && agent.branches.length < 3) { 
                 let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
                 let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
                 if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
