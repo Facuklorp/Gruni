@@ -117,7 +117,16 @@ function updateUI() {
     
     let stateDesc = agent.state;
     if (agent.state === STATES.SEEK_WOOD || agent.state === STATES.SEEK_ROCK) {
-        stateDesc += ' para hacer una herramienta';
+        let purpose = 'guardar en el inventario';
+        switch (agent.emergencyMission) {
+            case 'PICKAXE': purpose = 'hacer un Pico'; break;
+            case 'SWORD': purpose = 'forjar una Espada'; break;
+            case 'BUILD_HOUSE': purpose = 'construir su Casa'; break;
+            case 'RESTORE_HOUSE': purpose = 'reparar su Casa'; break;
+            case 'BUILD_TELESCOPE': purpose = 'construir un Telescopio'; break;
+            case 'BUILD_WALLS': purpose = 'construir Murallas'; break;
+        }
+        stateDesc += ` para ${purpose}`;
     } else if (agent.state === STATES.SEEK_FOOD) {
         stateDesc += ' para comer';
     } else if (agent.state === STATES.SEEK_WATER) {
