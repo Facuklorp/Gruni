@@ -192,6 +192,8 @@ export class Agent {
         
         let ix = this.ignoreTarget ? this.ignoreTarget.x : -1;
         let iy = this.ignoreTarget ? this.ignoreTarget.y : -1;
+        // Clear ignoreTarget after one decision cycle so it doesn't permanently block
+        this.ignoreTarget = null;
 
         let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
         if (bookTarget && !enemyThreat && !this.emergencyMission && this.branches.length < 3) {
@@ -323,6 +325,8 @@ export class Agent {
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
                     this.craft('PICKAXE');
+                    this.state = STATES.WANDERING;
+                    this.target = null;
                     return;
                 }
             } else if (this.emergencyMission === 'SWORD') {
@@ -334,6 +338,8 @@ export class Agent {
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
                     this.craft('SWORD');
+                    this.state = STATES.WANDERING;
+                    this.target = null;
                     return;
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
