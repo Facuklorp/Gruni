@@ -279,6 +279,21 @@ export class Agent {
             return;
         }
 
+        // Secuencia Tutorial
+        if (!this.emergencyMission) {
+            if (!this.craftedFirstPickaxe) {
+                if (this.inventory.pickaxes === 0) this.emergencyMission = 'PICKAXE';
+                else this.craftedFirstPickaxe = true;
+            } else if (!this.craftedFirstSword) {
+                if (this.swordDurability === 0) this.emergencyMission = 'SWORD';
+                else this.craftedFirstSword = true;
+            } else if (!this.home) {
+                this.emergencyMission = 'BUILD_HOUSE';
+            } else if (this.branches.length > 0 && this.swordDurability === 0) {
+                this.emergencyMission = 'SWORD';
+            }
+        }
+
         // MODO EMERGENCIA: Si estamos atrapados y necesitamos herramientas
         if (this.emergencyMission) {
             if (this.emergencyMission === 'SWORD') {
