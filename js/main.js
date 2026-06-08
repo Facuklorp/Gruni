@@ -340,11 +340,11 @@ function gameLoop(timestamp) {
             world.regenLoop(agent);
             agent.updateEmotion(enemies);
         }
-        renderer.draw(world, agent, enemies, wolf, isEclipse);
         updateUI();
         lastTime = timestamp;
     }
     
+    renderer.draw(world, agent, enemies, wolf, isEclipse, timestamp);
     requestAnimationFrame(gameLoop);
 }
 
