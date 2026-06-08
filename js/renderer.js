@@ -462,156 +462,63 @@ export class Renderer {
     }
 
     drawEntity(entity, type, timestamp = 0) {
-        let walkSwing = Math.sin(entity.x * 10) * 4; 
-        if (timestamp === 0) walkSwing = 0; // Animación de idle o movimiento
-
-        if (type === 'agent' && this.images && this.images.agent) {
-            let px = entity.x * CELL_SIZE;
-            let py = entity.y * CELL_SIZE;
-            let cx = px + CELL_SIZE / 2;
-            let cy = py + CELL_SIZE / 2;
-
-            // Sombra
-            this.drawShadow(cx, cy + 14, 10, 4);
-            
-            let hover = Math.sin((timestamp||0) * 0.005) * 2;
-            
-            // Draw agent sprite
-            this.ctx.drawImage(this.images.agent, px - 5, py - 15 + hover, CELL_SIZE + 10, CELL_SIZE + 15);
-            return;
-        }
-
         if (type !== 'agent' && entity.hp <= 0) return;
 
-        let cx = entity.x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = entity.y * CELL_SIZE + CELL_SIZE / 2;
-        
+        let px = entity.x * CELL_SIZE;
+        let py = entity.y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        let cy = py + CELL_SIZE / 2;
         let t = timestamp || 0;
-        let walkCycle = Math.sin(t * 0.01 + cx * 10);
         let breathe = Math.sin(t * 0.005 + cx) * 1.5;
 
-        // Shadow
-        this.drawShadow(cx, cy + 12, type === 'wolf' ? 14 : 10, 5);
-
-        this.ctx.save();
-        this.ctx.translate(cx, cy);
-        
-        let outline = '#0f172a'; // Dark outline
-        this.ctx.lineJoin = 'round';
-
-        let drawPart = (pathFn, fillStyle) => {
-            this.ctx.beginPath();
-            pathFn();
-            this.ctx.fillStyle = fillStyle;
-            this.ctx.fill();
-            this.ctx.lineWidth = 2.5 / ZOOM;
-            this.ctx.strokeStyle = outline;
-            this.ctx.stroke();
-        };
-
-        if (type === 'wolf') {
-            let bodyColor = '#94a3b8';
-            let furColor = '#cbd5e1';
-            let tailSwing = Math.sin(t * 0.01) * 3;
-            
-            // Patas traseras (atrás)
-            drawPart(() => { this.ctx.roundRect(-8, 8, 4, 8, 2); }, bodyColor);
-            drawPart(() => { this.ctx.roundRect(4, 8, 4, 8, 2); }, bodyColor);
-
-            // Cola
-            this.ctx.save();
-            this.ctx.translate(-12, 0);
-            this.ctx.rotate(tailSwing * 0.1);
-            drawPart(() => { this.ctx.ellipse(-6, 4, 8, 3, Math.PI/4, 0, Math.PI*2); }, bodyColor);
-            this.ctx.restore();
-
-            // Cuerpo
-            drawPart(() => { this.ctx.ellipse(0, 2 + breathe*0.5, 14, 10, 0, 0, Math.PI*2); }, furColor);
-            
-            // Cabeza
-            drawPart(() => { this.ctx.arc(10, -4 + breathe*0.5, 7, 0, Math.PI*2); }, furColor);
-            // Hocico
-            drawPart(() => { this.ctx.ellipse(16, -2 + breathe*0.5, 5, 3, 0, 0, Math.PI*2); }, '#e2e8f0');
-            // Nariz
-            this.ctx.fillStyle = outline;
-            this.ctx.beginPath(); this.ctx.arc(20, -3 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
-            // Oreja
-            drawPart(() => { this.ctx.moveTo(8, -10 + breathe*0.5); this.ctx.lineTo(12, -16 + breathe*0.5); this.ctx.lineTo(14, -8 + breathe*0.5); this.ctx.closePath(); }, bodyColor);
-            
-            // Patas delanteras (frente)
-            drawPart(() => { this.ctx.roundRect(-4, 10, 4, 8, 2); }, furColor);
-            drawPart(() => { this.ctx.roundRect(8, 10, 4, 8, 2); }, furColor);
-
-            // Ojo
-            this.ctx.fillStyle = outline;
-            this.ctx.beginPath(); this.ctx.arc(12, -5 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
-
-            // Mordida si ataca
-            if (entity.isAttacking) {
-                this.ctx.shadowColor = '#3b82f6';
-                this.ctx.shadowBlur = 10;
-                drawPart(() => { this.ctx.arc(24, -2 + breathe*0.5, 5, 0, Math.PI*2); }, 'rgba(59, 130, 246, 0.8)');
-                this.ctx.shadowBlur = 0;
-            }
-
-            // HP Bar
-            this.ctx.translate(0, -22);
-            this.drawHpBar(entity.hp, 10, '#3b82f6');
-            
         if (type === 'agent') {
-            let px = entity.x * CELL_SIZE;
-            let py = entity.y * CELL_SIZE;
-            let cx = px + CELL_SIZE / 2;
-            let cy = py + CELL_SIZE / 2;
-
             this.drawShadow(cx, cy + 14, 10, 4);
 
-            let t = timestamp || 0;
-            // Alternar frame entre 0 y 1 para la animación de caminar
             let frame = (Math.floor(entity.animationTimer / 2)) % 2; 
+            let img = this.images && this.images.agent_basicas ? this.images.agent_basicas : null;
+            let imgAcciones = this.images && this.images.agent_acciones ? this.images.agent_acciones : null;
             
-            let img = this.images.agent_basicas;
-            let sx = 512, sy = 512, sw = 256, sh = 512; // Default: Contento (Idle)
-            
-            if (entity.isAttacking || entity.state === '¡Defendiendo Casa!') {
-                img = this.images.agent_acciones;
-                sx = 0; sy = 512; sw = 1024; sh = 512; // Atacando
-            } else if (entity.state === 'Talando' || (entity.state === 'Recolectando' && entity.lastGathered === 'WOOD') || entity.state === 'Construyendo Casa' || entity.state === 'Restaurando Casa' || entity.state === 'Construyendo Muralla' || entity.state === 'Construyendo Telescopio') {
-                img = this.images.agent_acciones;
-                sx = 0; sy = 1024; sw = 512; sh = 512; // Talando
-            } else if (entity.state === 'Picando' || (entity.state === 'Recolectando' && entity.lastGathered === 'ROCK')) {
-                img = this.images.agent_acciones;
-                sx = 512; sy = 1024; sw = 512; sh = 512; // Picando
-            } else if (entity.happyTimer > 0) {
-                img = this.images.agent_basicas;
-                sx = 768; sy = 0; sw = 256; sh = 512; // Saltando
-            } else {
-                let isMoving = (entity.target !== null && entity.state.startsWith('Buscando'));
-                if (isMoving || entity.state === 'Deambulando' && entity.wanderTimer === 0) {
-                    if (entity.state === 'Buscando Agua') {
-                        img = this.images.agent_acciones;
-                        sx = 1024 + (frame * 512); sy = 0; sw = 512; sh = 512; // Con balde
-                    } else if (entity.state === 'Buscando Comida') {
-                        img = this.images.agent_acciones;
-                        sx = 1024 + (frame * 512); sy = 512; sw = 512; sh = 512; // Con canasta
-                    } else {
-                        img = this.images.agent_basicas;
-                        sx = frame * 256; sy = 0; sw = 256; sh = 512; // Caminando normal
-                    }
+            if (img && imgAcciones) {
+                let sx = 512, sy = 512, sw = 256, sh = 512; // Default
+                let activeImg = img;
+                
+                if (entity.isAttacking || entity.state === '¡Defendiendo Casa!') {
+                    activeImg = imgAcciones;
+                    sx = 0; sy = 512; sw = 1024; sh = 512; 
+                } else if (entity.state === 'Talando' || (entity.state === 'Recolectando' && entity.lastGathered === 'WOOD') || entity.state === 'Construyendo Casa' || entity.state === 'Restaurando Casa' || entity.state === 'Construyendo Muralla' || entity.state === 'Construyendo Telescopio') {
+                    activeImg = imgAcciones;
+                    sx = 0; sy = 1024; sw = 512; sh = 512;
+                } else if (entity.state === 'Picando' || (entity.state === 'Recolectando' && entity.lastGathered === 'ROCK')) {
+                    activeImg = imgAcciones;
+                    sx = 512; sy = 1024; sw = 512; sh = 512;
+                } else if (entity.happyTimer > 0) {
+                    activeImg = img;
+                    sx = 768; sy = 0; sw = 256; sh = 512;
                 } else {
-                    img = this.images.agent_basicas;
-                    if (entity.emotion === 'SAD') { sx = 256; sy = 512; sw = 256; sh = 512; }
-                    else if (entity.emotion === 'ANGRY') { sx = 0; sy = 512; sw = 256; sh = 512; }
-                    else if (entity.stuckTimer > 0) { sx = 768; sy = 512; sw = 256; sh = 512; } // Pensando si se atasca
-                    else { sx = 512; sy = 512; sw = 256; sh = 512; } // Neutral
+                    let isMoving = (entity.target !== null && entity.state.startsWith('Buscando'));
+                    if (isMoving || (entity.state === 'Deambulando' && entity.wanderTimer === 0)) {
+                        if (entity.state === 'Buscando Agua') {
+                            activeImg = imgAcciones;
+                            sx = 1024 + (frame * 512); sy = 0; sw = 512; sh = 512;
+                        } else if (entity.state === 'Buscando Comida') {
+                            activeImg = imgAcciones;
+                            sx = 1024 + (frame * 512); sy = 512; sw = 512; sh = 512;
+                        } else {
+                            activeImg = img;
+                            sx = frame * 256; sy = 0; sw = 256; sh = 512;
+                        }
+                    } else {
+                        activeImg = img;
+                        if (entity.emotion === 'SAD') { sx = 256; sy = 512; sw = 256; sh = 512; }
+                        else if (entity.emotion === 'ANGRY') { sx = 0; sy = 512; sw = 256; sh = 512; }
+                        else if (entity.stuckTimer > 0) { sx = 768; sy = 512; sw = 256; sh = 512; }
+                        else { sx = 512; sy = 512; sw = 256; sh = 512; }
+                    }
                 }
-            }
 
-            if (img) {
                 this.ctx.save();
                 this.ctx.translate(cx, cy);
                 
-                // Efecto espejo según la dirección de movimiento
                 if (entity.dx === -1) {
                     this.ctx.scale(-1, 1);
                 }
@@ -620,79 +527,124 @@ export class Renderer {
                 let drawH = 68;
                 let offsetY = -15;
 
-                if (img === this.images.agent_acciones) {
+                if (activeImg === imgAcciones) {
                     drawW = 68;
                     drawH = 68;
-                    if (sw === 1024) {
-                        drawW = 136; // Espada es ancha
-                    }
+                    if (sw === 1024) drawW = 136;
                 }
 
-                // Recortar texto inferio (un 15% del alto)
                 let cropH = sh * 0.85; 
                 let renderH = drawH * 0.85;
                 
                 let drawX = -drawW / 2;
-                if (sw === 1024) drawX = -drawW / 4; // Ajuste para la espada
+                if (sw === 1024) drawX = -drawW / 4;
 
-                let hover = Math.sin((timestamp||0) * 0.005) * 2;
-                
-                this.ctx.drawImage(img, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover, drawW, renderH);
-
+                let hover = Math.sin(t * 0.005) * 2;
+                this.ctx.drawImage(activeImg, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover, drawW, renderH);
                 this.ctx.restore();
             }
         } else {
-            // Humanoids (Enemy)
-            let isAgent = false;
-            let skinColor = '#d8b4fe'; 
-            let shirtColor = '#7e22ce'; 
-            let pantsColor = '#4c1d95'; 
+            // Lobo o Enemigo
+            this.drawShadow(cx, cy + 12, type === 'wolf' ? 14 : 10, 5);
+
+            this.ctx.save();
+            this.ctx.translate(cx, cy);
             
-            let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
+            let outline = '#0f172a';
+            this.ctx.lineJoin = 'round';
 
-            // Pierna Izquierda (Atrás)
-            drawPart(() => { this.ctx.roundRect(-6, 6 - legSwing, 5, 8, 2); }, pantsColor);
-            
-            // Brazo Izquierdo (Atrás)
-            drawPart(() => { this.ctx.roundRect(-8, 0 + legSwing, 4, 7, 2); }, skinColor);
+            let drawPart = (pathFn, fillStyle) => {
+                this.ctx.beginPath();
+                pathFn();
+                this.ctx.fillStyle = fillStyle;
+                this.ctx.fill();
+                this.ctx.lineWidth = 2.5 / ZOOM;
+                this.ctx.strokeStyle = outline;
+                this.ctx.stroke();
+            };
 
-            // Torso (Enterizo)
-            drawPart(() => { 
-                this.ctx.moveTo(-7, -4 + breathe);
-                this.ctx.lineTo(7, -4 + breathe);
-                this.ctx.lineTo(6, 8 + breathe);
-                this.ctx.lineTo(-6, 8 + breathe);
-                this.ctx.closePath();
-            }, shirtColor);
+            let walkCycle = Math.sin(t * 0.01 + cx * 10);
 
-            // Cabeza
-            drawPart(() => { this.ctx.arc(0, -12 + breathe, 8, 0, Math.PI*2); }, skinColor);
+            if (type === 'wolf') {
+                let bodyColor = '#94a3b8';
+                let furColor = '#cbd5e1';
+                let tailSwing = Math.sin(t * 0.01) * 3;
+                
+                drawPart(() => { this.ctx.roundRect(-8, 8, 4, 8, 2); }, bodyColor);
+                drawPart(() => { this.ctx.roundRect(4, 8, 4, 8, 2); }, bodyColor);
 
-            // Cuernos enemigo
-            drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
-            drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
+                this.ctx.save();
+                this.ctx.translate(-12, 0);
+                this.ctx.rotate(tailSwing * 0.1);
+                drawPart(() => { this.ctx.ellipse(-6, 4, 8, 3, Math.PI/4, 0, Math.PI*2); }, bodyColor);
+                this.ctx.restore();
 
-            // Cara
-            this.ctx.lineWidth = 2 / ZOOM;
-            this.ctx.strokeStyle = outline;
-            
-            this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
-            this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
-            this.ctx.fillStyle = outline;
-            this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
+                drawPart(() => { this.ctx.ellipse(0, 2 + breathe*0.5, 14, 10, 0, 0, Math.PI*2); }, furColor);
+                drawPart(() => { this.ctx.arc(10, -4 + breathe*0.5, 7, 0, Math.PI*2); }, furColor);
+                drawPart(() => { this.ctx.ellipse(16, -2 + breathe*0.5, 5, 3, 0, 0, Math.PI*2); }, '#e2e8f0');
+                
+                this.ctx.fillStyle = outline;
+                this.ctx.beginPath(); this.ctx.arc(20, -3 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
+                
+                drawPart(() => { this.ctx.moveTo(8, -10 + breathe*0.5); this.ctx.lineTo(12, -16 + breathe*0.5); this.ctx.lineTo(14, -8 + breathe*0.5); this.ctx.closePath(); }, bodyColor);
+                
+                drawPart(() => { this.ctx.roundRect(-4, 10, 4, 8, 2); }, furColor);
+                drawPart(() => { this.ctx.roundRect(8, 10, 4, 8, 2); }, furColor);
 
-            // Pierna Derecha (Frente)
-            drawPart(() => { this.ctx.roundRect(1, 6 + legSwing, 5, 8, 2); }, pantsColor);
-            
-            // Brazo Derecho (Frente)
-            drawPart(() => { this.ctx.roundRect(4, 0 - legSwing, 4, 7, 2); }, skinColor);
+                this.ctx.fillStyle = outline;
+                this.ctx.beginPath(); this.ctx.arc(12, -5 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
 
-            this.ctx.translate(0, -28);
-            this.drawHpBar(entity.hp, 4, '#22c55e');
+                if (entity.isAttacking) {
+                    this.ctx.shadowColor = '#3b82f6';
+                    this.ctx.shadowBlur = 10;
+                    drawPart(() => { this.ctx.arc(24, -2 + breathe*0.5, 5, 0, Math.PI*2); }, 'rgba(59, 130, 246, 0.8)');
+                    this.ctx.shadowBlur = 0;
+                }
+
+                this.ctx.translate(0, -22);
+                this.drawHpBar(entity.hp, 10, '#3b82f6');
+                
+            } else {
+                // Enemy
+                let skinColor = '#d8b4fe'; 
+                let shirtColor = '#7e22ce'; 
+                let pantsColor = '#4c1d95'; 
+                
+                let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
+
+                drawPart(() => { this.ctx.roundRect(-6, 6 - legSwing, 5, 8, 2); }, pantsColor);
+                drawPart(() => { this.ctx.roundRect(-8, 0 + legSwing, 4, 7, 2); }, skinColor);
+
+                drawPart(() => { 
+                    this.ctx.moveTo(-7, -4 + breathe);
+                    this.ctx.lineTo(7, -4 + breathe);
+                    this.ctx.lineTo(6, 8 + breathe);
+                    this.ctx.lineTo(-6, 8 + breathe);
+                    this.ctx.closePath();
+                }, shirtColor);
+
+                drawPart(() => { this.ctx.arc(0, -12 + breathe, 8, 0, Math.PI*2); }, skinColor);
+
+                drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
+                drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
+
+                this.ctx.lineWidth = 2 / ZOOM;
+                this.ctx.strokeStyle = outline;
+                
+                this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
+                this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
+                this.ctx.fillStyle = outline;
+                this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
+
+                drawPart(() => { this.ctx.roundRect(1, 6 + legSwing, 5, 8, 2); }, pantsColor);
+                drawPart(() => { this.ctx.roundRect(4, 0 - legSwing, 4, 7, 2); }, skinColor);
+
+                this.ctx.translate(0, -28);
+                this.drawHpBar(entity.hp, 4, '#22c55e');
+            }
+            this.ctx.restore();
         }
-
-        this.ctx.restore();
     }
 
     drawHpBar(hp, max, color) {
