@@ -5,25 +5,28 @@ export class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        // Pre-generar un patrón de ruido estático para el pasto (para optimizar)
         this.grassPattern = this.createGrassPattern();
     }
 
     createGrassPattern() {
         const pCanvas = document.createElement('canvas');
-        pCanvas.width = 100;
-        pCanvas.height = 100;
+        pCanvas.width = 120;
+        pCanvas.height = 120;
         const pCtx = pCanvas.getContext('2d');
         
-        pCtx.fillStyle = '#4ade80'; // Base verde
-        pCtx.fillRect(0, 0, 100, 100);
+        // Base verde suave y premium
+        pCtx.fillStyle = '#86efac'; 
+        pCtx.fillRect(0, 0, 120, 120);
         
-        // Dibujar pequeñas "briznas" de pasto
-        for(let i=0; i<300; i++) {
-            let x = Math.random() * 100;
-            let y = Math.random() * 100;
-            pCtx.fillStyle = Math.random() > 0.5 ? '#22c55e' : '#16a34a';
-            pCtx.fillRect(x, y, 2, Math.random() * 4 + 2);
+        // Manchas más suaves
+        for(let i=0; i<80; i++) {
+            let x = Math.random() * 120;
+            let y = Math.random() * 120;
+            let r = Math.random() * 8 + 4;
+            pCtx.fillStyle = Math.random() > 0.5 ? 'rgba(74, 222, 128, 0.4)' : 'rgba(134, 239, 172, 0.6)';
+            pCtx.beginPath();
+            pCtx.arc(x, y, r, 0, Math.PI * 2);
+            pCtx.fill();
         }
         return pCtx.createPattern(pCanvas, 'repeat');
     }
@@ -33,28 +36,32 @@ export class Renderer {
         this.ctx.fillStyle = this.grassPattern;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // Opcional: Iluminación global sutil
+        let grad = this.ctx.createRadialGradient(this.canvas.width/2, this.canvas.height/2, 50, this.canvas.width/2, this.canvas.height/2, this.canvas.width);
+        grad.addColorStop(0, 'rgba(255,255,255,0.05)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
         this.ctx.save();
         
-        // Primero dibujamos el terreno base (agua) y puentes
+        // 1. Dibujar Terreno Base (Agua Continua y Puentes)
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
                 let cell = world.getCell(x, y);
-                if (cell && cell.type === RESOURCES.WATER) {
-                    this.drawWater(x, y, timestamp);
-                } else if (cell && cell.type === RESOURCES.BRIDGE) {
-                    this.drawWater(x, y, timestamp);
-                    this.drawBridge(x, y);
+                if (cell && (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE)) {
+                    this.drawContinuousWater(x, y, world, timestamp);
+                    if (cell.type === RESOURCES.BRIDGE) {
+                        this.drawBridge(x, y);
+                    }
                 }
             }
         }
 
-        // Activamos las sombras para los elementos elevados
-        this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
-        this.ctx.shadowBlur = 4;
-        this.ctx.shadowOffsetX = 2;
-        this.ctx.shadowOffsetY = 4;
+        // 2. Dibujar Entidades y Objetos (Y-Sorted)
+        // Guardaremos todo en un array para dibujarlo ordenado por Y
+        let renderQueue = [];
 
-        // Dibujar recursos y construcciones
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
                 let cell = world.getCell(x, y);
@@ -67,44 +74,59 @@ export class Renderer {
                     }
                 }
 
-                switch(cell.type) {
-                    case RESOURCES.FOOD: this.drawApple(x, y); break;
-                    case RESOURCES.WOOD: this.drawTree(x, y); break;
-                    case RESOURCES.ROCK: this.drawRock(x, y); break;
-                    case RESOURCES.HOUSE: 
-                        if (!isAgentHome) this.drawHouse(x, y, cell.capacity); 
-                        break;
-                    case RESOURCES.BOOK: this.drawBook(x, y, timestamp); break;
-                    case RESOURCES.TELESCOPE: this.drawTelescope(x, y); break;
-                    case RESOURCES.WALL: this.drawWall(x, y, cell.capacity); break;
-                }
-
-                // Dibujar capacidad restante de vida del recurso
-                if (cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.BRIDGE && cell.type !== RESOURCES.WATER && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
-                    this.drawResourceDots(x, y, cell.capacity);
+                if (cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.WATER && cell.type !== RESOURCES.BRIDGE) {
+                    if (cell.type === RESOURCES.HOUSE && isAgentHome) {
+                        // Lo saltamos, se dibuja la casa grande
+                    } else {
+                        renderQueue.push({ type: 'resource', x: x, y: y, cell: cell });
+                    }
                 }
             }
         }
 
-        // Casa grande del Agente
         if (agent.home) {
-            let hx = agent.home.x;
-            let hy = agent.home.y;
-            this.drawBigHouse(hx, hy);
+            renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y });
         }
 
-        // Entidades (Enemigos, Lobo, Agente)
         if (enemies) {
-            for (let e of enemies) {
-                this.drawEntity(e, 'enemy', timestamp);
+            enemies.forEach(e => renderQueue.push({ type: 'enemy', entity: e, y: e.y }));
+        }
+        if (wolf) {
+            renderQueue.push({ type: 'wolf', entity: wolf, y: wolf.y });
+        }
+        renderQueue.push({ type: 'agent', entity: agent, y: agent.y });
+
+        // Ordenar por Y para dar perspectiva de profundidad
+        renderQueue.sort((a, b) => {
+            let ay = a.y;
+            let by = b.y;
+            if (a.type === 'bighouse') ay += 1; // Ajuste para que la casa grande cubra correctamente
+            if (b.type === 'bighouse') by += 1;
+            return ay - by;
+        });
+
+        // Dibujar todo en orden
+        for (let item of renderQueue) {
+            if (item.type === 'resource') {
+                let cell = item.cell;
+                switch(cell.type) {
+                    case RESOURCES.FOOD: this.drawApple(item.x, item.y, timestamp); break;
+                    case RESOURCES.WOOD: this.drawTree(item.x, item.y); break;
+                    case RESOURCES.ROCK: this.drawRock(item.x, item.y); break;
+                    case RESOURCES.HOUSE: this.drawHouse(item.x, item.y, cell.capacity); break;
+                    case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp); break;
+                    case RESOURCES.TELESCOPE: this.drawTelescope(item.x, item.y); break;
+                    case RESOURCES.WALL: this.drawWall(item.x, item.y, cell.capacity); break;
+                }
+                if (cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
+                    this.drawResourceDots(item.x, item.y, cell.capacity);
+                }
+            } else if (item.type === 'bighouse') {
+                this.drawBigHouse(item.x, item.y);
+            } else {
+                this.drawEntity(item.entity, item.type, timestamp);
             }
         }
-
-        if (wolf) {
-            this.drawEntity(wolf, 'wolf', timestamp);
-        }
-
-        this.drawEntity(agent, 'agent', timestamp);
 
         this.ctx.restore();
 
@@ -114,88 +136,143 @@ export class Renderer {
         }
     }
 
-    drawWater(x, y, timestamp) {
+    drawShadow(cx, cy, width, height) {
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, cy, width, height, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawContinuousWater(x, y, world, timestamp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         
-        let timeOffset = timestamp ? timestamp * 0.002 : 0;
-        let wave = Math.sin(x + y + timeOffset) * 2; 
+        let t = timestamp ? timestamp * 0.001 : 0;
         
-        this.ctx.save();
-        this.ctx.shadowColor = 'transparent';
+        this.ctx.fillStyle = '#38bdf8'; // Celeste vibrante
         
-        this.ctx.fillStyle = '#0ea5e9'; 
-        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+        // Sobredibujamos un poco (1 pixel extra) para evitar líneas entre celdas
+        this.ctx.fillRect(px - 1, py - 1, CELL_SIZE + 2, CELL_SIZE + 2);
         
-        this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        this.ctx.fillRect(px + CELL_SIZE/4, py + CELL_SIZE/4 + wave, CELL_SIZE/2, 2);
-        this.ctx.fillRect(px + CELL_SIZE/2, py + CELL_SIZE/2 - wave, CELL_SIZE/3, 2);
-        
-        this.ctx.restore();
+        // Oleaje sutil
+        this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        let wave = Math.sin(x*0.5 + y*0.5 + t) * 3;
+        this.ctx.fillRect(px + CELL_SIZE/4, py + CELL_SIZE/2 + wave, CELL_SIZE/2, 2);
+
+        // Orillas (Si el vecino no es agua, dibujamos un borde clarito)
+        this.ctx.fillStyle = '#bae6fd'; // Espuma
+        let isWater = (dx, dy) => {
+            let c = world.getCell(x + dx, y + dy);
+            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
+        };
+
+        if (!isWater(0, -1)) this.ctx.fillRect(px, py, CELL_SIZE, 3); // Arriba
+        if (!isWater(0, 1)) this.ctx.fillRect(px, py + CELL_SIZE - 3, CELL_SIZE, 3); // Abajo
+        if (!isWater(-1, 0)) this.ctx.fillRect(px, py, 3, CELL_SIZE); // Izquierda
+        if (!isWater(1, 0)) this.ctx.fillRect(px + CELL_SIZE - 3, py, 3, CELL_SIZE); // Derecha
     }
 
-    drawApple(x, y) {
+    drawApple(x, y, timestamp) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
+        let t = timestamp ? timestamp * 0.003 : 0;
+        let hover = Math.sin(t + x) * 2;
+        
+        this.drawShadow(cx, cy + 8, 8, 3);
+
+        cy += hover + 2;
         this.ctx.fillStyle = '#ef4444';
-        this.ctx.beginPath(); this.ctx.arc(cx, cy + 2, 6, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.arc(cx, cy, 7, 0, Math.PI * 2); this.ctx.fill();
         this.ctx.fillStyle = '#16a34a';
-        this.ctx.beginPath(); this.ctx.ellipse(cx + 4, cy - 4, 4, 2, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.ellipse(cx + 4, cy - 5, 5, 2.5, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
+        // Highlight
+        this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        this.ctx.beginPath(); this.ctx.arc(cx - 2, cy - 2, 2, 0, Math.PI * 2); this.ctx.fill();
     }
 
     drawTree(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
+        
+        this.drawShadow(cx, cy + 12, 14, 6);
+
+        // Tronco
         this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(cx - 3, cy, 6, 10);
-        this.ctx.fillStyle = '#15803d';
-        this.ctx.beginPath(); this.ctx.arc(cx, cy - 6, 8, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.arc(cx - 6, cy - 2, 7, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.arc(cx + 6, cy - 2, 7, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.fillRect(cx - 4, cy, 8, 14);
+
+        // Copa del árbol sobre escalada para ocultar grilla
+        this.ctx.fillStyle = '#166534'; // Oscuro fondo
+        this.ctx.beginPath(); this.ctx.arc(cx, cy - 8, 16, 0, Math.PI * 2); this.ctx.fill();
+        
+        this.ctx.fillStyle = '#22c55e'; // Claro medio
+        this.ctx.beginPath(); this.ctx.arc(cx - 6, cy - 12, 12, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.arc(cx + 6, cy - 12, 12, 0, Math.PI * 2); this.ctx.fill();
+        
+        this.ctx.fillStyle = '#4ade80'; // Highlight superior
+        this.ctx.beginPath(); this.ctx.arc(cx, cy - 18, 10, 0, Math.PI * 2); this.ctx.fill();
     }
 
     drawRock(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        this.ctx.fillStyle = '#64748b';
+        
+        this.drawShadow(cx, cy + 10, 12, 5);
+
+        this.ctx.fillStyle = '#475569';
         this.ctx.beginPath();
-        this.ctx.moveTo(cx - 8, cy + 6); this.ctx.lineTo(cx - 5, cy - 4); this.ctx.lineTo(cx + 2, cy - 8);
-        this.ctx.lineTo(cx + 9, cy - 2); this.ctx.lineTo(cx + 7, cy + 8); this.ctx.closePath(); this.ctx.fill();
+        this.ctx.moveTo(cx - 12, cy + 8); this.ctx.lineTo(cx - 6, cy - 6); this.ctx.lineTo(cx + 4, cy - 12);
+        this.ctx.lineTo(cx + 14, cy - 2); this.ctx.lineTo(cx + 10, cy + 10); this.ctx.closePath(); this.ctx.fill();
+        
         this.ctx.fillStyle = '#94a3b8';
         this.ctx.beginPath();
-        this.ctx.moveTo(cx - 5, cy + 4); this.ctx.lineTo(cx - 2, cy - 2); this.ctx.lineTo(cx + 4, cy - 2);
+        this.ctx.moveTo(cx - 8, cy + 6); this.ctx.lineTo(cx - 4, cy - 4); this.ctx.lineTo(cx + 6, cy - 4);
         this.ctx.closePath(); this.ctx.fill();
     }
 
     drawBridge(x, y) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        this.ctx.fillStyle = '#92400e';
-        this.ctx.fillRect(px + 2, py + 4, CELL_SIZE - 4, CELL_SIZE - 8);
-        this.ctx.fillStyle = '#78350f';
-        for(let i=1; i<4; i++) {
-            this.ctx.fillRect(px + 2 + (i*CELL_SIZE/4) - 2, py + 4, 2, CELL_SIZE - 8);
+        this.ctx.fillStyle = '#78350f'; // Base oscura
+        this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
+        
+        this.ctx.fillStyle = '#92400e'; // Tablones
+        for(let i=0; i<4; i++) {
+            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 1, py + 4, (CELL_SIZE/4)-2, CELL_SIZE - 8);
+        }
+        // Clavos
+        this.ctx.fillStyle = '#475569';
+        for(let i=0; i<4; i++) {
+            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 2, py + 6, 2, 2);
+            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 2, py + CELL_SIZE - 10, 2, 2);
         }
     }
 
     drawHouse(x, y, hp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        this.ctx.fillStyle = '#d97706';
-        this.ctx.fillRect(px + 4, py + 10, CELL_SIZE - 8, CELL_SIZE - 12);
-        this.ctx.fillStyle = '#b91c1c';
+        let cx = px + CELL_SIZE/2;
+        
+        this.drawShadow(cx, py + CELL_SIZE - 2, 14, 6);
+
+        // Base de la casa ampliada levemente
+        this.ctx.fillStyle = '#b45309';
+        this.ctx.fillRect(px + 2, py + 10, CELL_SIZE - 4, CELL_SIZE - 10);
+        
+        // Techo superpuesto
+        this.ctx.fillStyle = '#991b1b';
         this.ctx.beginPath();
-        this.ctx.moveTo(px + 2, py + 10); this.ctx.lineTo(px + CELL_SIZE / 2, py + 2); this.ctx.lineTo(px + CELL_SIZE - 2, py + 10);
+        this.ctx.moveTo(px - 2, py + 12); this.ctx.lineTo(cx, py - 2); this.ctx.lineTo(px + CELL_SIZE + 2, py + 12);
         this.ctx.closePath(); this.ctx.fill();
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(px + CELL_SIZE / 2 - 3, py + CELL_SIZE - 10, 6, 8);
+        
+        // Puerta
+        this.ctx.fillStyle = '#451a03';
+        this.ctx.fillRect(cx - 4, py + CELL_SIZE - 10, 8, 10);
+
         if (hp < 10) {
-            this.ctx.save();
-            this.ctx.shadowColor = 'transparent';
-            let cx = px + CELL_SIZE / 2;
-            this.ctx.fillStyle = '#475569'; this.ctx.fillRect(cx - 10, py + CELL_SIZE - 6, 20, 4);
-            this.ctx.fillStyle = '#22c55e'; this.ctx.fillRect(cx - 10, py + CELL_SIZE - 6, 2 * hp, 4);
-            this.ctx.restore();
+            let barWidth = 20;
+            let segWidth = barWidth / 10;
+            this.ctx.fillStyle = '#475569'; this.ctx.fillRect(cx - 10, py - 6, 20, 4);
+            this.ctx.fillStyle = '#22c55e'; this.ctx.fillRect(cx - 10, py - 6, segWidth * hp, 4);
         }
     }
 
@@ -204,59 +281,68 @@ export class Renderer {
         let py = y * CELL_SIZE;
         let w = CELL_SIZE * 2;
         let h = CELL_SIZE * 2;
+        let cx = px + w/2;
 
-        this.ctx.fillStyle = '#d97706';
-        this.ctx.fillRect(px + 6, py + 20, w - 12, h - 24);
+        this.drawShadow(cx, py + h - 4, w/1.2, 12);
+
+        // Base
+        this.ctx.fillStyle = '#b45309';
+        this.ctx.fillRect(px + 4, py + 20, w - 8, h - 24);
         
-        this.ctx.fillStyle = '#b91c1c';
+        // Techo principal
+        this.ctx.fillStyle = '#991b1b';
         this.ctx.beginPath();
-        this.ctx.moveTo(px + 2, py + 20);
-        this.ctx.lineTo(px + w / 2, py + 4);
-        this.ctx.lineTo(px + w - 2, py + 20);
+        this.ctx.moveTo(px - 4, py + 24);
+        this.ctx.lineTo(cx, py - 4);
+        this.ctx.lineTo(px + w + 4, py + 24);
         this.ctx.closePath();
         this.ctx.fill();
         
-        // Ventana redonda
-        this.ctx.fillStyle = '#0ea5e9';
-        this.ctx.beginPath(); this.ctx.arc(px + w / 2, py + 18, 5, 0, Math.PI*2); this.ctx.fill();
+        // Detalle de tejado
+        this.ctx.fillStyle = '#ef4444';
+        this.ctx.beginPath();
+        this.ctx.moveTo(px + 4, py + 22);
+        this.ctx.lineTo(cx, py + 2);
+        this.ctx.lineTo(px + w - 4, py + 22);
+        this.ctx.closePath();
+        this.ctx.fill();
 
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(px + w / 2 - 5, py + h - 18, 10, 14);
+        // Puerta y ventana
+        this.ctx.fillStyle = '#0ea5e9';
+        this.ctx.beginPath(); this.ctx.arc(cx, py + 18, 6, 0, Math.PI*2); this.ctx.fill();
+        
+        this.ctx.fillStyle = '#451a03';
+        this.ctx.fillRect(cx - 8, py + h - 20, 16, 16);
     }
 
     drawBook(x, y, timestamp) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        
         let t = timestamp ? timestamp * 0.003 : 0;
-        let hover = Math.sin(t) * 3; 
+        let hover = Math.sin(t) * 4; 
+
+        this.drawShadow(cx, cy + 10, 10, 4);
 
         this.ctx.save();
-        this.ctx.shadowColor = '#eab308';
-        this.ctx.shadowBlur = 15;
         this.ctx.translate(cx, cy + hover);
 
-        // Tapas del libro abierto
+        // Aura
+        let aura = Math.abs(Math.sin(t*0.5)) * 5;
+        this.ctx.shadowColor = '#fef08a';
+        this.ctx.shadowBlur = 10 + aura;
+
+        // Tapas
         this.ctx.fillStyle = '#431407'; 
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, 0); this.ctx.lineTo(-10, -5); this.ctx.lineTo(-10, 8); this.ctx.lineTo(0, 12);
-        this.ctx.closePath(); this.ctx.fill();
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, 0); this.ctx.lineTo(10, -5); this.ctx.lineTo(10, 8); this.ctx.lineTo(0, 12);
-        this.ctx.closePath(); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-12, -6); this.ctx.lineTo(-12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(12, -6); this.ctx.lineTo(12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
 
         // Hojas
         this.ctx.fillStyle = '#fef08a'; 
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, 0); this.ctx.lineTo(-8, -4); this.ctx.lineTo(-8, 7); this.ctx.lineTo(0, 11);
-        this.ctx.closePath(); this.ctx.fill();
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, 0); this.ctx.lineTo(8, -4); this.ctx.lineTo(8, 7); this.ctx.lineTo(0, 11);
-        this.ctx.closePath(); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-10, -5); this.ctx.lineTo(-10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(10, -5); this.ctx.lineTo(10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
         
-        // Marca
         this.ctx.fillStyle = '#eab308';
-        this.ctx.fillRect(-2, 0, 4, 12);
+        this.ctx.fillRect(-2, 0, 4, 14);
         
         this.ctx.restore();
     }
@@ -265,22 +351,21 @@ export class Renderer {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
         
+        this.drawShadow(cx, cy + 12, 10, 4);
+
         this.ctx.save();
-        this.ctx.translate(cx, cy);
+        this.ctx.translate(cx, cy + 2);
 
-        // Trípode
         this.ctx.strokeStyle = '#451a03';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath(); this.ctx.moveTo(0, 5); this.ctx.lineTo(-5, 12); this.ctx.stroke();
-        this.ctx.beginPath(); this.ctx.moveTo(0, 5); this.ctx.lineTo(5, 12); this.ctx.stroke();
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(-6, 12); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(6, 12); this.ctx.stroke();
 
-        // Tubo
         this.ctx.fillStyle = '#f59e0b';
-        this.ctx.rotate(-Math.PI / 6);
-        this.ctx.fillRect(-8, -3, 16, 6);
-        // Lente
+        this.ctx.rotate(-Math.PI / 5);
+        this.ctx.fillRect(-10, -4, 20, 8);
         this.ctx.fillStyle = '#0ea5e9';
-        this.ctx.fillRect(6, -2, 3, 4);
+        this.ctx.fillRect(8, -3, 4, 6);
 
         this.ctx.restore();
     }
@@ -288,34 +373,37 @@ export class Renderer {
     drawWall(x, y, hp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE/2;
+
+        this.drawShadow(cx, py + CELL_SIZE - 2, 14, 5);
+
         this.ctx.fillStyle = '#475569';
-        this.ctx.fillRect(px + 2, py + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+        this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
+        
+        this.ctx.fillStyle = '#334155';
+        this.ctx.fillRect(px, py + CELL_SIZE/2, CELL_SIZE, CELL_SIZE/2 - 4);
         
         this.ctx.strokeStyle = '#1e293b';
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
-        this.ctx.moveTo(px+2, py + CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE-2, py+CELL_SIZE/2);
-        this.ctx.moveTo(px+CELL_SIZE/2, py+2); this.ctx.lineTo(px+CELL_SIZE/2, py+CELL_SIZE/2);
-        this.ctx.moveTo(px+CELL_SIZE/4, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE/4, py+CELL_SIZE-2);
-        this.ctx.moveTo(px+CELL_SIZE*0.75, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE*0.75, py+CELL_SIZE-2);
+        this.ctx.moveTo(px, py + CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE, py+CELL_SIZE/2);
+        this.ctx.moveTo(px+CELL_SIZE/2, py+4); this.ctx.lineTo(px+CELL_SIZE/2, py+CELL_SIZE/2);
+        this.ctx.moveTo(px+CELL_SIZE/4, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE/4, py+CELL_SIZE-4);
+        this.ctx.moveTo(px+CELL_SIZE*0.75, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE*0.75, py+CELL_SIZE-4);
         this.ctx.stroke();
     }
 
     drawResourceDots(x, y, capacity) {
-        this.ctx.save();
-        this.ctx.shadowColor = 'transparent';
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
-        let dotRadius = 2;
         let startX = cx - (capacity * 6) / 2 + 3;
         for (let i = 0; i < capacity; i++) {
             this.ctx.fillStyle = '#f8fafc';
             this.ctx.beginPath();
-            this.ctx.arc(startX + i * 6, py + CELL_SIZE - 4, dotRadius, 0, Math.PI * 2);
+            this.ctx.arc(startX + i * 6, py + CELL_SIZE - 2, 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
-        this.ctx.restore();
     }
 
     drawEntity(entity, type, timestamp) {
@@ -325,7 +413,10 @@ export class Renderer {
         let cy = entity.y * CELL_SIZE + CELL_SIZE / 2;
         
         let t = timestamp || 0;
-        let breathe = Math.sin(t * 0.005) * 1.5;
+        let breathe = Math.sin(t * 0.005 + cx) * 1.5;
+
+        // Shadow
+        this.drawShadow(cx, cy + 10, type === 'wolf' ? 10 : 8, 4);
 
         this.ctx.save();
         this.ctx.translate(cx, cy);
@@ -335,13 +426,15 @@ export class Renderer {
             let swing = Math.sin(t * 0.03) * 0.5;
             this.ctx.rotate(Math.PI / 4 + swing);
             if (type === 'wolf') {
-                this.ctx.fillStyle = '#3b82f6';
-                this.ctx.beginPath(); this.ctx.arc(8, -8, 6, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
+                this.ctx.shadowColor = '#3b82f6';
+                this.ctx.shadowBlur = 10;
+                this.ctx.beginPath(); this.ctx.arc(10, -10, 8, 0, Math.PI*2); this.ctx.fill();
             } else {
-                this.ctx.fillStyle = '#9ca3af'; 
-                this.ctx.fillRect(6, -10, 4, 12);
-                this.ctx.fillStyle = '#b45309'; 
-                this.ctx.fillRect(6, 2, 4, 6);
+                this.ctx.fillStyle = '#f1f5f9'; 
+                this.ctx.fillRect(8, -12, 4, 14);
+                this.ctx.fillStyle = '#78350f'; 
+                this.ctx.fillRect(8, 2, 4, 6);
             }
             this.ctx.restore();
         }
@@ -360,30 +453,30 @@ export class Renderer {
         let limbRadius = 3;
         
         if (type === 'wolf') {
-            let tailSwing = Math.sin(t * 0.01) * 2;
-            this.ctx.beginPath(); this.ctx.ellipse(-10, 2 + tailSwing, 4, 2, Math.PI/4, 0, Math.PI*2); this.ctx.fill();
+            let tailSwing = Math.sin(t * 0.01) * 3;
+            this.ctx.beginPath(); this.ctx.ellipse(-12, 2 + tailSwing, 5, 2.5, Math.PI/4, 0, Math.PI*2); this.ctx.fill();
             
-            this.ctx.beginPath(); this.ctx.arc(-4, 6 + breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(4, 6 - breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(-8, 8, 2, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(8, 8, 2, 0, Math.PI*2); this.ctx.fill();
-            
-            this.ctx.beginPath(); this.ctx.moveTo(-5, -6); this.ctx.lineTo(-8, -12); this.ctx.lineTo(-2, -8); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.moveTo(5, -6); this.ctx.lineTo(8, -12); this.ctx.lineTo(2, -8); this.ctx.fill();
-        } else {
             this.ctx.beginPath(); this.ctx.arc(-5, 8 + breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
             this.ctx.beginPath(); this.ctx.arc(5, 8 - breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(-8, 2, limbRadius, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(8, 2, limbRadius, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(-10, 8, 2.5, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(10, 8, 2.5, 0, Math.PI*2); this.ctx.fill();
+            
+            this.ctx.beginPath(); this.ctx.moveTo(-6, -8); this.ctx.lineTo(-10, -14); this.ctx.lineTo(-2, -10); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(6, -8); this.ctx.lineTo(10, -14); this.ctx.lineTo(2, -10); this.ctx.fill();
+        } else {
+            this.ctx.beginPath(); this.ctx.arc(-6, 9 + breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(6, 9 - breathe*0.2, limbRadius, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(-9, 3, limbRadius, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(9, 3, limbRadius, 0, Math.PI*2); this.ctx.fill();
         }
 
         // Cuerpo principal
         this.ctx.fillStyle = bodyColor;
         this.ctx.beginPath();
         if (type === 'wolf') {
-            this.ctx.ellipse(0, 0 + breathe/2, CELL_SIZE / 2.2, CELL_SIZE / 3, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(0, 0 + breathe/2, CELL_SIZE / 2.0, CELL_SIZE / 2.8, 0, 0, Math.PI * 2);
         } else {
-            this.ctx.ellipse(0, 0 + breathe/2, CELL_SIZE / 2.5, (CELL_SIZE / 2.5) + breathe/2, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(0, 0 + breathe/2, CELL_SIZE / 2.2, (CELL_SIZE / 2.2) + breathe/2, 0, 0, Math.PI * 2);
         }
         this.ctx.fill();
 
@@ -391,7 +484,6 @@ export class Renderer {
         this.ctx.fillStyle = '#0f172a';
         this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 1.5;
-        this.ctx.shadowColor = 'transparent';
 
         if (type === 'agent') {
             this.drawAgentFace(entity, 0, breathe/2);
@@ -455,37 +547,37 @@ export class Renderer {
     }
 
     drawWolfFace(cx, cy) {
-        this.ctx.beginPath(); this.ctx.arc(cx, cy + 4, 2, 0, Math.PI*2); this.ctx.fill();
-        this.ctx.fillRect(cx - 5, cy - 2, 2, 2); this.ctx.fillRect(cx + 3, cy - 2, 2, 2);
+        this.ctx.beginPath(); this.ctx.arc(cx, cy + 4, 2.5, 0, Math.PI*2); this.ctx.fill();
+        this.ctx.fillRect(cx - 6, cy - 2, 2, 2); this.ctx.fillRect(cx + 4, cy - 2, 2, 2);
     }
 
     drawEclipseOverlay(agent, wolf, timestamp) {
         this.ctx.save();
         
         this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.fillStyle = 'rgba(2, 6, 23, 0.8)';
+        this.ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.ctx.globalCompositeOperation = 'destination-out';
         
         let ax = agent.x * CELL_SIZE + CELL_SIZE/2;
         let ay = agent.y * CELL_SIZE + CELL_SIZE/2;
-        let pulse = Math.sin((timestamp||0) * 0.002) * 5;
-        let grad = this.ctx.createRadialGradient(ax, ay, 10, ax, ay, 80 + pulse);
+        let pulse = Math.sin((timestamp||0) * 0.002) * 8;
+        let grad = this.ctx.createRadialGradient(ax, ay, 10, ax, ay, 90 + pulse);
         grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         this.ctx.fillStyle = grad;
-        this.ctx.beginPath(); this.ctx.arc(ax, ay, 80 + pulse, 0, Math.PI*2); this.ctx.fill();
+        this.ctx.beginPath(); this.ctx.arc(ax, ay, 90 + pulse, 0, Math.PI*2); this.ctx.fill();
 
         if (wolf) {
             let wx = wolf.x * CELL_SIZE + CELL_SIZE/2;
             let wy = wolf.y * CELL_SIZE + CELL_SIZE/2;
-            let wPulse = Math.sin((timestamp||0) * 0.003) * 3;
-            let wGrad = this.ctx.createRadialGradient(wx, wy, 5, wx, wy, 40 + wPulse);
-            wGrad.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+            let wPulse = Math.sin((timestamp||0) * 0.003) * 5;
+            let wGrad = this.ctx.createRadialGradient(wx, wy, 5, wx, wy, 50 + wPulse);
+            wGrad.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
             wGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             this.ctx.fillStyle = wGrad;
-            this.ctx.beginPath(); this.ctx.arc(wx, wy, 40 + wPulse, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(wx, wy, 50 + wPulse, 0, Math.PI*2); this.ctx.fill();
         }
 
         this.ctx.restore();
