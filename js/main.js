@@ -15,7 +15,8 @@ const imageUrls = {
     water: 'assets/water.png',
     tree: 'assets/tree.png',
     rock: 'assets/rock.png',
-    agent: 'assets/agent.png'
+    agent_basicas: 'assets/Sprite gruni basicas.png',
+    agent_acciones: 'assets/Sprite gruni acciones.png'
 };
 
 function removeMagentaBackground(img) {

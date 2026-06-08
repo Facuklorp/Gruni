@@ -62,9 +62,15 @@ export class Agent {
         this.branches = []; 
         this.hasTelescope = false;
         this.eclipseWarning = false;
+        
+        // Animaciones
+        this.dx = 1;
+        this.animationTimer = 0;
+        this.lastGathered = null;
     }
 
     update(enemies, eclipseWarning = false) {
+        this.animationTimer++;
         this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
@@ -496,11 +502,13 @@ export class Agent {
                     }
                 } else if (this.state === STATES.SEEK_WOOD) {
                     this.inventory.wood++;
+                    this.lastGathered = 'WOOD';
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
                 } else if (this.state === STATES.SEEK_ROCK) {
                     this.inventory.rock++;
+                    this.lastGathered = 'ROCK';
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
@@ -581,8 +589,8 @@ export class Agent {
         let oldX = this.x;
         let oldY = this.y;
 
-        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.stepOnCell(this.x, this.y); }
-        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.stepOnCell(this.x, this.y); }
+        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.stepOnCell(this.x, this.y); }
+        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.stepOnCell(this.x, this.y); }
         else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.stepOnCell(this.x, this.y); }
         else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.stepOnCell(this.x, this.y); }
 
@@ -667,6 +675,7 @@ export class Agent {
             let nx = this.x + m.dx;
             let ny = this.y + m.dy;
             if (this.tryStep(nx, ny)) {
+                if (m.dx !== 0) this.dx = m.dx;
                 this.x = nx;
                 this.y = ny;
                 this.stepOnCell(nx, ny);

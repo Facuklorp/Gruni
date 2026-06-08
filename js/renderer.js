@@ -558,26 +558,97 @@ export class Renderer {
             this.ctx.translate(0, -22);
             this.drawHpBar(entity.hp, 10, '#3b82f6');
             
-        } else {
-            // Humanoids (Agent / Enemy)
-            let isAgent = type === 'agent';
-            let skinColor = isAgent ? '#fef08a' : '#d8b4fe'; // Piel clara elfa
-            let shirtColor = isAgent ? '#3b82f6' : '#7e22ce'; // Azul liso enterizo
-            let pantsColor = isAgent ? '#1e3a8a' : '#4c1d95'; 
-            let hairColor = isAgent ? '#3b82f6' : '#000000'; // Pelo azul
-            
-            let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
+        if (type === 'agent') {
+            let px = entity.x * CELL_SIZE;
+            let py = entity.y * CELL_SIZE;
+            let cx = px + CELL_SIZE / 2;
+            let cy = py + CELL_SIZE / 2;
 
-            // Arma atrás (si ataca)
-            if (entity.isAttacking) {
+            this.drawShadow(cx, cy + 14, 10, 4);
+
+            let t = timestamp || 0;
+            // Alternar frame entre 0 y 1 para la animación de caminar
+            let frame = (Math.floor(entity.animationTimer / 2)) % 2; 
+            
+            let img = this.images.agent_basicas;
+            let sx = 512, sy = 512, sw = 256, sh = 512; // Default: Contento (Idle)
+            
+            if (entity.isAttacking || entity.state === '¡Defendiendo Casa!') {
+                img = this.images.agent_acciones;
+                sx = 0; sy = 512; sw = 1024; sh = 512; // Atacando
+            } else if (entity.state === 'Talando' || (entity.state === 'Recolectando' && entity.lastGathered === 'WOOD') || entity.state === 'Construyendo Casa' || entity.state === 'Restaurando Casa' || entity.state === 'Construyendo Muralla' || entity.state === 'Construyendo Telescopio') {
+                img = this.images.agent_acciones;
+                sx = 0; sy = 1024; sw = 512; sh = 512; // Talando
+            } else if (entity.state === 'Picando' || (entity.state === 'Recolectando' && entity.lastGathered === 'ROCK')) {
+                img = this.images.agent_acciones;
+                sx = 512; sy = 1024; sw = 512; sh = 512; // Picando
+            } else if (entity.happyTimer > 0) {
+                img = this.images.agent_basicas;
+                sx = 768; sy = 0; sw = 256; sh = 512; // Saltando
+            } else {
+                let isMoving = (entity.target !== null && entity.state.startsWith('Buscando'));
+                if (isMoving || entity.state === 'Deambulando' && entity.wanderTimer === 0) {
+                    if (entity.state === 'Buscando Agua') {
+                        img = this.images.agent_acciones;
+                        sx = 1024 + (frame * 512); sy = 0; sw = 512; sh = 512; // Con balde
+                    } else if (entity.state === 'Buscando Comida') {
+                        img = this.images.agent_acciones;
+                        sx = 1024 + (frame * 512); sy = 512; sw = 512; sh = 512; // Con canasta
+                    } else {
+                        img = this.images.agent_basicas;
+                        sx = frame * 256; sy = 0; sw = 256; sh = 512; // Caminando normal
+                    }
+                } else {
+                    img = this.images.agent_basicas;
+                    if (entity.emotion === 'SAD') { sx = 256; sy = 512; sw = 256; sh = 512; }
+                    else if (entity.emotion === 'ANGRY') { sx = 0; sy = 512; sw = 256; sh = 512; }
+                    else if (entity.stuckTimer > 0) { sx = 768; sy = 512; sw = 256; sh = 512; } // Pensando si se atasca
+                    else { sx = 512; sy = 512; sw = 256; sh = 512; } // Neutral
+                }
+            }
+
+            if (img) {
                 this.ctx.save();
-                let swing = Math.sin(t * 0.03) * 0.5;
-                this.ctx.rotate(Math.PI / 4 + swing);
-                drawPart(() => { this.ctx.rect(12, -15, 4, 16); }, '#cbd5e1'); // Espada
-                drawPart(() => { this.ctx.rect(10, -1, 8, 3); }, '#f59e0b'); // Guarda
-                drawPart(() => { this.ctx.rect(12, 2, 4, 6); }, '#78350f'); // Mango
+                this.ctx.translate(cx, cy);
+                
+                // Efecto espejo según la dirección de movimiento
+                if (entity.dx === -1) {
+                    this.ctx.scale(-1, 1);
+                }
+
+                let drawW = 34;
+                let drawH = 68;
+                let offsetY = -15;
+
+                if (img === this.images.agent_acciones) {
+                    drawW = 68;
+                    drawH = 68;
+                    if (sw === 1024) {
+                        drawW = 136; // Espada es ancha
+                    }
+                }
+
+                // Recortar texto inferio (un 15% del alto)
+                let cropH = sh * 0.85; 
+                let renderH = drawH * 0.85;
+                
+                let drawX = -drawW / 2;
+                if (sw === 1024) drawX = -drawW / 4; // Ajuste para la espada
+
+                let hover = Math.sin((timestamp||0) * 0.005) * 2;
+                
+                this.ctx.drawImage(img, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover, drawW, renderH);
+
                 this.ctx.restore();
             }
+        } else {
+            // Humanoids (Enemy)
+            let isAgent = false;
+            let skinColor = '#d8b4fe'; 
+            let shirtColor = '#7e22ce'; 
+            let pantsColor = '#4c1d95'; 
+            
+            let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
 
             // Pierna Izquierda (Atrás)
             drawPart(() => { this.ctx.roundRect(-6, 6 - legSwing, 5, 8, 2); }, pantsColor);
@@ -585,7 +656,7 @@ export class Renderer {
             // Brazo Izquierdo (Atrás)
             drawPart(() => { this.ctx.roundRect(-8, 0 + legSwing, 4, 7, 2); }, skinColor);
 
-            // Torso (Enterizo Azul liso)
+            // Torso (Enterizo)
             drawPart(() => { 
                 this.ctx.moveTo(-7, -4 + breathe);
                 this.ctx.lineTo(7, -4 + breathe);
@@ -594,103 +665,22 @@ export class Renderer {
                 this.ctx.closePath();
             }, shirtColor);
 
-            if (isAgent) {
-                // Orejas de elfo (Atrás de la cabeza)
-                drawPart(() => {
-                    this.ctx.moveTo(-7, -12 + breathe);
-                    this.ctx.lineTo(-14, -14 + breathe);
-                    this.ctx.lineTo(-7, -9 + breathe);
-                    this.ctx.closePath();
-                }, skinColor);
-                drawPart(() => {
-                    this.ctx.moveTo(7, -12 + breathe);
-                    this.ctx.lineTo(14, -14 + breathe);
-                    this.ctx.lineTo(7, -9 + breathe);
-                    this.ctx.closePath();
-                }, skinColor);
-            }
-
             // Cabeza
             drawPart(() => { this.ctx.arc(0, -12 + breathe, 8, 0, Math.PI*2); }, skinColor);
 
-            // Pelo / Sombrero / Cuernos
-            if (isAgent) {
-                // Pelo azul asomando
-                drawPart(() => {
-                    this.ctx.arc(0, -14 + breathe, 8, Math.PI, 0);
-                    this.ctx.lineTo(6, -10 + breathe);
-                    this.ctx.lineTo(4, -8 + breathe);
-                    this.ctx.lineTo(0, -10 + breathe);
-                    this.ctx.lineTo(-4, -8 + breathe);
-                    this.ctx.lineTo(-6, -10 + breathe);
-                    this.ctx.closePath();
-                }, hairColor);
+            // Cuernos enemigo
+            drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
+            drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
 
-                // Sombrero de Paja
-                drawPart(() => { this.ctx.ellipse(0, -16 + breathe, 14, 4, 0, 0, Math.PI*2); }, '#fde047'); // Ala ancha
-                drawPart(() => { this.ctx.arc(0, -17 + breathe, 7, Math.PI, 0); }, '#facc15'); // Copa
-            } else {
-                // Cuernos enemigo
-                drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
-                drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
-            }
-
-            // Cara (Ojos y boca expresiva)
+            // Cara
             this.ctx.lineWidth = 2 / ZOOM;
             this.ctx.strokeStyle = outline;
             
-            let drawAnimeEye = (x, y) => {
-                this.ctx.fillStyle = outline;
-                this.ctx.beginPath(); this.ctx.ellipse(x, y, 1.5, 2.5, 0, 0, Math.PI*2); this.ctx.fill();
-                this.ctx.fillStyle = 'white';
-                this.ctx.beginPath(); this.ctx.arc(x - 0.5, y - 1, 0.8, 0, Math.PI*2); this.ctx.fill();
-            };
-
-            if (entity.hp <= 0 && isAgent) {
-                // KO
-                this.ctx.beginPath(); this.ctx.moveTo(-5, -13+breathe); this.ctx.lineTo(-1, -9+breathe); this.ctx.moveTo(-1, -13+breathe); this.ctx.lineTo(-5, -9+breathe); this.ctx.stroke();
-                this.ctx.beginPath(); this.ctx.moveTo(1, -13+breathe); this.ctx.lineTo(5, -9+breathe); this.ctx.moveTo(5, -13+breathe); this.ctx.lineTo(1, -9+breathe); this.ctx.stroke();
-            } else {
-                if (isAgent) {
-                    if (entity.emotion === 'HAPPY') {
-                        // Ojos felices cerrados
-                        this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 2, Math.PI, 0); this.ctx.stroke();
-                        this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 2, Math.PI, 0); this.ctx.stroke();
-                        // Boca sonriente grande
-                        this.ctx.fillStyle = '#ef4444';
-                        this.ctx.beginPath(); this.ctx.arc(0, -7+breathe, 3, 0, Math.PI); this.ctx.fill(); this.ctx.stroke();
-                    } else if (entity.emotion === 'SAD') {
-                        drawAnimeEye(-3, -11+breathe);
-                        drawAnimeEye(3, -11+breathe);
-                        // Cejas tristes
-                        this.ctx.beginPath(); this.ctx.moveTo(-5, -14+breathe); this.ctx.lineTo(-2, -15+breathe); this.ctx.stroke();
-                        this.ctx.beginPath(); this.ctx.moveTo(5, -14+breathe); this.ctx.lineTo(2, -15+breathe); this.ctx.stroke();
-                        // Boca triste
-                        this.ctx.beginPath(); this.ctx.arc(0, -6+breathe, 2, Math.PI, 0); this.ctx.stroke();
-                    } else if (entity.emotion === 'ANGRY') {
-                        drawAnimeEye(-3, -11+breathe);
-                        drawAnimeEye(3, -11+breathe);
-                        // Cejas enojadas
-                        this.ctx.beginPath(); this.ctx.moveTo(-5, -15+breathe); this.ctx.lineTo(-1, -13+breathe); this.ctx.stroke();
-                        this.ctx.beginPath(); this.ctx.moveTo(5, -15+breathe); this.ctx.lineTo(1, -13+breathe); this.ctx.stroke();
-                        // Boca enojada
-                        this.ctx.beginPath(); this.ctx.moveTo(-2, -7+breathe); this.ctx.lineTo(2, -7+breathe); this.ctx.stroke();
-                    } else {
-                        // Neutral (Anime)
-                        drawAnimeEye(-3, -11+breathe);
-                        drawAnimeEye(3, -11+breathe);
-                        // Boca neutral
-                        this.ctx.beginPath(); this.ctx.arc(0, -8+breathe, 1.5, 0, Math.PI); this.ctx.stroke();
-                    }
-                } else {
-                    // Enemy Face
-                    this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
-                    this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
-                    this.ctx.fillStyle = outline;
-                    this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-                }
-            }
+            this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
+            this.ctx.fillStyle = outline;
+            this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
 
             // Pierna Derecha (Frente)
             drawPart(() => { this.ctx.roundRect(1, 6 + legSwing, 5, 8, 2); }, pantsColor);
@@ -698,10 +688,8 @@ export class Renderer {
             // Brazo Derecho (Frente)
             drawPart(() => { this.ctx.roundRect(4, 0 - legSwing, 4, 7, 2); }, skinColor);
 
-            if (!isAgent) {
-                this.ctx.translate(0, -28);
-                this.drawHpBar(entity.hp, 4, '#22c55e');
-            }
+            this.ctx.translate(0, -28);
+            this.drawHpBar(entity.hp, 4, '#22c55e');
         }
 
         this.ctx.restore();
