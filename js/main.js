@@ -9,6 +9,52 @@ import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
 
 const canvas = document.getElementById('gameCanvas');
 
+export const IMAGES = {};
+const imageUrls = {
+    grass: 'assets/grass.png',
+    water: 'assets/water.png',
+    tree: 'assets/tree.png',
+    rock: 'assets/rock.png',
+    agent: 'assets/agent.png'
+};
+
+function removeMagentaBackground(img) {
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = img.width;
+    pCanvas.height = img.height;
+    const pCtx = pCanvas.getContext('2d');
+    pCtx.drawImage(img, 0, 0);
+    const imageData = pCtx.getImageData(0, 0, pCanvas.width, pCanvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i+1], b = data[i+2];
+        if (r > 200 && g < 80 && b > 200) {
+            data[i+3] = 0; // Transparente
+        }
+    }
+    pCtx.putImageData(imageData, 0, 0);
+    return pCanvas;
+}
+
+function loadImage(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = url;
+    });
+}
+
+async function loadAssets() {
+    for (let key in imageUrls) {
+        let img = await loadImage(imageUrls[key]);
+        if (key === 'grass' || key === 'water') {
+            IMAGES[key] = img;
+        } else {
+            IMAGES[key] = removeMagentaBackground(img);
+        }
+    }
+}
+
 function resizeCanvas() {
     const container = canvas.parentElement;
     canvas.width = container.clientWidth || 600;
@@ -359,4 +405,7 @@ function gameLoop(timestamp) {
 }
 
 // Iniciar el bucle
-requestAnimationFrame(gameLoop);
+loadAssets().then(() => {
+    renderer.initImages(IMAGES);
+    requestAnimationFrame(gameLoop);
+});

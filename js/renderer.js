@@ -5,7 +5,20 @@ export class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.images = null;
         this.grassPattern = this.createGrassPattern();
+    }
+
+    initImages(images) {
+        this.images = images;
+        if (images.grass) {
+            this.grassPattern = this.ctx.createPattern(images.grass, 'repeat');
+        }
+        if (images.water) {
+            this.waterPattern = this.ctx.createPattern(images.water, 'repeat');
+        }
     }
 
     createGrassPattern() {
@@ -174,25 +187,25 @@ export class Renderer {
     drawContinuousWater(x, y, world, timestamp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        let t = timestamp ? timestamp * 0.001 : 0;
         
-        this.ctx.fillStyle = '#0ea5e9'; // Azul profundo
-        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-        
-        // Detalles de agua (Olas suaves)
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        let wave1 = Math.sin(x + y + t) * 4;
-        let wave2 = Math.cos(x*2 + y*1.5 + t*1.2) * 3;
-        this.ctx.fillRect(px + CELL_SIZE/4, py + CELL_SIZE/3 + wave1, CELL_SIZE/2, 1);
-        this.ctx.fillRect(px + CELL_SIZE/2, py + CELL_SIZE/1.5 + wave2, CELL_SIZE/3, 1);
+        if (this.waterPattern) {
+            this.ctx.save();
+            this.ctx.translate(px, py);
+            this.ctx.fillStyle = this.waterPattern;
+            this.ctx.fillRect(0, 0, CELL_SIZE, CELL_SIZE);
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = '#0ea5e9';
+            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+        }
 
-        // Orilla de agua fina
-        this.ctx.fillStyle = '#7dd3fc'; 
+        // Orilla de arena
+        this.ctx.fillStyle = '#fde047'; 
         let isWater = (dx, dy) => {
             let c = world.getCell(x + dx, y + dy);
             return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
         };
-        let b = 1.5; // Borde muy fino
+        let b = 2; // Borde de arena
         if (!isWater(0, -1)) this.ctx.fillRect(px, py, CELL_SIZE, b);
         if (!isWater(0, 1)) this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b);
         if (!isWater(-1, 0)) this.ctx.fillRect(px, py, b, CELL_SIZE);
@@ -220,45 +233,55 @@ export class Renderer {
     drawTree(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        
         this.drawShadow(cx, cy + 12, 12, 4);
 
-        // Tronco
-        this.ctx.fillStyle = '#5c2b07';
-        this.ctx.fillRect(cx - 3, cy, 6, 14);
+        if (this.images && this.images.tree) {
+            let px = x * CELL_SIZE;
+            let py = y * CELL_SIZE;
+            // Draw tree sprite slightly larger and overlapping upwards
+            this.ctx.drawImage(this.images.tree, px - 10, py - 20, CELL_SIZE + 20, CELL_SIZE + 20);
+        } else {
+            // Tronco
+            this.ctx.fillStyle = '#5c2b07';
+            this.ctx.fillRect(cx - 3, cy, 6, 14);
 
-        // Pino (Triángulos superpuestos para estilo más refinado)
-        let drawPine = (yOffset, width, height, color) => {
-            this.ctx.fillStyle = color;
-            this.ctx.beginPath();
-            this.ctx.moveTo(cx, cy - yOffset - height);
-            this.ctx.lineTo(cx + width, cy - yOffset);
-            this.ctx.lineTo(cx - width, cy - yOffset);
-            this.ctx.closePath();
-            this.ctx.fill();
-        };
+            let drawPine = (yOffset, width, height, color) => {
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.moveTo(cx, cy - yOffset - height);
+                this.ctx.lineTo(cx + width, cy - yOffset);
+                this.ctx.lineTo(cx - width, cy - yOffset);
+                this.ctx.closePath();
+                this.ctx.fill();
+            };
 
-        drawPine(4, 14, 18, '#14532d'); // Base oscura
-        drawPine(9, 12, 16, '#166534'); // Medio
-        drawPine(14, 10, 14, '#22c55e'); // Claro
-        drawPine(19, 8, 12, '#4ade80'); // Punta
+            drawPine(4, 14, 18, '#14532d');
+            drawPine(9, 12, 16, '#166534');
+            drawPine(14, 10, 14, '#22c55e');
+            drawPine(19, 8, 12, '#4ade80');
+        }
     }
 
     drawRock(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        
         this.drawShadow(cx, cy + 10, 12, 5);
 
-        this.ctx.fillStyle = '#475569';
-        this.ctx.beginPath();
-        this.ctx.moveTo(cx - 12, cy + 8); this.ctx.lineTo(cx - 6, cy - 6); this.ctx.lineTo(cx + 4, cy - 12);
-        this.ctx.lineTo(cx + 14, cy - 2); this.ctx.lineTo(cx + 10, cy + 10); this.ctx.closePath(); this.ctx.fill();
-        
-        this.ctx.fillStyle = '#94a3b8';
-        this.ctx.beginPath();
-        this.ctx.moveTo(cx - 8, cy + 6); this.ctx.lineTo(cx - 4, cy - 4); this.ctx.lineTo(cx + 6, cy - 4);
-        this.ctx.closePath(); this.ctx.fill();
+        if (this.images && this.images.rock) {
+            let px = x * CELL_SIZE;
+            let py = y * CELL_SIZE;
+            this.ctx.drawImage(this.images.rock, px, py, CELL_SIZE, CELL_SIZE);
+        } else {
+            this.ctx.fillStyle = '#475569';
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx - 12, cy + 8); this.ctx.lineTo(cx - 6, cy - 6); this.ctx.lineTo(cx + 4, cy - 12);
+            this.ctx.lineTo(cx + 14, cy - 2); this.ctx.lineTo(cx + 10, cy + 10); this.ctx.closePath(); this.ctx.fill();
+            
+            this.ctx.fillStyle = '#94a3b8';
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx - 8, cy + 6); this.ctx.lineTo(cx - 4, cy - 4); this.ctx.lineTo(cx + 6, cy - 4);
+            this.ctx.closePath(); this.ctx.fill();
+        }
     }
 
     drawBridge(x, y) {
@@ -438,7 +461,26 @@ export class Renderer {
         }
     }
 
-    drawEntity(entity, type, timestamp) {
+    drawEntity(entity, type, timestamp = 0) {
+        let walkSwing = Math.sin(entity.x * 10) * 4; 
+        if (timestamp === 0) walkSwing = 0; // Animación de idle o movimiento
+
+        if (type === 'agent' && this.images && this.images.agent) {
+            let px = entity.x * CELL_SIZE;
+            let py = entity.y * CELL_SIZE;
+            let cx = px + CELL_SIZE / 2;
+            let cy = py + CELL_SIZE / 2;
+
+            // Sombra
+            this.drawShadow(cx, cy + 14, 10, 4);
+            
+            let hover = Math.sin((timestamp||0) * 0.005) * 2;
+            
+            // Draw agent sprite
+            this.ctx.drawImage(this.images.agent, px - 5, py - 15 + hover, CELL_SIZE + 10, CELL_SIZE + 15);
+            return;
+        }
+
         if (type !== 'agent' && entity.hp <= 0) return;
 
         let cx = entity.x * CELL_SIZE + CELL_SIZE / 2;
