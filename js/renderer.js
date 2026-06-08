@@ -32,18 +32,37 @@ export class Renderer {
     }
 
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0) {
-        // Fondo base (pasto)
-        this.ctx.fillStyle = this.grassPattern;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.cameraX = 0;
+        this.cameraY = 0;
+        if (agent) {
+            let targetX = agent.x * CELL_SIZE + CELL_SIZE / 2;
+            let targetY = agent.y * CELL_SIZE + CELL_SIZE / 2;
+            this.cameraX = targetX - this.canvas.width / 2;
+            this.cameraY = targetY - this.canvas.height / 2;
+            
+            let mapPxWidth = WORLD_WIDTH * CELL_SIZE;
+            let mapPxHeight = WORLD_HEIGHT * CELL_SIZE;
+            
+            this.cameraX = Math.max(0, Math.min(this.cameraX, mapPxWidth - this.canvas.width));
+            this.cameraY = Math.max(0, Math.min(this.cameraY, mapPxHeight - this.canvas.height));
+        }
 
-        // Opcional: Iluminación global sutil
+        this.ctx.save();
+        this.ctx.translate(-this.cameraX, -this.cameraY);
+
+        // Fondo base (pasto) - Anclado al mundo
+        this.ctx.fillStyle = this.grassPattern;
+        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width, this.canvas.height);
+
+        // Iluminación global sutil (fija a la pantalla)
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         let grad = this.ctx.createRadialGradient(this.canvas.width/2, this.canvas.height/2, 50, this.canvas.width/2, this.canvas.height/2, this.canvas.width);
         grad.addColorStop(0, 'rgba(255,255,255,0.05)');
         grad.addColorStop(1, 'rgba(0,0,0,0.1)');
         this.ctx.fillStyle = grad;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        this.ctx.save();
+        this.ctx.restore();
         
         // 1. Dibujar Terreno Base (Agua Continua y Puentes)
         for (let y = 0; y < WORLD_HEIGHT; y++) {
@@ -652,7 +671,7 @@ export class Renderer {
         
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width, this.canvas.height);
 
         this.ctx.globalCompositeOperation = 'destination-out';
         

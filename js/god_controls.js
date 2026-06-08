@@ -4,10 +4,11 @@ import { RESOURCES, CELL_SIZE } from './world.js';
 import { Enemy } from './enemy.js';
 
 export class GodControls {
-    constructor(world, canvas, enemiesArray) {
+    constructor(world, canvas, enemiesArray, renderer) {
         this.world = world;
         this.canvas = canvas;
         this.enemies = enemiesArray;
+        this.renderer = renderer;
         this.currentTool = RESOURCES.FOOD;
 
         this.initEvents();
@@ -55,8 +56,21 @@ export class GodControls {
 
     handleCanvasClick(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const gridX = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-        const gridY = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+        // Escala real del canvas vs CSS
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+
+        // Desplazamiento de la cámara
+        const camX = this.renderer ? (this.renderer.cameraX || 0) : 0;
+        const camY = this.renderer ? (this.renderer.cameraY || 0) : 0;
+
+        const worldX = canvasX + camX;
+        const worldY = canvasY + camY;
+
+        const gridX = Math.floor(worldX / CELL_SIZE);
+        const gridY = Math.floor(worldY / CELL_SIZE);
 
         if (this.currentTool === 'ENEMY') {
             if (e.type === 'mousedown') {

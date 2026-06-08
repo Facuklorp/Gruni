@@ -8,12 +8,22 @@ import { Wolf } from './wolf.js';
 import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
 
 const canvas = document.getElementById('gameCanvas');
+
+function resizeCanvas() {
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth || 600;
+    canvas.height = Math.min(container.clientWidth, window.innerHeight * 0.7) || 600;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
 const world = new World();
 const agent = new Agent(world);
 let enemies = [];
 let wolf = null;
 const renderer = new Renderer(canvas);
-const controls = new GodControls(world, canvas, enemies);
+const controls = new GodControls(world, canvas, enemies, renderer);
+
 
 let gamePaused = false;
 let eclipseTimer = 0;

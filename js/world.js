@@ -1,5 +1,5 @@
 // js/world.js
-export const CELL_SIZE = 30;
+export const CELL_SIZE = 80;
 export const WORLD_WIDTH = 20;
 export const WORLD_HEIGHT = 20;
 
