@@ -540,7 +540,24 @@ export class Renderer {
                 if (sw === 1024) drawX = -drawW / 4;
 
                 let hover = Math.sin(t * 0.005) * 2;
-                this.ctx.drawImage(activeImg, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover, drawW, renderH);
+                
+                // Efecto de caminado por código (Wobble & Bobbing)
+                let walkWobble = 0;
+                let walkBounce = 0;
+                let isMoving = (entity.target !== null && entity.state.startsWith('Buscando')) || (entity.state === 'Deambulando' && entity.wanderTimer === 0);
+                
+                if (isMoving) {
+                    // Balanceo (rotación leve)
+                    walkWobble = Math.sin(t * 0.02) * 0.15; 
+                    // Salto vertical (bobbing)
+                    walkBounce = Math.abs(Math.sin(t * 0.02)) * 6;
+                }
+
+                this.ctx.translate(drawX + drawW/2, -renderH/2 + offsetY + hover - walkBounce + renderH/2);
+                this.ctx.rotate(walkWobble);
+                this.ctx.translate(-(drawX + drawW/2), -(-renderH/2 + offsetY + hover - walkBounce + renderH/2));
+
+                this.ctx.drawImage(activeImg, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover - walkBounce, drawW, renderH);
                 this.ctx.restore();
             }
         } else {
