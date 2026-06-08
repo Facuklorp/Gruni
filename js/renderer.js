@@ -10,23 +10,27 @@ export class Renderer {
 
     createGrassPattern() {
         const pCanvas = document.createElement('canvas');
-        pCanvas.width = 120;
-        pCanvas.height = 120;
+        pCanvas.width = 100;
+        pCanvas.height = 100;
         const pCtx = pCanvas.getContext('2d');
         
-        // Base verde suave y premium
         pCtx.fillStyle = '#86efac'; 
-        pCtx.fillRect(0, 0, 120, 120);
+        pCtx.fillRect(0, 0, 100, 100);
         
-        // Manchas más suaves
-        for(let i=0; i<80; i++) {
-            let x = Math.random() * 120;
-            let y = Math.random() * 120;
-            let r = Math.random() * 8 + 4;
-            pCtx.fillStyle = Math.random() > 0.5 ? 'rgba(74, 222, 128, 0.4)' : 'rgba(134, 239, 172, 0.6)';
+        // Dibujar pequeñas espigas de pasto
+        pCtx.strokeStyle = 'rgba(22, 163, 74, 0.4)';
+        pCtx.lineWidth = 1.5;
+        pCtx.lineCap = 'round';
+        
+        for(let i=0; i<40; i++) {
+            let x = Math.random() * 100;
+            let y = Math.random() * 100;
             pCtx.beginPath();
-            pCtx.arc(x, y, r, 0, Math.PI * 2);
-            pCtx.fill();
+            pCtx.moveTo(x, y);
+            pCtx.lineTo(x - 2, y - 4);
+            pCtx.moveTo(x, y);
+            pCtx.lineTo(x + 2, y - 5);
+            pCtx.stroke();
         }
         return pCtx.createPattern(pCanvas, 'repeat');
     }
@@ -170,30 +174,29 @@ export class Renderer {
     drawContinuousWater(x, y, world, timestamp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        
         let t = timestamp ? timestamp * 0.001 : 0;
         
-        this.ctx.fillStyle = '#38bdf8'; // Celeste vibrante
+        this.ctx.fillStyle = '#0ea5e9'; // Azul profundo
+        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
         
-        // Sobredibujamos un poco (1 pixel extra) para evitar líneas entre celdas
-        this.ctx.fillRect(px - 1, py - 1, CELL_SIZE + 2, CELL_SIZE + 2);
-        
-        // Oleaje sutil
-        this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        let wave = Math.sin(x*0.5 + y*0.5 + t) * 3;
-        this.ctx.fillRect(px + CELL_SIZE/4, py + CELL_SIZE/2 + wave, CELL_SIZE/2, 2);
+        // Detalles de agua (Olas suaves)
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        let wave1 = Math.sin(x + y + t) * 4;
+        let wave2 = Math.cos(x*2 + y*1.5 + t*1.2) * 3;
+        this.ctx.fillRect(px + CELL_SIZE/4, py + CELL_SIZE/3 + wave1, CELL_SIZE/2, 1);
+        this.ctx.fillRect(px + CELL_SIZE/2, py + CELL_SIZE/1.5 + wave2, CELL_SIZE/3, 1);
 
-        // Orillas (Si el vecino no es agua, dibujamos un borde clarito)
-        this.ctx.fillStyle = '#bae6fd'; // Espuma
+        // Orilla de agua fina
+        this.ctx.fillStyle = '#7dd3fc'; 
         let isWater = (dx, dy) => {
             let c = world.getCell(x + dx, y + dy);
             return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
         };
-
-        if (!isWater(0, -1)) this.ctx.fillRect(px, py, CELL_SIZE, 3); // Arriba
-        if (!isWater(0, 1)) this.ctx.fillRect(px, py + CELL_SIZE - 3, CELL_SIZE, 3); // Abajo
-        if (!isWater(-1, 0)) this.ctx.fillRect(px, py, 3, CELL_SIZE); // Izquierda
-        if (!isWater(1, 0)) this.ctx.fillRect(px + CELL_SIZE - 3, py, 3, CELL_SIZE); // Derecha
+        let b = 1.5; // Borde muy fino
+        if (!isWater(0, -1)) this.ctx.fillRect(px, py, CELL_SIZE, b);
+        if (!isWater(0, 1)) this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b);
+        if (!isWater(-1, 0)) this.ctx.fillRect(px, py, b, CELL_SIZE);
+        if (!isWater(1, 0)) this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE);
     }
 
     drawApple(x, y, timestamp) {
@@ -218,22 +221,27 @@ export class Renderer {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
         
-        this.drawShadow(cx, cy + 12, 14, 6);
+        this.drawShadow(cx, cy + 12, 12, 4);
 
         // Tronco
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(cx - 4, cy, 8, 14);
+        this.ctx.fillStyle = '#5c2b07';
+        this.ctx.fillRect(cx - 3, cy, 6, 14);
 
-        // Copa del árbol sobre escalada para ocultar grilla
-        this.ctx.fillStyle = '#166534'; // Oscuro fondo
-        this.ctx.beginPath(); this.ctx.arc(cx, cy - 8, 16, 0, Math.PI * 2); this.ctx.fill();
-        
-        this.ctx.fillStyle = '#22c55e'; // Claro medio
-        this.ctx.beginPath(); this.ctx.arc(cx - 6, cy - 12, 12, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.arc(cx + 6, cy - 12, 12, 0, Math.PI * 2); this.ctx.fill();
-        
-        this.ctx.fillStyle = '#4ade80'; // Highlight superior
-        this.ctx.beginPath(); this.ctx.arc(cx, cy - 18, 10, 0, Math.PI * 2); this.ctx.fill();
+        // Pino (Triángulos superpuestos para estilo más refinado)
+        let drawPine = (yOffset, width, height, color) => {
+            this.ctx.fillStyle = color;
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx, cy - yOffset - height);
+            this.ctx.lineTo(cx + width, cy - yOffset);
+            this.ctx.lineTo(cx - width, cy - yOffset);
+            this.ctx.closePath();
+            this.ctx.fill();
+        };
+
+        drawPine(4, 14, 18, '#14532d'); // Base oscura
+        drawPine(9, 12, 16, '#166534'); // Medio
+        drawPine(14, 10, 14, '#22c55e'); // Claro
+        drawPine(19, 8, 12, '#4ade80'); // Punta
     }
 
     drawRock(x, y) {
@@ -381,7 +389,7 @@ export class Renderer {
         this.ctx.translate(cx, cy + 2);
 
         this.ctx.strokeStyle = '#451a03';
-        this.ctx.lineWidth = 3;
+            this.ctx.lineWidth = 3 / ZOOM;
         this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(-6, 12); this.ctx.stroke();
         this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(6, 12); this.ctx.stroke();
 
@@ -449,13 +457,12 @@ export class Renderer {
         let outline = '#0f172a'; // Dark outline
         this.ctx.lineJoin = 'round';
 
-        // Helper to draw segmented parts with thick stroke
         let drawPart = (pathFn, fillStyle) => {
             this.ctx.beginPath();
             pathFn();
             this.ctx.fillStyle = fillStyle;
             this.ctx.fill();
-            this.ctx.lineWidth = 2.5;
+            this.ctx.lineWidth = 2.5 / ZOOM;
             this.ctx.strokeStyle = outline;
             this.ctx.stroke();
         };
@@ -587,7 +594,7 @@ export class Renderer {
             }
 
             // Cara (Ojos y boca expresiva)
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 2 / ZOOM;
             this.ctx.strokeStyle = outline;
             
             let drawAnimeEye = (x, y) => {
