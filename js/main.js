@@ -127,7 +127,16 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
         document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         currentTickRate = parseInt(e.target.dataset.speed);
+        if (gamePaused) document.getElementById('btn-pause').click(); // Auto reanudar al cambiar velocidad
     });
+});
+
+const btnPause = document.getElementById('btn-pause');
+btnPause.addEventListener('click', () => {
+    gamePaused = !gamePaused;
+    btnPause.innerText = gamePaused ? '▶️ Play' : '⏸️ Pausa';
+    btnPause.style.background = gamePaused ? '#22c55e' : '#334155';
+    document.getElementById('gameCanvas').style.filter = gamePaused ? 'grayscale(0.5)' : 'none'; // Efecto visual
 });
 
 const modal = document.getElementById('book-modal');
