@@ -1,5 +1,5 @@
 // js/god_controls.js
-import { RESOURCES, CELL_SIZE } from './world.js';
+import { RESOURCES, CELL_SIZE, ZOOM } from './world.js';
 
 import { Enemy } from './enemy.js';
 
@@ -66,8 +66,8 @@ export class GodControls {
         const camX = this.renderer ? (this.renderer.cameraX || 0) : 0;
         const camY = this.renderer ? (this.renderer.cameraY || 0) : 0;
 
-        const worldX = canvasX + camX;
-        const worldY = canvasY + camY;
+        const worldX = (canvasX / ZOOM) + camX;
+        const worldY = (canvasY / ZOOM) + camY;
 
         const gridX = Math.floor(worldX / CELL_SIZE);
         const gridY = Math.floor(worldY / CELL_SIZE);

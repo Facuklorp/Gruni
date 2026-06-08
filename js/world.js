@@ -1,5 +1,6 @@
 // js/world.js
-export const CELL_SIZE = 80;
+export const CELL_SIZE = 30; // Base size for all drawings
+export const ZOOM = 2.5; // Visual scale multiplier
 export const WORLD_WIDTH = 20;
 export const WORLD_HEIGHT = 20;
 

@@ -1,5 +1,5 @@
 // js/renderer.js
-import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, RESOURCES } from './world.js';
+import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES } from './world.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -34,25 +34,30 @@ export class Renderer {
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0) {
         this.cameraX = 0;
         this.cameraY = 0;
+        
+        let viewW = this.canvas.width / ZOOM;
+        let viewH = this.canvas.height / ZOOM;
+
         if (agent) {
             let targetX = agent.x * CELL_SIZE + CELL_SIZE / 2;
             let targetY = agent.y * CELL_SIZE + CELL_SIZE / 2;
-            this.cameraX = targetX - this.canvas.width / 2;
-            this.cameraY = targetY - this.canvas.height / 2;
+            this.cameraX = targetX - viewW / 2;
+            this.cameraY = targetY - viewH / 2;
             
             let mapPxWidth = WORLD_WIDTH * CELL_SIZE;
             let mapPxHeight = WORLD_HEIGHT * CELL_SIZE;
             
-            this.cameraX = Math.max(0, Math.min(this.cameraX, mapPxWidth - this.canvas.width));
-            this.cameraY = Math.max(0, Math.min(this.cameraY, mapPxHeight - this.canvas.height));
+            this.cameraX = Math.max(0, Math.min(this.cameraX, mapPxWidth - viewW));
+            this.cameraY = Math.max(0, Math.min(this.cameraY, mapPxHeight - viewH));
         }
 
         this.ctx.save();
+        this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
         // Fondo base (pasto) - Anclado al mundo
         this.ctx.fillStyle = this.grassPattern;
-        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(this.cameraX, this.cameraY, viewW, viewH);
 
         // Iluminación global sutil (fija a la pantalla)
         this.ctx.save();
@@ -671,7 +676,7 @@ export class Renderer {
         
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width / ZOOM, this.canvas.height / ZOOM);
 
         this.ctx.globalCompositeOperation = 'destination-out';
         

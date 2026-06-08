@@ -32,7 +32,7 @@ body {
     display: flex;
     gap: 24px;
     width: 100%;
-    max-width: 1200px;
+    max-width: 98%;
     padding: 24px;
     align-items: flex-start;
     overflow-x: auto;
