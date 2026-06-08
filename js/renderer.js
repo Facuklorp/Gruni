@@ -488,10 +488,10 @@ export class Renderer {
         } else {
             // Humanoids (Agent / Enemy)
             let isAgent = type === 'agent';
-            let skinColor = isAgent ? '#fde047' : '#d8b4fe'; // Amarillo o morado
-            let shirtColor = isAgent ? '#3b82f6' : '#7e22ce'; // Azul o violeta
+            let skinColor = isAgent ? '#fef08a' : '#d8b4fe'; // Piel clara elfa
+            let shirtColor = isAgent ? '#3b82f6' : '#7e22ce'; // Azul liso enterizo
             let pantsColor = isAgent ? '#1e3a8a' : '#4c1d95'; 
-            let hairColor = isAgent ? '#78350f' : '#000000'; // Marrón o negro
+            let hairColor = isAgent ? '#3b82f6' : '#000000'; // Pelo azul
             
             let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
 
@@ -512,7 +512,7 @@ export class Renderer {
             // Brazo Izquierdo (Atrás)
             drawPart(() => { this.ctx.roundRect(-8, 0 + legSwing, 4, 7, 2); }, skinColor);
 
-            // Torso
+            // Torso (Enterizo Azul liso)
             drawPart(() => { 
                 this.ctx.moveTo(-7, -4 + breathe);
                 this.ctx.lineTo(7, -4 + breathe);
@@ -521,45 +521,101 @@ export class Renderer {
                 this.ctx.closePath();
             }, shirtColor);
 
+            if (isAgent) {
+                // Orejas de elfo (Atrás de la cabeza)
+                drawPart(() => {
+                    this.ctx.moveTo(-7, -12 + breathe);
+                    this.ctx.lineTo(-14, -14 + breathe);
+                    this.ctx.lineTo(-7, -9 + breathe);
+                    this.ctx.closePath();
+                }, skinColor);
+                drawPart(() => {
+                    this.ctx.moveTo(7, -12 + breathe);
+                    this.ctx.lineTo(14, -14 + breathe);
+                    this.ctx.lineTo(7, -9 + breathe);
+                    this.ctx.closePath();
+                }, skinColor);
+            }
+
             // Cabeza
             drawPart(() => { this.ctx.arc(0, -12 + breathe, 8, 0, Math.PI*2); }, skinColor);
 
-            // Pelo / Cuernos
+            // Pelo / Sombrero / Cuernos
             if (isAgent) {
+                // Pelo azul asomando
                 drawPart(() => {
                     this.ctx.arc(0, -14 + breathe, 8, Math.PI, 0);
                     this.ctx.lineTo(6, -10 + breathe);
+                    this.ctx.lineTo(4, -8 + breathe);
+                    this.ctx.lineTo(0, -10 + breathe);
+                    this.ctx.lineTo(-4, -8 + breathe);
                     this.ctx.lineTo(-6, -10 + breathe);
                     this.ctx.closePath();
                 }, hairColor);
+
+                // Sombrero de Paja
+                drawPart(() => { this.ctx.ellipse(0, -16 + breathe, 14, 4, 0, 0, Math.PI*2); }, '#fde047'); // Ala ancha
+                drawPart(() => { this.ctx.arc(0, -17 + breathe, 7, Math.PI, 0); }, '#facc15'); // Copa
             } else {
                 // Cuernos enemigo
                 drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
                 drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
             }
 
-            // Cara (Ojos)
+            // Cara (Ojos y boca expresiva)
             this.ctx.lineWidth = 2;
             this.ctx.strokeStyle = outline;
+            
+            let drawAnimeEye = (x, y) => {
+                this.ctx.fillStyle = outline;
+                this.ctx.beginPath(); this.ctx.ellipse(x, y, 1.5, 2.5, 0, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.fillStyle = 'white';
+                this.ctx.beginPath(); this.ctx.arc(x - 0.5, y - 1, 0.8, 0, Math.PI*2); this.ctx.fill();
+            };
+
             if (entity.hp <= 0 && isAgent) {
                 // KO
-                this.ctx.beginPath(); this.ctx.moveTo(-5, -15+breathe); this.ctx.lineTo(-1, -11+breathe); this.ctx.moveTo(-1, -15+breathe); this.ctx.lineTo(-5, -11+breathe); this.ctx.stroke();
-                this.ctx.beginPath(); this.ctx.moveTo(1, -15+breathe); this.ctx.lineTo(5, -11+breathe); this.ctx.moveTo(5, -15+breathe); this.ctx.lineTo(1, -11+breathe); this.ctx.stroke();
+                this.ctx.beginPath(); this.ctx.moveTo(-5, -13+breathe); this.ctx.lineTo(-1, -9+breathe); this.ctx.moveTo(-1, -13+breathe); this.ctx.lineTo(-5, -9+breathe); this.ctx.stroke();
+                this.ctx.beginPath(); this.ctx.moveTo(1, -13+breathe); this.ctx.lineTo(5, -9+breathe); this.ctx.moveTo(5, -13+breathe); this.ctx.lineTo(1, -9+breathe); this.ctx.stroke();
             } else {
-                if (isAgent && entity.emotion === 'HAPPY') {
-                    this.ctx.beginPath(); this.ctx.arc(-3, -12+breathe, 2, Math.PI, 0); this.ctx.stroke();
-                    this.ctx.beginPath(); this.ctx.arc(3, -12+breathe, 2, Math.PI, 0); this.ctx.stroke();
-                } else if (type === 'enemy') {
-                    // Ojos enojados
+                if (isAgent) {
+                    if (entity.emotion === 'HAPPY') {
+                        // Ojos felices cerrados
+                        this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 2, Math.PI, 0); this.ctx.stroke();
+                        this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 2, Math.PI, 0); this.ctx.stroke();
+                        // Boca sonriente grande
+                        this.ctx.fillStyle = '#ef4444';
+                        this.ctx.beginPath(); this.ctx.arc(0, -7+breathe, 3, 0, Math.PI); this.ctx.fill(); this.ctx.stroke();
+                    } else if (entity.emotion === 'SAD') {
+                        drawAnimeEye(-3, -11+breathe);
+                        drawAnimeEye(3, -11+breathe);
+                        // Cejas tristes
+                        this.ctx.beginPath(); this.ctx.moveTo(-5, -14+breathe); this.ctx.lineTo(-2, -15+breathe); this.ctx.stroke();
+                        this.ctx.beginPath(); this.ctx.moveTo(5, -14+breathe); this.ctx.lineTo(2, -15+breathe); this.ctx.stroke();
+                        // Boca triste
+                        this.ctx.beginPath(); this.ctx.arc(0, -6+breathe, 2, Math.PI, 0); this.ctx.stroke();
+                    } else if (entity.emotion === 'ANGRY') {
+                        drawAnimeEye(-3, -11+breathe);
+                        drawAnimeEye(3, -11+breathe);
+                        // Cejas enojadas
+                        this.ctx.beginPath(); this.ctx.moveTo(-5, -15+breathe); this.ctx.lineTo(-1, -13+breathe); this.ctx.stroke();
+                        this.ctx.beginPath(); this.ctx.moveTo(5, -15+breathe); this.ctx.lineTo(1, -13+breathe); this.ctx.stroke();
+                        // Boca enojada
+                        this.ctx.beginPath(); this.ctx.moveTo(-2, -7+breathe); this.ctx.lineTo(2, -7+breathe); this.ctx.stroke();
+                    } else {
+                        // Neutral (Anime)
+                        drawAnimeEye(-3, -11+breathe);
+                        drawAnimeEye(3, -11+breathe);
+                        // Boca neutral
+                        this.ctx.beginPath(); this.ctx.arc(0, -8+breathe, 1.5, 0, Math.PI); this.ctx.stroke();
+                    }
+                } else {
+                    // Enemy Face
                     this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
                     this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
                     this.ctx.fillStyle = outline;
                     this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
                     this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-                } else {
-                    this.ctx.fillStyle = outline;
-                    this.ctx.beginPath(); this.ctx.arc(-3, -12+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.beginPath(); this.ctx.arc(3, -12+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
                 }
             }
 
