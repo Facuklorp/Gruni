@@ -51,32 +51,17 @@ export class Renderer {
                 let px = x * CELL_SIZE;
                 let py = y * CELL_SIZE;
                 
-                // Fondo pasto general
-                this.ctx.fillStyle = '#86efac';
-                this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-
                 let tv = cell.terrainVariant || 0;
-                if (tv === 1) { // Flores
-                    this.ctx.fillStyle = '#fde047';
-                    this.ctx.beginPath(); this.ctx.arc(px + 10, py + 10, 2, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.fillStyle = '#f87171';
-                    this.ctx.beginPath(); this.ctx.arc(px + 22, py + 20, 2, 0, Math.PI*2); this.ctx.fill();
-                } else if (tv === 2) { // Tierra (dirt patch)
-                    this.ctx.fillStyle = '#d97706';
-                    this.ctx.beginPath(); this.ctx.ellipse(px + 15, py + 15, 10, 6, 0, 0, Math.PI*2); this.ctx.fill();
-                } else if (tv === 3) { // Pasto oscuro alto
-                    this.ctx.fillStyle = '#22c55e';
-                    this.ctx.fillRect(px + 5, py + 15, 2, 6);
-                    this.ctx.fillRect(px + 8, py + 12, 2, 9);
-                    this.ctx.fillRect(px + 20, py + 5, 2, 7);
-                } else { // Pasto normal
-                    this.ctx.strokeStyle = 'rgba(22, 163, 74, 0.4)';
-                    this.ctx.lineWidth = 1.5;
-                    this.ctx.lineCap = 'round';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(px + 15, py + 15); this.ctx.lineTo(px + 13, py + 11);
-                    this.ctx.moveTo(px + 15, py + 15); this.ctx.lineTo(px + 17, py + 10);
-                    this.ctx.stroke();
+                let sx = 0, sy = 64; 
+                if (tv === 1) sx = 16;
+                else if (tv === 2) sx = 32;
+                else if (tv === 3) sx = 48;
+
+                if (this.images && this.images.sprout_grass) {
+                    this.ctx.drawImage(this.images.sprout_grass, sx, sy, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
+                } else {
+                    this.ctx.fillStyle = '#86efac';
+                    this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
                 }
             }
         }
@@ -188,32 +173,28 @@ export class Renderer {
     drawContinuousWater(x, y, world, timestamp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
+        let t = Math.floor((timestamp || 0) * 0.002) % 4;
         
-        let t = (timestamp || 0) * 0.002;
-        let wave = Math.sin(x + y + t) * 2;
-        
-        this.ctx.fillStyle = '#0ea5e9';
-        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-        
-        // Highlight de agua (olas)
-        this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        this.ctx.fillRect(px + 5, py + 10 + wave, 15, 2);
-        this.ctx.fillRect(px + 15, py + 20 - wave, 10, 2);
+        if (this.images && this.images.sprout_water) {
+            // El tile de agua puro suele estar en 16,16
+            this.ctx.drawImage(this.images.sprout_water, 16, 16, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
+        } else {
+            this.ctx.fillStyle = '#0ea5e9';
+            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+        }
 
-        // Orilla de arena con espuma animada
-        this.ctx.fillStyle = '#fde047'; 
+        // Borde arena basico (procedural por ahora si no autotileamos full)
+        this.ctx.fillStyle = '#fcd34d'; 
         let isWater = (dx, dy) => {
             let c = world.getCell(x + dx, y + dy);
             return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
         };
         let b = 2; // Borde de arena
-        let foamWave = Math.sin(t * 2 + x) * 1.5;
-        let fw = Math.max(0, foamWave);
-        
-        if (!isWater(0, -1)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+b, CELL_SIZE, 1+fw); }
-        if (!isWater(0, 1)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+CELL_SIZE-b-1-fw, CELL_SIZE, 1+fw); }
-        if (!isWater(-1, 0)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+b, py, 1+fw, CELL_SIZE); }
-        if (!isWater(1, 0)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+CELL_SIZE-b-1-fw, py, 1+fw, CELL_SIZE); }
+        let fw = Math.max(0, Math.sin(timestamp * 0.002 + x) * 1.5);
+        if (!isWater(0, -1)) { this.ctx.fillRect(px, py, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+b, CELL_SIZE, 1+fw); this.ctx.fillStyle='#fcd34d'; }
+        if (!isWater(0, 1)) { this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+CELL_SIZE-b-1-fw, CELL_SIZE, 1+fw); this.ctx.fillStyle='#fcd34d'; }
+        if (!isWater(-1, 0)) { this.ctx.fillRect(px, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+b, py, 1+fw, CELL_SIZE); this.ctx.fillStyle='#fcd34d'; }
+        if (!isWater(1, 0)) { this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+CELL_SIZE-b-1-fw, py, 1+fw, CELL_SIZE); }
     }
 
     drawApple(x, y, timestamp) {
@@ -237,54 +218,33 @@ export class Renderer {
     drawTree(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        this.drawShadow(cx, cy + 12, 12, 4);
+        this.drawShadow(cx, cy + 4, 10, 4);
 
-        if (this.images && this.images.tree) {
+        if (this.images && this.images.sprout_objects) {
             let px = x * CELL_SIZE;
             let py = y * CELL_SIZE;
-            // Draw tree sprite slightly larger and overlapping upwards
-            this.ctx.drawImage(this.images.tree, px - 10, py - 20, CELL_SIZE + 20, CELL_SIZE + 20);
+            // Sprout Lands pine tree (Aprox: 16x32 en 0,0)
+            this.ctx.drawImage(this.images.sprout_objects, 0, 0, 16, 32, px, py - 16, 16, 32);
         } else {
-            // Tronco
-            this.ctx.fillStyle = '#5c2b07';
-            this.ctx.fillRect(cx - 3, cy, 6, 14);
-
-            let drawPine = (yOffset, width, height, color) => {
-                this.ctx.fillStyle = color;
-                this.ctx.beginPath();
-                this.ctx.moveTo(cx, cy - yOffset - height);
-                this.ctx.lineTo(cx + width, cy - yOffset);
-                this.ctx.lineTo(cx - width, cy - yOffset);
-                this.ctx.closePath();
-                this.ctx.fill();
-            };
-
-            drawPine(4, 14, 18, '#14532d');
-            drawPine(9, 12, 16, '#166534');
-            drawPine(14, 10, 14, '#22c55e');
-            drawPine(19, 8, 12, '#4ade80');
+            // Procedural fallback
+            this.ctx.fillStyle = '#5c2b07'; this.ctx.fillRect(cx - 2, cy, 4, 10);
+            this.ctx.fillStyle = '#14532d'; this.ctx.beginPath(); this.ctx.moveTo(cx, cy - 16); this.ctx.lineTo(cx + 8, cy); this.ctx.lineTo(cx - 8, cy); this.ctx.fill();
         }
     }
 
     drawRock(x, y) {
         let cx = x * CELL_SIZE + CELL_SIZE / 2;
         let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        this.drawShadow(cx, cy + 10, 12, 5);
+        this.drawShadow(cx, cy + 6, 8, 3);
 
-        if (this.images && this.images.rock) {
+        if (this.images && this.images.sprout_objects) {
             let px = x * CELL_SIZE;
             let py = y * CELL_SIZE;
-            this.ctx.drawImage(this.images.rock, px, py, CELL_SIZE, CELL_SIZE);
+            // Small rocks en Sprout Lands suelen estar en 16x16
+            this.ctx.drawImage(this.images.sprout_objects, 112, 16, 16, 16, px, py, 16, 16);
         } else {
             this.ctx.fillStyle = '#475569';
-            this.ctx.beginPath();
-            this.ctx.moveTo(cx - 12, cy + 8); this.ctx.lineTo(cx - 6, cy - 6); this.ctx.lineTo(cx + 4, cy - 12);
-            this.ctx.lineTo(cx + 14, cy - 2); this.ctx.lineTo(cx + 10, cy + 10); this.ctx.closePath(); this.ctx.fill();
-            
-            this.ctx.fillStyle = '#94a3b8';
-            this.ctx.beginPath();
-            this.ctx.moveTo(cx - 8, cy + 6); this.ctx.lineTo(cx - 4, cy - 4); this.ctx.lineTo(cx + 6, cy - 4);
-            this.ctx.closePath(); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 6, 0, Math.PI*2); this.ctx.fill();
         }
     }
 
@@ -472,199 +432,47 @@ export class Renderer {
         let py = entity.y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
         let cy = py + CELL_SIZE / 2;
+        
         let t = timestamp || 0;
-        let breathe = Math.sin(t * 0.005 + cx) * 1.5;
+        let frame = Math.floor(t * 0.005) % 4; // Animación 4 frames
 
         if (type === 'agent') {
-            this.drawShadow(cx, cy + 14, 10, 4);
+            this.drawShadow(cx, cy + 6, 6, 2);
 
-            let frame = (Math.floor(entity.animationTimer / 2)) % 2; 
-            let img = this.images && this.images.agent_basicas ? this.images.agent_basicas : null;
-            let imgAcciones = this.images && this.images.agent_acciones ? this.images.agent_acciones : null;
-            
-            if (img && imgAcciones) {
-                let sx = 512, sy = 512, sw = 256, sh = 512; // Default
-                let activeImg = img;
-                
-                if (entity.isAttacking || entity.state === '¡Defendiendo Casa!') {
-                    activeImg = imgAcciones;
-                    sx = 0; sy = 512; sw = 1024; sh = 512; 
-                } else if (entity.state === 'Talando' || (entity.state === 'Recolectando' && entity.lastGathered === 'WOOD') || entity.state === 'Construyendo Casa' || entity.state === 'Restaurando Casa' || entity.state === 'Construyendo Muralla' || entity.state === 'Construyendo Telescopio') {
-                    activeImg = imgAcciones;
-                    sx = 0; sy = 1024; sw = 512; sh = 512;
-                } else if (entity.state === 'Picando' || (entity.state === 'Recolectando' && entity.lastGathered === 'ROCK')) {
-                    activeImg = imgAcciones;
-                    sx = 512; sy = 1024; sw = 512; sh = 512;
-                } else if (entity.happyTimer > 0) {
-                    activeImg = img;
-                    sx = 768; sy = 0; sw = 256; sh = 512;
-                } else {
-                    let isMoving = (entity.target !== null && entity.state.startsWith('Buscando'));
-                    if (isMoving || (entity.state === 'Deambulando' && entity.wanderTimer === 0)) {
-                        if (entity.state === 'Buscando Agua') {
-                            activeImg = imgAcciones;
-                            sx = 1024 + (frame * 512); sy = 0; sw = 512; sh = 512;
-                        } else if (entity.state === 'Buscando Comida') {
-                            activeImg = imgAcciones;
-                            sx = 1024 + (frame * 512); sy = 512; sw = 512; sh = 512;
-                        } else {
-                            activeImg = img;
-                            sx = frame * 256; sy = 0; sw = 256; sh = 512;
-                        }
-                    } else {
-                        activeImg = img;
-                        if (entity.emotion === 'SAD') { sx = 256; sy = 512; sw = 256; sh = 512; }
-                        else if (entity.emotion === 'ANGRY') { sx = 0; sy = 512; sw = 256; sh = 512; }
-                        else if (entity.stuckTimer > 0) { sx = 768; sy = 512; sw = 256; sh = 512; }
-                        else { sx = 512; sy = 512; sw = 256; sh = 512; }
-                    }
-                }
+            let dir = 0; // 0=down, 1=up, 2=left, 3=right
+            if (entity.dx > 0) dir = 3;
+            else if (entity.dx < 0) dir = 2;
+            else if (entity.dy < 0) dir = 1;
 
-                this.ctx.save();
-                this.ctx.translate(cx, cy);
-                
-                if (entity.dx === -1) {
-                    this.ctx.scale(-1, 1);
-                }
+            let isMoving = (entity.dx !== 0 || entity.dy !== 0);
+            if (!isMoving) frame = 0; // Idle frame (col 0) o 0/1 para idle respirando
+            if (!isMoving && Math.floor(t * 0.002) % 2 === 0) frame = 1; // Idle sutil
 
-                let drawW = 34;
-                let drawH = 68;
-                let offsetY = -15;
-
-                if (activeImg === imgAcciones) {
-                    drawW = 68;
-                    drawH = 68;
-                    if (sw === 1024) drawW = 136;
-                }
-
-                let cropH = sh * 0.85; 
-                let renderH = drawH * 0.85;
-                
-                let drawX = -drawW / 2;
-                if (sw === 1024) drawX = -drawW / 4;
-
-                let hover = Math.sin(t * 0.005) * 2;
-                
-                // Efecto de caminado por código (Wobble & Bobbing)
-                let walkWobble = 0;
-                let walkBounce = 0;
-                let isMoving = (entity.target !== null && entity.state.startsWith('Buscando')) || (entity.state === 'Deambulando' && entity.wanderTimer === 0);
-                
-                if (isMoving) {
-                    // Balanceo (rotación leve)
-                    walkWobble = Math.sin(t * 0.02) * 0.15; 
-                    // Salto vertical (bobbing)
-                    walkBounce = Math.abs(Math.sin(t * 0.02)) * 6;
-                }
-
-                this.ctx.translate(drawX + drawW/2, -renderH/2 + offsetY + hover - walkBounce + renderH/2);
-                this.ctx.rotate(walkWobble);
-                this.ctx.translate(-(drawX + drawW/2), -(-renderH/2 + offsetY + hover - walkBounce + renderH/2));
-
-                this.ctx.drawImage(activeImg, sx, sy, sw, cropH, drawX, -renderH/2 + offsetY + hover - walkBounce, drawW, renderH);
-                this.ctx.restore();
-            }
-        } else {
-            // Lobo o Enemigo
-            this.drawShadow(cx, cy + 12, type === 'wolf' ? 14 : 10, 5);
-
-            this.ctx.save();
-            this.ctx.translate(cx, cy);
-            
-            let outline = '#0f172a';
-            this.ctx.lineJoin = 'round';
-
-            let drawPart = (pathFn, fillStyle) => {
-                this.ctx.beginPath();
-                pathFn();
-                this.ctx.fillStyle = fillStyle;
-                this.ctx.fill();
-                this.ctx.lineWidth = 2.5 / ZOOM;
-                this.ctx.strokeStyle = outline;
-                this.ctx.stroke();
-            };
-
-            let walkCycle = Math.sin(t * 0.01 + cx * 10);
-
-            if (type === 'wolf') {
-                let bodyColor = '#94a3b8';
-                let furColor = '#cbd5e1';
-                let tailSwing = Math.sin(t * 0.01) * 3;
-                
-                drawPart(() => { this.ctx.roundRect(-8, 8, 4, 8, 2); }, bodyColor);
-                drawPart(() => { this.ctx.roundRect(4, 8, 4, 8, 2); }, bodyColor);
-
-                this.ctx.save();
-                this.ctx.translate(-12, 0);
-                this.ctx.rotate(tailSwing * 0.1);
-                drawPart(() => { this.ctx.ellipse(-6, 4, 8, 3, Math.PI/4, 0, Math.PI*2); }, bodyColor);
-                this.ctx.restore();
-
-                drawPart(() => { this.ctx.ellipse(0, 2 + breathe*0.5, 14, 10, 0, 0, Math.PI*2); }, furColor);
-                drawPart(() => { this.ctx.arc(10, -4 + breathe*0.5, 7, 0, Math.PI*2); }, furColor);
-                drawPart(() => { this.ctx.ellipse(16, -2 + breathe*0.5, 5, 3, 0, 0, Math.PI*2); }, '#e2e8f0');
-                
-                this.ctx.fillStyle = outline;
-                this.ctx.beginPath(); this.ctx.arc(20, -3 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
-                
-                drawPart(() => { this.ctx.moveTo(8, -10 + breathe*0.5); this.ctx.lineTo(12, -16 + breathe*0.5); this.ctx.lineTo(14, -8 + breathe*0.5); this.ctx.closePath(); }, bodyColor);
-                
-                drawPart(() => { this.ctx.roundRect(-4, 10, 4, 8, 2); }, furColor);
-                drawPart(() => { this.ctx.roundRect(8, 10, 4, 8, 2); }, furColor);
-
-                this.ctx.fillStyle = outline;
-                this.ctx.beginPath(); this.ctx.arc(12, -5 + breathe*0.5, 1.5, 0, Math.PI*2); this.ctx.fill();
-
-                if (entity.isAttacking) {
-                    this.ctx.shadowColor = '#3b82f6';
-                    this.ctx.shadowBlur = 10;
-                    drawPart(() => { this.ctx.arc(24, -2 + breathe*0.5, 5, 0, Math.PI*2); }, 'rgba(59, 130, 246, 0.8)');
-                    this.ctx.shadowBlur = 0;
-                }
-
-                this.ctx.translate(0, -22);
-                this.drawHpBar(entity.hp, 10, '#3b82f6');
-                
+            if (this.images && this.images.sprout_agent) {
+                // Sprout Lands Basic Charakter: 4x4 grid de 16x16
+                let sx = frame * 16;
+                let sy = dir * 16;
+                this.ctx.drawImage(this.images.sprout_agent, sx, sy, 16, 16, px, py - 4, 16, 16);
             } else {
-                // Enemy
-                let skinColor = '#d8b4fe'; 
-                let shirtColor = '#7e22ce'; 
-                let pantsColor = '#4c1d95'; 
-                
-                let legSwing = entity.isAttacking ? 0 : walkCycle * 4;
-
-                drawPart(() => { this.ctx.roundRect(-6, 6 - legSwing, 5, 8, 2); }, pantsColor);
-                drawPart(() => { this.ctx.roundRect(-8, 0 + legSwing, 4, 7, 2); }, skinColor);
-
-                drawPart(() => { 
-                    this.ctx.moveTo(-7, -4 + breathe);
-                    this.ctx.lineTo(7, -4 + breathe);
-                    this.ctx.lineTo(6, 8 + breathe);
-                    this.ctx.lineTo(-6, 8 + breathe);
-                    this.ctx.closePath();
-                }, shirtColor);
-
-                drawPart(() => { this.ctx.arc(0, -12 + breathe, 8, 0, Math.PI*2); }, skinColor);
-
-                drawPart(() => { this.ctx.moveTo(-5, -18 + breathe); this.ctx.lineTo(-8, -24 + breathe); this.ctx.lineTo(-2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
-                drawPart(() => { this.ctx.moveTo(5, -18 + breathe); this.ctx.lineTo(8, -24 + breathe); this.ctx.lineTo(2, -18 + breathe); this.ctx.closePath(); }, '#f1f5f9');
-
-                this.ctx.lineWidth = 2 / ZOOM;
-                this.ctx.strokeStyle = outline;
-                
-                this.ctx.beginPath(); this.ctx.moveTo(-6, -14+breathe); this.ctx.lineTo(-2, -12+breathe); this.ctx.stroke();
-                this.ctx.beginPath(); this.ctx.moveTo(6, -14+breathe); this.ctx.lineTo(2, -12+breathe); this.ctx.stroke();
-                this.ctx.fillStyle = outline;
-                this.ctx.beginPath(); this.ctx.arc(-3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-                this.ctx.beginPath(); this.ctx.arc(3, -11+breathe, 1.5, 0, Math.PI*2); this.ctx.fill();
-
-                drawPart(() => { this.ctx.roundRect(1, 6 + legSwing, 5, 8, 2); }, pantsColor);
-                drawPart(() => { this.ctx.roundRect(4, 0 - legSwing, 4, 7, 2); }, skinColor);
-
-                this.ctx.translate(0, -28);
-                this.drawHpBar(entity.hp, 4, '#22c55e');
+                this.ctx.fillStyle = '#ef4444'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
-            this.ctx.restore();
+        } else if (type === 'enemy') {
+            this.drawShadow(cx, cy + 6, 8, 3);
+            if (this.images && this.images.sprout_cow) {
+                // Dibujamos vaca temporalmente como enemigo (para testear spritesheets)
+                let cowFrame = Math.floor(t * 0.003) % 3; 
+                this.ctx.drawImage(this.images.sprout_cow, cowFrame * 32, 0, 32, 32, px - 8, py - 16, 32, 32);
+            } else {
+                this.ctx.fillStyle = '#d8b4fe'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
+            }
+        } else if (type === 'wolf') {
+            this.drawShadow(cx, cy + 6, 6, 2);
+            if (this.images && this.images.sprout_chicken) {
+                let chickFrame = Math.floor(t * 0.004) % 2; 
+                this.ctx.drawImage(this.images.sprout_chicken, chickFrame * 16, 0, 16, 16, px, py, 16, 16);
+            } else {
+                this.ctx.fillStyle = '#94a3b8'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
+            }
         }
     }
 

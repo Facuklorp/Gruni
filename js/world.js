@@ -1,8 +1,8 @@
 // js/world.js
-export const CELL_SIZE = 30; // Base size for all drawings
-export const ZOOM = 2.5; // Visual scale multiplier
-export const WORLD_WIDTH = 20;
-export const WORLD_HEIGHT = 20;
+export const CELL_SIZE = 16; // Base size for 16-bit tiles
+export const ZOOM = 3.5; // Visual scale multiplier
+export const WORLD_WIDTH = 30;
+export const WORLD_HEIGHT = 30;
 
 export const RESOURCES = {
     EMPTY: 0,

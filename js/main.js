@@ -10,31 +10,16 @@ const canvas = document.getElementById('gameCanvas');
 
 export const IMAGES = {};
 const imageUrls = {
-    grass: 'assets/grass.png',
-    water: 'assets/water.png',
-    tree: 'assets/tree.png',
-    rock: 'assets/rock.png',
-    agent_basicas: 'assets/Sprite gruni basicas.png',
-    agent_acciones: 'assets/Sprite gruni acciones.png'
+    sprout_grass: 'assets/sprout_grass.png',
+    sprout_water: 'assets/sprout_water.png',
+    sprout_house: 'assets/sprout_house.png',
+    sprout_objects: 'assets/sprout_objects.png',
+    sprout_bridge: 'assets/sprout_bridge.png',
+    sprout_agent: 'assets/sprout_agent.png',
+    sprout_agent_actions: 'assets/sprout_agent_actions.png',
+    sprout_cow: 'assets/sprout_cow.png',
+    sprout_chicken: 'assets/sprout_chicken.png'
 };
-
-function removeMagentaBackground(img) {
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = img.width;
-    pCanvas.height = img.height;
-    const pCtx = pCanvas.getContext('2d');
-    pCtx.drawImage(img, 0, 0);
-    const imageData = pCtx.getImageData(0, 0, pCanvas.width, pCanvas.height);
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-        let r = data[i], g = data[i+1], b = data[i+2];
-        if (r > 200 && g < 80 && b > 200) {
-            data[i+3] = 0; // Transparente
-        }
-    }
-    pCtx.putImageData(imageData, 0, 0);
-    return pCanvas;
-}
 
 function loadImage(url) {
     return new Promise((resolve) => {
@@ -47,11 +32,7 @@ function loadImage(url) {
 async function loadAssets() {
     for (let key in imageUrls) {
         let img = await loadImage(imageUrls[key]);
-        if (key === 'grass' || key === 'water') {
-            IMAGES[key] = img;
-        } else {
-            IMAGES[key] = removeMagentaBackground(img);
-        }
+        IMAGES[key] = img;
     }
 }
 
