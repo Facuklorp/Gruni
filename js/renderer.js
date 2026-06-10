@@ -52,10 +52,12 @@ export class Renderer {
                 let py = y * CELL_SIZE;
                 
                 let tv = cell.terrainVariant || 0;
-                let sx = 0, sy = 64; 
-                if (tv === 1) sx = 16;
-                else if (tv === 2) sx = 32;
-                else if (tv === 3) sx = 48;
+                let sx = 16, sy = 16; // Tile de pasto verde sólido
+                
+                // Variaciones con florcitas/pasto más alto (en Sprout Lands están abajo)
+                if (tv === 1) { sx = 16; sy = 64; }
+                else if (tv === 2) { sx = 32; sy = 64; }
+                else if (tv === 3) { sx = 0; sy = 80; }
 
                 if (this.images && this.images.sprout_grass) {
                     this.ctx.drawImage(this.images.sprout_grass, sx, sy, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
@@ -198,21 +200,23 @@ export class Renderer {
     }
 
     drawApple(x, y, timestamp) {
-        let cx = x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        let t = timestamp ? timestamp * 0.003 : 0;
-        let hover = Math.sin(t + x) * 2;
-        
-        this.drawShadow(cx, cy + 8, 8, 3);
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        let cy = py + CELL_SIZE / 2;
 
-        cy += hover + 2;
-        this.ctx.fillStyle = '#ef4444';
-        this.ctx.beginPath(); this.ctx.arc(cx, cy, 7, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.fillStyle = '#16a34a';
-        this.ctx.beginPath(); this.ctx.ellipse(cx + 4, cy - 5, 5, 2.5, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
-        // Highlight
-        this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        this.ctx.beginPath(); this.ctx.arc(cx - 2, cy - 2, 2, 0, Math.PI * 2); this.ctx.fill();
+        let bounce = Math.abs(Math.sin((timestamp || 0) * 0.005 + x)) * 4;
+        this.drawShadow(cx, cy + 4, 6, 2);
+
+        if (this.images && this.images.sprout_objects) {
+            // El item de manzana o semilla suele estar en la fila 3 (ej: sx=32, sy=32)
+            this.ctx.drawImage(this.images.sprout_objects, 32, 16, 16, 16, px, py - 4 - bounce, 16, 16);
+        } else {
+            this.ctx.fillStyle = '#ef4444';
+            this.ctx.beginPath(); this.ctx.arc(cx, cy - 4 - bounce, 5, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = '#22c55e';
+            this.ctx.beginPath(); this.ctx.ellipse(cx + 3, cy - 8 - bounce, 3, 1.5, Math.PI/4, 0, Math.PI*2); this.ctx.fill();
+        }
     }
 
     drawTree(x, y) {
@@ -298,40 +302,15 @@ export class Renderer {
     drawBigHouse(x, y) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        let w = CELL_SIZE * 2;
-        let h = CELL_SIZE * 2;
-        let cx = px + w/2;
+        let cx = px + CELL_SIZE;
+        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, CELL_SIZE * 1.5, 12);
 
-        this.drawShadow(cx, py + h - 4, w/1.2, 12);
-
-        // Base
-        this.ctx.fillStyle = '#b45309';
-        this.ctx.fillRect(px + 4, py + 20, w - 8, h - 24);
-        
-        // Techo principal
-        this.ctx.fillStyle = '#991b1b';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px - 4, py + 24);
-        this.ctx.lineTo(cx, py - 4);
-        this.ctx.lineTo(px + w + 4, py + 24);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Detalle de tejado
-        this.ctx.fillStyle = '#ef4444';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px + 4, py + 22);
-        this.ctx.lineTo(cx, py + 2);
-        this.ctx.lineTo(px + w - 4, py + 22);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Puerta y ventana
-        this.ctx.fillStyle = '#0ea5e9';
-        this.ctx.beginPath(); this.ctx.arc(cx, py + 18, 6, 0, Math.PI*2); this.ctx.fill();
-        
-        this.ctx.fillStyle = '#451a03';
-        this.ctx.fillRect(cx - 8, py + h - 20, 16, 16);
+        if (this.images && this.images.sprout_house) {
+            this.ctx.drawImage(this.images.sprout_house, 0, 0, 112, 80, px - 48, py - 32, 112, 80);
+        } else {
+            this.ctx.fillStyle = '#b45309';
+            this.ctx.fillRect(px, py, CELL_SIZE * 2, CELL_SIZE * 2);
+        }
     }
 
     drawBook(x, y, timestamp) {
@@ -449,17 +428,17 @@ export class Renderer {
             if (!isMoving && Math.floor(t * 0.002) % 2 === 0) frame = 1; // Idle sutil
 
             if (this.images && this.images.sprout_agent) {
-                // Sprout Lands Basic Charakter: 4x4 grid de 16x16
-                let sx = frame * 16;
-                let sy = dir * 16;
-                this.ctx.drawImage(this.images.sprout_agent, sx, sy, 16, 16, px, py - 4, 16, 16);
+                // Sprout Lands Basic Charakter: 4x4 grid de 48x48
+                let sx = frame * 48;
+                let sy = dir * 48;
+                this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
             } else {
                 this.ctx.fillStyle = '#ef4444'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
         } else if (type === 'enemy') {
             this.drawShadow(cx, cy + 6, 8, 3);
             if (this.images && this.images.sprout_cow) {
-                // Dibujamos vaca temporalmente como enemigo (para testear spritesheets)
+                // Vaca es 96x64 (3 frames de 32x32?)
                 let cowFrame = Math.floor(t * 0.003) % 3; 
                 this.ctx.drawImage(this.images.sprout_cow, cowFrame * 32, 0, 32, 32, px - 8, py - 16, 32, 32);
             } else {
