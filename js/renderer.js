@@ -260,24 +260,23 @@ export class Renderer {
         
         this.drawShadow(cx, py + CELL_SIZE - 2, 14, 6);
 
-        // Base de la casa procedural si no hay imagen
-        if (this.images && this.images.sprout_house) {
-            // Usar un segmento de pared de 48x48 como "casita pequeña"
-            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px - 16, py - 32, 48, 48);
-        } else {
-            this.ctx.fillStyle = '#b45309';
-            this.ctx.fillRect(px + 2, py + 10, CELL_SIZE - 4, CELL_SIZE - 10);
-            
-            // Techo superpuesto
-            this.ctx.fillStyle = '#991b1b';
-            this.ctx.beginPath();
-            this.ctx.moveTo(px - 2, py + 12); this.ctx.lineTo(cx, py - 2); this.ctx.lineTo(px + CELL_SIZE + 2, py + 12);
-            this.ctx.closePath(); this.ctx.fill();
-            
-            // Puerta
-            this.ctx.fillStyle = '#451a03';
-            this.ctx.fillRect(cx - 4, py + CELL_SIZE - 10, 8, 10);
+        // Base de la casa en construcción
+        this.ctx.fillStyle = '#b45309';
+        this.ctx.fillRect(px + 2, py + 4, CELL_SIZE - 4, CELL_SIZE - 4);
+        
+        // Tablones
+        this.ctx.fillStyle = '#92400e'; 
+        for(let i=0; i<3; i++) {
+            this.ctx.fillRect(px + 2, py + 6 + i*4, CELL_SIZE - 4, 1);
         }
+
+        // Techo plano / en construcción
+        this.ctx.fillStyle = '#991b1b';
+        this.ctx.fillRect(px, py, CELL_SIZE, 4);
+        
+        // Puerta chica
+        this.ctx.fillStyle = '#451a03';
+        this.ctx.fillRect(cx - 4, py + CELL_SIZE - 8, 8, 8);
 
         if (hp < 10) {
             let barWidth = 20;
@@ -291,16 +290,82 @@ export class Renderer {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE;
-        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, CELL_SIZE * 1.5, 12);
+        
+        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 28, 10);
 
-        if (this.images && this.images.sprout_house) {
-            // Dibujar dos paredes juntas para la casa grande
-            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px - 16, py - 32, 48, 48);
-            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px + 16, py - 32, 48, 48);
-        } else {
-            this.ctx.fillStyle = '#b45309';
-            this.ctx.fillRect(px, py, CELL_SIZE * 2, CELL_SIZE * 2);
+        // Offset para centrar la casa verticalmente
+        py -= 8;
+
+        // Base de piedra (Cimientos)
+        this.ctx.fillStyle = '#94a3b8'; 
+        this.ctx.fillRect(px - 4, py + 20, CELL_SIZE * 2 + 8, 16);
+        this.ctx.fillStyle = '#64748b'; 
+        for(let i=0; i<4; i++) {
+            this.ctx.fillRect(px - 2 + i*9, py + 22, 7, 5);
+            this.ctx.fillRect(px + 2 + i*9, py + 29, 7, 5);
         }
+
+        // Paredes de madera
+        this.ctx.fillStyle = '#b45309'; 
+        this.ctx.fillRect(px - 2, py - 4, CELL_SIZE * 2 + 4, 24);
+        this.ctx.fillStyle = '#92400e'; 
+        for(let i=0; i<3; i++) {
+            this.ctx.fillRect(px - 2, py + i*8, CELL_SIZE * 2 + 4, 1);
+        }
+
+        // Puerta (Centro)
+        this.ctx.fillStyle = '#451a03'; 
+        this.ctx.fillRect(px + 10, py + 8, 12, 16);
+        this.ctx.fillStyle = '#f59e0b'; 
+        this.ctx.fillRect(px + 19, py + 16, 2, 2); // Pomo dorado
+
+        // Ventanas
+        let drawWindow = (wx, wy) => {
+            this.ctx.fillStyle = '#451a03'; // Marco
+            this.ctx.fillRect(wx - 1, wy - 1, 10, 12);
+            this.ctx.fillStyle = '#0ea5e9'; // Vidrio
+            this.ctx.fillRect(wx, wy, 8, 10);
+            this.ctx.fillStyle = '#38bdf8'; // Reflejo
+            this.ctx.fillRect(wx + 4, wy + 2, 2, 6);
+            this.ctx.fillStyle = '#451a03'; // Divisiones de vidrio
+            this.ctx.fillRect(wx, wy + 4, 8, 1);
+            this.ctx.fillRect(wx + 3, wy, 1, 10);
+        };
+        drawWindow(px - 1, py + 2); // Ventana izquierda
+        drawWindow(px + 23, py + 2); // Ventana derecha
+
+        // Techo principal rojo
+        this.ctx.fillStyle = '#991b1b'; 
+        this.ctx.beginPath();
+        this.ctx.moveTo(px - 8, py - 4);
+        this.ctx.lineTo(cx, py - 20); // Pico del techo
+        this.ctx.lineTo(px + CELL_SIZE * 2 + 8, py - 4);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Borde del techo (Madera gruesa)
+        this.ctx.fillStyle = '#78350f';
+        this.ctx.beginPath();
+        this.ctx.moveTo(px - 10, py - 2);
+        this.ctx.lineTo(cx, py - 22);
+        this.ctx.lineTo(cx, py - 18);
+        this.ctx.lineTo(px - 4, py + 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(px + CELL_SIZE * 2 + 10, py - 2);
+        this.ctx.lineTo(cx, py - 22);
+        this.ctx.lineTo(cx, py - 18);
+        this.ctx.lineTo(px + CELL_SIZE * 2 + 4, py + 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Chimenea
+        this.ctx.fillStyle = '#475569';
+        this.ctx.fillRect(px + 20, py - 26, 6, 12);
+        this.ctx.fillStyle = '#334155';
+        this.ctx.fillRect(px + 19, py - 28, 8, 3);
     }
 
     drawBook(x, y, timestamp) {
