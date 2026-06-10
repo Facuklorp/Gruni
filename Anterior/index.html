@@ -78,24 +78,77 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Knowledge Log -->
-            <div id="knowledge-log" style="width: 100%; margin-top: 20px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 15px; font-size: 0.95rem; display: none; box-sizing: border-box; border-left: 4px solid #a855f7;">
-                <h4 style="margin: 0 0 10px 0; color: #c084fc; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">Conocimiento Obtenido</h4>
-                <ul id="knowledge-list" style="margin: 0; padding-left: 20px; color: #e2e8f0; line-height: 1.5; font-size: 0.9rem;">
-                </ul>
-            </div>
         </aside>
 
         <!-- Centro: El Mundo (Canvas) -->
-        <main class="canvas-container">
+        <main class="canvas-container" style="position: relative; display: flex; flex-direction: column; align-items: center;">
             <canvas id="gameCanvas"></canvas>
-            <div id="gruni-dialogue" class="dialogue-bubble" style="display: none;">
+            <div id="gruni-dialogue" class="dialogue-bubble" style="display: none; width: 100%;">
                 <span id="gruni-dialogue-text"></span>
+            </div>
+            
+            <!-- Knowledge Log -->
+            <div id="knowledge-log" style="width: 100%; margin-top: 15px; background: rgba(30, 41, 59, 0.8); border-radius: 8px; padding: 15px; font-size: 0.95rem; display: none; box-sizing: border-box; border-left: 4px solid #a855f7;">
+                <h4 style="margin: 0 0 10px 0; color: #c084fc; font-weight: 600;">Conocimiento Obtenido:</h4>
+                <ul id="knowledge-list" style="margin: 0; padding-left: 20px; color: #e2e8f0; line-height: 1.5;">
+                </ul>
             </div>
         </main>
 
+        <!-- Panel Derecho: Controles de Dios -->
+        <aside class="glass-panel god-panel">
+            <h2>Modo Dios</h2>
+            <div id="book-countdown" style="margin-bottom: 15px; background: rgba(0,0,0,0.5); color: #fbbf24; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 0.95rem; border: 1px solid #f59e0b; display: none; text-align: center;">
+                Próximo libro: --
+            </div>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: #94a3b8;">Selecciona un recurso y haz clic en el mapa.</p>
+            
+            <div style="margin-bottom: 15px; background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px;">Velocidad del tiempo</h3>
+                <div style="display: flex; gap: 5px;" id="speed-controls">
+                    <button class="tool-btn speed-btn active" data-speed="500">1x</button>
+                    <button class="tool-btn speed-btn" data-speed="250">2x</button>
+                    <button class="tool-btn speed-btn" data-speed="125">4x</button>
+                    <button class="tool-btn" id="btn-pause" style="background: #334155; padding: 5px 10px; flex-grow: 1;">⏸️ Pausa</button>
+                </div>
+            </div>
+            <div class="tool-grid">
+                <button class="tool-btn active" data-tool="1">🍎 Comida</button>
+                <button class="tool-btn" data-tool="2">💧 Agua</button>
+                <button class="tool-btn" data-tool="3">🌳 Árbol</button>
+                <button class="tool-btn" data-tool="4">🪨 Roca</button>
+                <button class="tool-btn" style="background: #7f1d1d; color: white;" data-tool="ENEMY">👹 Enemigo</button>
+                <button class="tool-btn" data-tool="clear">❌ Borrar</button>
+            </div>
+            <div class="global-actions">
+                <button id="btn-rain" class="action-btn primary">🌧️ Hacer Llover</button>
+                <button id="btn-lightning" class="action-btn danger">⚡ Lanzar Rayo</button>
+            </div>
+        </aside>
     </div>
+    
+    <!-- Modal del Libro -->
+    <div id="book-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-panel">
+            <h2>📖 El Libro de los Bosques</h2>
+            <p style="margin-bottom: 20px; color: #cbd5e1;">Gruni ha encontrado un libro antiguo. ¿Qué camino de sabiduría debería seguir?</p>
+            <div class="branch-options">
+                <button class="branch-btn" id="btn-branch-astro">
+                    <h3>🔭 Libro I: Astronomía</h3>
+                    <p>¿Qué misterios ocultarán las estrellas?</p>
+                </button>
+                <button class="branch-btn" id="btn-branch-bio">
+                    <h3>🐺 Libro II: Biología</h3>
+                    <p>¿Qué secretos aguardarán en la naturaleza?</p>
+                </button>
+                <button class="branch-btn" id="btn-branch-smith">
+                    <h3>⚒️ Libro III: Herrería</h3>
+                    <p>¿Qué poder esconderá el forjado de metales?</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

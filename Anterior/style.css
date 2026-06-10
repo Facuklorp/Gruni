@@ -29,12 +29,13 @@ body {
 }
 
 .app-container {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    max-width: 98%;
+    padding: 24px;
+    align-items: flex-start;
+    overflow-x: auto;
 }
 
 #rotate-message {
@@ -53,12 +54,14 @@ body {
 #rotate-message p { font-size: 1.2rem; color: var(--text-muted); }
 
 .glass-panel {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
     border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    flex: 1;
+    min-width: 250px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .glass-panel h2 {
@@ -72,38 +75,22 @@ body {
 }
 
 .canvas-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 canvas {
     background: #020617;
-    width: 100vw;
-    height: 100vh;
-    display: block;
-}
-
-/* Agent Panel Flotante */
-.agent-panel {
-    position: absolute;
-    top: 24px;
-    left: 24px;
-    z-index: 10;
-    width: 320px;
-    max-height: calc(100vh - 48px);
-    overflow-y: auto;
-}
-
-.agent-panel::-webkit-scrollbar {
-    width: 6px;
-}
-.agent-panel::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--glass-border);
+    cursor: crosshair;
+    max-width: 100%;
+    height: auto;
+    max-height: 90vh;
+    object-fit: contain;
 }
 
 /* RESPONSIVENESS PARA CELULARES */
@@ -275,22 +262,18 @@ button {
 }
 .branch-btn p { font-size: 0.9rem; color: #cbd5e1; }
 
-/* Dialogue Bubble Overlay */
+/* Dialogue Bubble */
 .dialogue-bubble {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
     background: #ffffff;
     color: #0f172a;
-    padding: 16px 32px;
-    border-radius: 30px;
-    font-weight: 800;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    font-size: 1.2rem;
+    padding: 12px 24px;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    font-size: 0.95rem;
     text-align: center;
-    max-width: 60%;
+    max-width: 80%;
+    margin: 15px auto 0;
 }
 @keyframes popIn {
     0% { opacity: 0; transform: translateY(10px) scale(0.9); }

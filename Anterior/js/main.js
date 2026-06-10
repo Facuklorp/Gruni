@@ -2,6 +2,7 @@
 import { World } from './world.js';
 import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
+import { GodControls } from './god_controls.js';
 import { Enemy } from './enemy.js';
 import { Wolf } from './wolf.js';
 import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
@@ -56,8 +57,9 @@ async function loadAssets() {
 }
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth || 600;
+    canvas.height = Math.min(container.clientWidth, window.innerHeight * 0.7) || 600;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -67,6 +69,7 @@ const agent = new Agent(world);
 let enemies = [];
 let wolf = null;
 const renderer = new Renderer(canvas);
+const controls = new GodControls(world, canvas, enemies, renderer);
 
 
 let gamePaused = false;
@@ -119,6 +122,24 @@ let lastTime = 0;
 let spawnTimer = 0;
 let currentTickRate = 500; // Milisegundos por cada tick lógico del agente
 
+document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentTickRate = parseInt(e.target.dataset.speed);
+        if (gamePaused) document.getElementById('btn-pause').click(); // Auto reanudar al cambiar velocidad
+    });
+});
+
+const btnPause = document.getElementById('btn-pause');
+btnPause.addEventListener('click', () => {
+    gamePaused = !gamePaused;
+    btnPause.innerText = gamePaused ? '▶️ Play' : '⏸️ Pausa';
+    btnPause.style.background = gamePaused ? '#22c55e' : '#334155';
+    document.getElementById('gameCanvas').style.filter = gamePaused ? 'grayscale(0.5)' : 'none'; // Efecto visual
+});
+
+const modal = document.getElementById('book-modal');
 const branchText = document.getElementById('agent-branch');
 
 const dialogueBubble = document.getElementById('gruni-dialogue');
@@ -130,6 +151,10 @@ function showDialogue(text, timeTicks = 15) {
     dialogueBubble.style.display = 'block';
     dialogueTimer = timeTicks;
 }
+
+document.getElementById('btn-branch-astro').onclick = () => { selectBranch('ASTRONOMY'); };
+document.getElementById('btn-branch-bio').onclick = () => { selectBranch('BIOLOGY'); };
+document.getElementById('btn-branch-smith').onclick = () => { selectBranch('BLACKSMITH'); };
 
 function selectBranch(branch) {
     if (!agent.branches.includes(branch)) {
@@ -150,6 +175,13 @@ function selectBranch(branch) {
     } else if (branch === 'BLACKSMITH') {
         showDialogue("¡Siento el poder del metal en mis manos!", 15);
     }
+
+    if (agent.branches.includes('ASTRONOMY')) document.getElementById('btn-branch-astro').style.display = 'none';
+    if (agent.branches.includes('BIOLOGY')) document.getElementById('btn-branch-bio').style.display = 'none';
+    if (agent.branches.includes('BLACKSMITH')) document.getElementById('btn-branch-smith').style.display = 'none';
+
+    modal.style.display = 'none';
+    gamePaused = false;
 }
 
 function updateUI() {
@@ -280,13 +312,9 @@ function gameLoop(timestamp) {
 
             let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120; // 20 ticks of warning (10 segundos)
             
-            // Auto-select book branch (Twitch 24/7 Mode)
+            // Control Modal de libros
             if (agent.bookFound && agent.branches.length < 3) {
-                const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
-                if (availableBranches.length > 0) {
-                    const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];
-                    selectBranch(randomBranch);
-                }
+                modal.style.display = 'flex';
                 agent.bookFound = false; // Reset to avoid infinite loop
                 bookSpawned = false; // Allow a new book to spawn later
                 bookCooldownTimer = 180; // 90 seconds cooldown after reading
@@ -345,9 +373,17 @@ function gameLoop(timestamp) {
                 }
             }
             
-            // Book spawning
-            if (agent.branches.length < 3) {
-                if (agent.home && !bookSpawned) {
+            // Countdown visual logic & spawning
+            let countdownEl = document.getElementById('book-countdown');
+            if (agent.branches.length >= 3) {
+                countdownEl.style.display = 'none';
+            } else {
+                countdownEl.style.display = 'block';
+                if (!agent.home) {
+                    countdownEl.innerText = "Próximo libro: Requiere Casa";
+                } else if (bookSpawned) {
+                    countdownEl.innerText = "¡Libro en el mundo!";
+                } else {
                     if (bookCooldownTimer > 0) bookCooldownTimer--;
                     if (bookCooldownTimer === 0) {
                         let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
@@ -358,6 +394,11 @@ function gameLoop(timestamp) {
                         } else {
                             bookCooldownTimer = 1; // Try again next tick
                         }
+                    } else {
+                        let seconds = Math.ceil(bookCooldownTimer / 2);
+                        let m = Math.floor(seconds / 60);
+                        let s = seconds % 60;
+                        countdownEl.innerText = `Próximo libro en: ${m}:${s.toString().padStart(2, '0')}`;
                     }
                 }
             }
