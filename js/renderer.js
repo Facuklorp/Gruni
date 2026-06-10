@@ -496,8 +496,8 @@ export class Renderer {
                     this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
                 }
 
-                // Dibujar espada si tiene una
-                if (entity.swordDurability > 0) {
+                // Dibujar espada si tiene una y no está ocupando sus manos con otra herramienta
+                if (entity.swordDurability > 0 && !entity.isActioning) {
                     this.ctx.save();
                     
                     // Posicionar la espada según a dónde mire
