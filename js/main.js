@@ -1,10 +1,10 @@
 // js/main.js
-import { World } from './world.js';
+import { World, WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, RESOURCES } from './world.js';
 import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
 import { ParticleSystem } from './particles.js';
 import { Wolf } from './wolf.js';
-import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
+import { Enemy } from './enemy.js';
 
 const canvas = document.getElementById('gameCanvas');
 

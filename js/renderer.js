@@ -180,19 +180,7 @@ export class Renderer {
             this.ctx.fillStyle = '#0ea5e9';
             this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
         }
-
-        // Borde arena basico (procedural por ahora si no autotileamos full)
-        this.ctx.fillStyle = '#fcd34d'; 
-        let isWater = (dx, dy) => {
-            let c = world.getCell(x + dx, y + dy);
-            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
-        };
-        let b = 2; // Borde de arena
-        let fw = Math.max(0, Math.sin(timestamp * 0.002 + x) * 1.5);
-        if (!isWater(0, -1)) { this.ctx.fillRect(px, py, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+b, CELL_SIZE, 1+fw); this.ctx.fillStyle='#fcd34d'; }
-        if (!isWater(0, 1)) { this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+CELL_SIZE-b-1-fw, CELL_SIZE, 1+fw); this.ctx.fillStyle='#fcd34d'; }
-        if (!isWater(-1, 0)) { this.ctx.fillRect(px, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+b, py, 1+fw, CELL_SIZE); this.ctx.fillStyle='#fcd34d'; }
-        if (!isWater(1, 0)) { this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+CELL_SIZE-b-1-fw, py, 1+fw, CELL_SIZE); }
+        // Eliminado el borde procedural de arena para mantener el estilo pixel art puro
     }
 
     drawApple(x, y, timestamp) {
@@ -205,8 +193,8 @@ export class Renderer {
         this.drawShadow(cx, cy + 4, 6, 2);
 
         if (this.images && this.images.sprout_objects) {
-            // El item de manzana o semilla suele estar en la fila 3 (ej: sx=32, sy=32)
-            this.ctx.drawImage(this.images.sprout_objects, 32, 16, 16, 16, px, py - 4 - bounce, 16, 16);
+            // El item de manzana está en 32, 32
+            this.ctx.drawImage(this.images.sprout_objects, 32, 32, 16, 16, px, py - 4 - bounce, 16, 16);
         } else {
             this.ctx.fillStyle = '#ef4444';
             this.ctx.beginPath(); this.ctx.arc(cx, cy - 4 - bounce, 5, 0, Math.PI*2); this.ctx.fill();
@@ -223,8 +211,10 @@ export class Renderer {
         if (this.images && this.images.sprout_objects) {
             let px = x * CELL_SIZE;
             let py = y * CELL_SIZE;
-            // Sprout Lands pine tree (Aprox: 32x32 en 0,0)
-            this.ctx.drawImage(this.images.sprout_objects, 0, 0, 32, 32, px - 8, py - 16, 32, 32);
+            // Sprout Lands round tree is at 0,0 and is 48x48. Apple tree is 48,0.
+            let isAppleTree = (x + y) % 2 === 0; // Aleatorizar un poco visualmente
+            let sx = isAppleTree ? 48 : 0;
+            this.ctx.drawImage(this.images.sprout_objects, sx, 0, 48, 48, px - 16, py - 32, 48, 48);
         } else {
             // Procedural fallback
             this.ctx.fillStyle = '#5c2b07'; this.ctx.fillRect(cx - 2, cy, 4, 10);
@@ -273,19 +263,24 @@ export class Renderer {
         
         this.drawShadow(cx, py + CELL_SIZE - 2, 14, 6);
 
-        // Base de la casa ampliada levemente
-        this.ctx.fillStyle = '#b45309';
-        this.ctx.fillRect(px + 2, py + 10, CELL_SIZE - 4, CELL_SIZE - 10);
-        
-        // Techo superpuesto
-        this.ctx.fillStyle = '#991b1b';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px - 2, py + 12); this.ctx.lineTo(cx, py - 2); this.ctx.lineTo(px + CELL_SIZE + 2, py + 12);
-        this.ctx.closePath(); this.ctx.fill();
-        
-        // Puerta
-        this.ctx.fillStyle = '#451a03';
-        this.ctx.fillRect(cx - 4, py + CELL_SIZE - 10, 8, 10);
+        // Base de la casa procedural si no hay imagen
+        if (this.images && this.images.sprout_house) {
+            // Usar un segmento de pared de 48x48 como "casita pequeña"
+            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px - 16, py - 32, 48, 48);
+        } else {
+            this.ctx.fillStyle = '#b45309';
+            this.ctx.fillRect(px + 2, py + 10, CELL_SIZE - 4, CELL_SIZE - 10);
+            
+            // Techo superpuesto
+            this.ctx.fillStyle = '#991b1b';
+            this.ctx.beginPath();
+            this.ctx.moveTo(px - 2, py + 12); this.ctx.lineTo(cx, py - 2); this.ctx.lineTo(px + CELL_SIZE + 2, py + 12);
+            this.ctx.closePath(); this.ctx.fill();
+            
+            // Puerta
+            this.ctx.fillStyle = '#451a03';
+            this.ctx.fillRect(cx - 4, py + CELL_SIZE - 10, 8, 10);
+        }
 
         if (hp < 10) {
             let barWidth = 20;
@@ -302,7 +297,9 @@ export class Renderer {
         this.drawShadow(cx, py + CELL_SIZE * 2 - 4, CELL_SIZE * 1.5, 12);
 
         if (this.images && this.images.sprout_house) {
-            this.ctx.drawImage(this.images.sprout_house, 0, 0, 112, 80, px - 48, py - 32, 112, 80);
+            // Dibujar dos paredes juntas para la casa grande
+            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px - 16, py - 32, 48, 48);
+            this.ctx.drawImage(this.images.sprout_house, 0, 0, 48, 48, px + 16, py - 32, 48, 48);
         } else {
             this.ctx.fillStyle = '#b45309';
             this.ctx.fillRect(px, py, CELL_SIZE * 2, CELL_SIZE * 2);
