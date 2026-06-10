@@ -1,8 +1,8 @@
 // js/world.js
 export const CELL_SIZE = 16; // Base size for 16-bit tiles
 export const ZOOM = 3.5; // Visual scale multiplier
-export const WORLD_WIDTH = 30;
-export const WORLD_HEIGHT = 30;
+export const WORLD_WIDTH = 60;
+export const WORLD_HEIGHT = 60;
 
 export const RESOURCES = {
     EMPTY: 0,
@@ -30,16 +30,55 @@ export class World {
                 const rand = Math.random();
                 let type = RESOURCES.EMPTY;
                 
-                if (rand < 0.05) type = RESOURCES.WATER;
-                else if (rand < 0.1) type = RESOURCES.FOOD;
-                else if (rand < 0.15) type = RESOURCES.WOOD;
-                else if (rand < 0.18) type = RESOURCES.ROCK;
+                if (rand < 0.08) type = RESOURCES.FOOD;
+                else if (rand < 0.12) type = RESOURCES.WOOD;
+                else if (rand < 0.15) type = RESOURCES.ROCK;
 
                 let capacity = (type === RESOURCES.EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
-                let terrainVariant = Math.floor(Math.random() * 4); // 0=normal, 1=flores, 2=tierra, 3=pasto alto
+                let terrainVariant = Math.floor(Math.random() * 4);
                 row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant });
             }
             this.grid.push(row);
+        }
+
+        // Generar lagos
+        let numLakes = Math.floor(Math.random() * 3) + 2;
+        for (let i = 0; i < numLakes; i++) {
+            let lx = Math.floor(Math.random() * WORLD_WIDTH);
+            let ly = Math.floor(Math.random() * WORLD_HEIGHT);
+            let radius = Math.floor(Math.random() * 4) + 3; // Radio 3 a 6
+            for (let y = -radius; y <= radius; y++) {
+                for (let x = -radius; x <= radius; x++) {
+                    if (x * x + y * y <= radius * radius) {
+                        let cx = lx + x, cy = ly + y;
+                        if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
+                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0 };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Generar un río largo y sinuoso
+        let rx = Math.floor(Math.random() * WORLD_WIDTH);
+        let ry = 0;
+        let dir = Math.random() < 0.5 ? 1 : -1;
+        while (ry < WORLD_HEIGHT) {
+            // Un río de ancho variable
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    let cx = rx + dx, cy = ry + dy;
+                    if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
+                        // Forma redondeada para el río
+                        if (Math.abs(dx) + Math.abs(dy) <= 2) {
+                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0 };
+                        }
+                    }
+                }
+            }
+            ry += 1;
+            if (Math.random() < 0.4) rx += dir;
+            if (Math.random() < 0.1) dir *= -1; // A veces cambia de dirección
         }
     }
 

@@ -619,6 +619,19 @@ export class Agent {
                         this.stuckTimer = 0;
                         if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
                     }
+                } else if (cell && cell.type === RESOURCES.WATER) {
+                    if (this.inventory.wood > 0) {
+                        this.inventory.wood--;
+                        this.inventory.bridges++; // Aumenta las estadísticas o trackeo
+                        this.world.setCell(nx, ny, RESOURCES.BRIDGE);
+                        this.happyTimer = 5;
+                        this.stuckTimer = 0;
+                    } else if (this.stuckTimer > 3) {
+                        this.wanderTimer = 8;
+                        this.stuckTimer = 0;
+                        // Necesitamos madera para hacer un puente
+                        if (!this.emergencyMission) this.emergencyMission = 'BUILD_WALLS'; // Usamos BUILD_WALLS porque recolecta madera. O creamos uno nuevo.
+                    }
                 } else if (this.stuckTimer > 3) {
                     if (this.stuckTimer > 5) {
                         this.ignoreTarget = {x: this.target.x, y: this.target.y};
@@ -646,15 +659,18 @@ export class Agent {
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
         if (cell.type === RESOURCES.ROCK) return false;
-        // Water is walkable - agent drinks it when stepping on it
+        if (cell.type === RESOURCES.WATER) return false; // El agua bloquea el paso, hay que hacer puentes
         return true;
     }
 
     stepOnCell(nx, ny) {
         let cell = this.world.getCell(nx, ny);
         if (cell && cell.type === RESOURCES.WATER) {
+            // Ya no pisamos agua directamente porque bloquea, pero si lo hacemos:
             this.thirst = Math.max(0, this.thirst - 20);
             this.world.consumeResource(nx, ny);
+        } else if (cell && cell.type === RESOURCES.BRIDGE) {
+            // Cruzando el puente no da sed ni lo rompe
         }
     }
 

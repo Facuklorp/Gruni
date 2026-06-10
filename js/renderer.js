@@ -38,21 +38,18 @@ export class Renderer {
         this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // 0. Dibujar Terreno Base (Celda por celda)
-        let startX = Math.max(0, Math.floor(this.cameraX / CELL_SIZE));
-        let startY = Math.max(0, Math.floor(this.cameraY / CELL_SIZE));
-        let endX = Math.min(WORLD_WIDTH, Math.ceil((this.cameraX + viewW) / CELL_SIZE));
-        let endY = Math.min(WORLD_HEIGHT, Math.ceil((this.cameraY + viewH) / CELL_SIZE));
+        // 0. Dibujar Terreno Base (Fondo infinito de pasto)
+        let startX = Math.floor(this.cameraX / CELL_SIZE);
+        let startY = Math.floor(this.cameraY / CELL_SIZE);
+        let endX = Math.ceil((this.cameraX + viewW) / CELL_SIZE);
+        let endY = Math.ceil((this.cameraY + viewH) / CELL_SIZE);
 
         for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
-                let cell = world.getCell(x, y);
-                if (!cell) continue;
                 let px = x * CELL_SIZE;
                 let py = y * CELL_SIZE;
                 
                 let sx = 16, sy = 16; // Tile de pasto verde sólido
-                // Se removieron las variaciones temporalmente para garantizar que no haya tiles rotos
 
                 if (this.images && this.images.sprout_grass) {
                     this.ctx.drawImage(this.images.sprout_grass, sx, sy, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
@@ -474,17 +471,17 @@ export class Renderer {
             // Ciclo de día
             // 600: Amanecer (naranja) -> 1200: Mediodía (claro) -> 1800: Atardecer (rosado) -> 2400/0: Noche (azul oscuro)
             if (timeOfDay > 1800 || timeOfDay < 500) {
-                // Noche
-                opacity = 0.7;
-                overlayColor = `rgba(15, 23, 42, ${opacity})`; 
+                // Noche - un tono azul más agradable y místico, menos grisáceo opresivo
+                opacity = 0.65;
+                overlayColor = `rgba(12, 18, 55, ${opacity})`; 
             } else if (timeOfDay >= 500 && timeOfDay <= 700) {
                 // Amanecer
-                opacity = 0.4;
-                overlayColor = `rgba(234, 88, 12, ${opacity})`;
+                opacity = 0.35;
+                overlayColor = `rgba(234, 100, 20, ${opacity})`;
             } else if (timeOfDay >= 1700 && timeOfDay <= 1800) {
                 // Atardecer
-                opacity = 0.4;
-                overlayColor = `rgba(190, 24, 93, ${opacity})`;
+                opacity = 0.35;
+                overlayColor = `rgba(190, 40, 80, ${opacity})`;
             }
         }
 
