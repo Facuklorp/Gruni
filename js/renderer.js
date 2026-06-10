@@ -51,13 +51,8 @@ export class Renderer {
                 let px = x * CELL_SIZE;
                 let py = y * CELL_SIZE;
                 
-                let tv = cell.terrainVariant || 0;
                 let sx = 16, sy = 16; // Tile de pasto verde sólido
-                
-                // Variaciones con florcitas/pasto más alto (en Sprout Lands están abajo)
-                if (tv === 1) { sx = 16; sy = 64; }
-                else if (tv === 2) { sx = 32; sy = 64; }
-                else if (tv === 3) { sx = 0; sy = 80; }
+                // Se removieron las variaciones temporalmente para garantizar que no haya tiles rotos
 
                 if (this.images && this.images.sprout_grass) {
                     this.ctx.drawImage(this.images.sprout_grass, sx, sy, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
@@ -178,8 +173,9 @@ export class Renderer {
         let t = Math.floor((timestamp || 0) * 0.002) % 4;
         
         if (this.images && this.images.sprout_water) {
-            // El tile de agua puro suele estar en 16,16
-            this.ctx.drawImage(this.images.sprout_water, 16, 16, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
+            // sprout_water es 64x16 (4 frames de 16x16 animado horizontalmente)
+            let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
+            this.ctx.drawImage(this.images.sprout_water, waterFrame * 16, 0, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
         } else {
             this.ctx.fillStyle = '#0ea5e9';
             this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -227,8 +223,8 @@ export class Renderer {
         if (this.images && this.images.sprout_objects) {
             let px = x * CELL_SIZE;
             let py = y * CELL_SIZE;
-            // Sprout Lands pine tree (Aprox: 16x32 en 0,0)
-            this.ctx.drawImage(this.images.sprout_objects, 0, 0, 16, 32, px, py - 16, 16, 32);
+            // Sprout Lands pine tree (Aprox: 32x32 en 0,0)
+            this.ctx.drawImage(this.images.sprout_objects, 0, 0, 32, 32, px - 8, py - 16, 32, 32);
         } else {
             // Procedural fallback
             this.ctx.fillStyle = '#5c2b07'; this.ctx.fillRect(cx - 2, cy, 4, 10);
