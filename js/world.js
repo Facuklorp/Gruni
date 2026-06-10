@@ -36,7 +36,8 @@ export class World {
                 else if (rand < 0.18) type = RESOURCES.ROCK;
 
                 let capacity = (type === RESOURCES.EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
-                row.push({ type: type, capacity: capacity });
+                let terrainVariant = Math.floor(Math.random() * 4); // 0=normal, 1=flores, 2=tierra, 3=pasto alto
+                row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant });
             }
             this.grid.push(row);
         }
@@ -61,7 +62,8 @@ export class World {
                     cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK) ? 0 : Math.floor(Math.random() * 3) + 1;
                 }
             }
-            this.grid[y][x] = { type: type, capacity: cap };
+            let tv = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x].terrainVariant : Math.floor(Math.random() * 4);
+            this.grid[y][x] = { type: type, capacity: cap, terrainVariant: tv };
         }
     }
 

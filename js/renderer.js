@@ -8,47 +8,13 @@ export class Renderer {
         this.cameraX = 0;
         this.cameraY = 0;
         this.images = null;
-        this.grassPattern = this.createGrassPattern();
     }
 
     initImages(images) {
         this.images = images;
-        if (images.grass) {
-            this.grassPattern = this.ctx.createPattern(images.grass, 'repeat');
-        }
-        if (images.water) {
-            this.waterPattern = this.ctx.createPattern(images.water, 'repeat');
-        }
     }
 
-    createGrassPattern() {
-        const pCanvas = document.createElement('canvas');
-        pCanvas.width = 100;
-        pCanvas.height = 100;
-        const pCtx = pCanvas.getContext('2d');
-        
-        pCtx.fillStyle = '#86efac'; 
-        pCtx.fillRect(0, 0, 100, 100);
-        
-        // Dibujar pequeñas espigas de pasto
-        pCtx.strokeStyle = 'rgba(22, 163, 74, 0.4)';
-        pCtx.lineWidth = 1.5;
-        pCtx.lineCap = 'round';
-        
-        for(let i=0; i<40; i++) {
-            let x = Math.random() * 100;
-            let y = Math.random() * 100;
-            pCtx.beginPath();
-            pCtx.moveTo(x, y);
-            pCtx.lineTo(x - 2, y - 4);
-            pCtx.moveTo(x, y);
-            pCtx.lineTo(x + 2, y - 5);
-            pCtx.stroke();
-        }
-        return pCtx.createPattern(pCanvas, 'repeat');
-    }
-
-    draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0) {
+    draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
         this.cameraX = 0;
         this.cameraY = 0;
         
@@ -72,19 +38,48 @@ export class Renderer {
         this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // Fondo base (pasto) - Anclado al mundo
-        this.ctx.fillStyle = this.grassPattern;
-        this.ctx.fillRect(this.cameraX, this.cameraY, viewW, viewH);
+        // 0. Dibujar Terreno Base (Celda por celda)
+        let startX = Math.max(0, Math.floor(this.cameraX / CELL_SIZE));
+        let startY = Math.max(0, Math.floor(this.cameraY / CELL_SIZE));
+        let endX = Math.min(WORLD_WIDTH, Math.ceil((this.cameraX + viewW) / CELL_SIZE));
+        let endY = Math.min(WORLD_HEIGHT, Math.ceil((this.cameraY + viewH) / CELL_SIZE));
 
-        // Iluminación global sutil (fija a la pantalla)
-        this.ctx.save();
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        let grad = this.ctx.createRadialGradient(this.canvas.width/2, this.canvas.height/2, 50, this.canvas.width/2, this.canvas.height/2, this.canvas.width);
-        grad.addColorStop(0, 'rgba(255,255,255,0.05)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.restore();
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                let cell = world.getCell(x, y);
+                if (!cell) continue;
+                let px = x * CELL_SIZE;
+                let py = y * CELL_SIZE;
+                
+                // Fondo pasto general
+                this.ctx.fillStyle = '#86efac';
+                this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+
+                let tv = cell.terrainVariant || 0;
+                if (tv === 1) { // Flores
+                    this.ctx.fillStyle = '#fde047';
+                    this.ctx.beginPath(); this.ctx.arc(px + 10, py + 10, 2, 0, Math.PI*2); this.ctx.fill();
+                    this.ctx.fillStyle = '#f87171';
+                    this.ctx.beginPath(); this.ctx.arc(px + 22, py + 20, 2, 0, Math.PI*2); this.ctx.fill();
+                } else if (tv === 2) { // Tierra (dirt patch)
+                    this.ctx.fillStyle = '#d97706';
+                    this.ctx.beginPath(); this.ctx.ellipse(px + 15, py + 15, 10, 6, 0, 0, Math.PI*2); this.ctx.fill();
+                } else if (tv === 3) { // Pasto oscuro alto
+                    this.ctx.fillStyle = '#22c55e';
+                    this.ctx.fillRect(px + 5, py + 15, 2, 6);
+                    this.ctx.fillRect(px + 8, py + 12, 2, 9);
+                    this.ctx.fillRect(px + 20, py + 5, 2, 7);
+                } else { // Pasto normal
+                    this.ctx.strokeStyle = 'rgba(22, 163, 74, 0.4)';
+                    this.ctx.lineWidth = 1.5;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(px + 15, py + 15); this.ctx.lineTo(px + 13, py + 11);
+                    this.ctx.moveTo(px + 15, py + 15); this.ctx.lineTo(px + 17, py + 10);
+                    this.ctx.stroke();
+                }
+            }
+        }
         
         // 1. Dibujar Terreno Base (Agua Continua y Puentes)
         for (let y = 0; y < WORLD_HEIGHT; y++) {
@@ -169,18 +164,24 @@ export class Renderer {
             }
         }
 
+        // Draw particles
+        if (particles) {
+            particles.draw(this.ctx);
+        }
+
         this.ctx.restore();
 
-        // Eclipse y luces
-        if (isEclipse) {
-            this.drawEclipseOverlay(agent, wolf, timestamp);
-        }
+        // Global Lighting Overlay (Day/Night Cycle)
+        this.drawGlobalLighting(timeOfDay, renderQueue, agent, particles, timestamp, isEclipse);
     }
 
     drawShadow(cx, cy, width, height) {
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        // Obtenemos la hora del sistema de alguna manera o la simulamos local
+        // Por ahora, sombra direccional fija pero suave
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         this.ctx.beginPath();
-        this.ctx.ellipse(cx, cy, width, height, 0, 0, Math.PI * 2);
+        // Sombra levemente ladeada para dar volumen
+        this.ctx.ellipse(cx + 4, cy + 2, width, height, 0, 0, Math.PI * 2);
         this.ctx.fill();
     }
 
@@ -188,28 +189,31 @@ export class Renderer {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         
-        if (this.waterPattern) {
-            this.ctx.save();
-            this.ctx.translate(px, py);
-            this.ctx.fillStyle = this.waterPattern;
-            this.ctx.fillRect(0, 0, CELL_SIZE, CELL_SIZE);
-            this.ctx.restore();
-        } else {
-            this.ctx.fillStyle = '#0ea5e9';
-            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-        }
+        let t = (timestamp || 0) * 0.002;
+        let wave = Math.sin(x + y + t) * 2;
+        
+        this.ctx.fillStyle = '#0ea5e9';
+        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+        
+        // Highlight de agua (olas)
+        this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        this.ctx.fillRect(px + 5, py + 10 + wave, 15, 2);
+        this.ctx.fillRect(px + 15, py + 20 - wave, 10, 2);
 
-        // Orilla de arena
+        // Orilla de arena con espuma animada
         this.ctx.fillStyle = '#fde047'; 
         let isWater = (dx, dy) => {
             let c = world.getCell(x + dx, y + dy);
             return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
         };
         let b = 2; // Borde de arena
-        if (!isWater(0, -1)) this.ctx.fillRect(px, py, CELL_SIZE, b);
-        if (!isWater(0, 1)) this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b);
-        if (!isWater(-1, 0)) this.ctx.fillRect(px, py, b, CELL_SIZE);
-        if (!isWater(1, 0)) this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE);
+        let foamWave = Math.sin(t * 2 + x) * 1.5;
+        let fw = Math.max(0, foamWave);
+        
+        if (!isWater(0, -1)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+b, CELL_SIZE, 1+fw); }
+        if (!isWater(0, 1)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py + CELL_SIZE - b, CELL_SIZE, b); this.ctx.fillStyle='white'; this.ctx.fillRect(px, py+CELL_SIZE-b-1-fw, CELL_SIZE, 1+fw); }
+        if (!isWater(-1, 0)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+b, py, 1+fw, CELL_SIZE); }
+        if (!isWater(1, 0)) { this.ctx.fillStyle='#fde047'; this.ctx.fillRect(px + CELL_SIZE - b, py, b, CELL_SIZE); this.ctx.fillStyle='white'; this.ctx.fillRect(px+CELL_SIZE-b-1-fw, py, 1+fw, CELL_SIZE); }
     }
 
     drawApple(x, y, timestamp) {
@@ -677,35 +681,82 @@ export class Renderer {
         this.ctx.strokeRect(-barWidth/2, -18, barWidth, 3);
     }
 
-    drawEclipseOverlay(agent, wolf, timestamp) {
+    drawGlobalLighting(timeOfDay, renderQueue, agent, particles, timestamp, isEclipse) {
         this.ctx.save();
         
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-        this.ctx.fillRect(this.cameraX, this.cameraY, this.canvas.width / ZOOM, this.canvas.height / ZOOM);
-
-        this.ctx.globalCompositeOperation = 'destination-out';
+        let overlayColor = 'rgba(0,0,0,0)';
+        let opacity = 0;
         
-        let ax = agent.x * CELL_SIZE + CELL_SIZE/2;
-        let ay = agent.y * CELL_SIZE + CELL_SIZE/2;
-        let pulse = Math.sin((timestamp||0) * 0.002) * 8;
-        let grad = this.ctx.createRadialGradient(ax, ay, 10, ax, ay, 90 + pulse);
-        grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        this.ctx.fillStyle = grad;
-        this.ctx.beginPath(); this.ctx.arc(ax, ay, 90 + pulse, 0, Math.PI*2); this.ctx.fill();
-
-        if (wolf) {
-            let wx = wolf.x * CELL_SIZE + CELL_SIZE/2;
-            let wy = wolf.y * CELL_SIZE + CELL_SIZE/2;
-            let wPulse = Math.sin((timestamp||0) * 0.003) * 5;
-            let wGrad = this.ctx.createRadialGradient(wx, wy, 5, wx, wy, 50 + wPulse);
-            wGrad.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
-            wGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            this.ctx.fillStyle = wGrad;
-            this.ctx.beginPath(); this.ctx.arc(wx, wy, 50 + wPulse, 0, Math.PI*2); this.ctx.fill();
+        if (isEclipse) {
+            overlayColor = 'rgba(2, 6, 23, 0.85)'; // Oscuro profundo
+            opacity = 0.85;
+        } else {
+            // Ciclo de día
+            // 600: Amanecer (naranja) -> 1200: Mediodía (claro) -> 1800: Atardecer (rosado) -> 2400/0: Noche (azul oscuro)
+            if (timeOfDay > 1800 || timeOfDay < 500) {
+                // Noche
+                opacity = 0.7;
+                overlayColor = `rgba(15, 23, 42, ${opacity})`; 
+            } else if (timeOfDay >= 500 && timeOfDay <= 700) {
+                // Amanecer
+                opacity = 0.4;
+                overlayColor = `rgba(234, 88, 12, ${opacity})`;
+            } else if (timeOfDay >= 1700 && timeOfDay <= 1800) {
+                // Atardecer
+                opacity = 0.4;
+                overlayColor = `rgba(190, 24, 93, ${opacity})`;
+            }
         }
 
+        if (opacity > 0) {
+            // Capa oscura principal
+            this.ctx.globalCompositeOperation = 'source-over';
+            this.ctx.fillStyle = overlayColor;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Luces (Glow) que cortan la oscuridad
+            this.ctx.globalCompositeOperation = 'destination-out';
+            
+            let drawLight = (worldX, worldY, radius, intensity = 1) => {
+                let px = (worldX * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraX * ZOOM;
+                let py = (worldY * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraY * ZOOM;
+                let grad = this.ctx.createRadialGradient(px, py, 2, px, py, radius);
+                grad.addColorStop(0, `rgba(0, 0, 0, ${intensity})`);
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                this.ctx.fillStyle = grad;
+                this.ctx.beginPath(); this.ctx.arc(px, py, radius, 0, Math.PI*2); this.ctx.fill();
+            };
+
+            // Luz del Agente
+            if (agent) {
+                let pulse = Math.sin((timestamp||0) * 0.002) * 5;
+                drawLight(agent.x, agent.y, 80 + pulse, 0.9);
+            }
+
+            // Luz de casas grandes (iluminación de las ventanas)
+            for (let item of renderQueue) {
+                if (item.type === 'bighouse') {
+                    // Casa ocupa 2x2. Centro es x+1, y+1
+                    drawLight(item.x + 0.5, item.y + 0.5, 120, 0.7);
+                }
+            }
+
+            // Luz de luciérnagas
+            if (particles) {
+                for (let p of particles.particles) {
+                    if (p.type === 'FIREFLY') {
+                        let px = p.x * ZOOM - this.cameraX * ZOOM;
+                        let py = p.y * ZOOM - this.cameraY * ZOOM;
+                        let grad = this.ctx.createRadialGradient(px, py, 1, px, py, 20);
+                        grad.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+                        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                        this.ctx.fillStyle = grad;
+                        this.ctx.beginPath(); this.ctx.arc(px, py, 20, 0, Math.PI*2); this.ctx.fill();
+                    }
+                }
+            }
+        }
+        
         this.ctx.restore();
     }
 }

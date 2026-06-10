@@ -2,7 +2,7 @@
 import { World } from './world.js';
 import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
-import { Enemy } from './enemy.js';
+import { ParticleSystem } from './particles.js';
 import { Wolf } from './wolf.js';
 import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
 
@@ -118,6 +118,8 @@ const barCraftHouse = document.getElementById('bar-craft-house');
 let lastTime = 0;
 let spawnTimer = 0;
 let currentTickRate = 500; // Milisegundos por cada tick lógico del agente
+let timeOfDay = 600; // Inicia a las 6:00 AM (Rango 0 - 2400)
+const particles = new ParticleSystem();
 
 const branchText = document.getElementById('agent-branch');
 
@@ -271,9 +273,36 @@ function updateUI() {
 }
 
 function gameLoop(timestamp) {
-    if (timestamp - lastTime >= currentTickRate) {
-        if (!gamePaused) {
-            
+    if (!lastTime) lastTime = timestamp;
+    let deltaTime = timestamp - lastTime;
+    
+    // Smooth time of day progression
+    timeOfDay += 0.5;
+    if (timeOfDay > 2400) timeOfDay = 0;
+
+    if (!gamePaused) {
+        particles.update(timeOfDay);
+
+        // Ambient Spawns
+        if (Math.random() < 0.05) { // 5% chance por frame de spawnear hoja
+            let rx = Math.floor(Math.random() * WORLD_WIDTH);
+            let ry = Math.floor(Math.random() * WORLD_HEIGHT);
+            let cell = world.getCell(rx, ry);
+            if (cell && cell.type === RESOURCES.WOOD) {
+                particles.spawnLeaf(rx * CELL_SIZE + CELL_SIZE/2, ry * CELL_SIZE + CELL_SIZE/2 - 20);
+            }
+        }
+
+        if (Math.random() < 0.02) { // 2% chance de luciérnaga
+            let rx = Math.floor(Math.random() * WORLD_WIDTH);
+            let ry = Math.floor(Math.random() * WORLD_HEIGHT);
+            let cell = world.getCell(rx, ry);
+            if (cell && cell.type === RESOURCES.WATER) {
+                particles.spawnFirefly(rx * CELL_SIZE + Math.random()*CELL_SIZE, ry * CELL_SIZE + Math.random()*CELL_SIZE);
+            }
+        }
+
+        if (deltaTime > currentTickRate) {
             if (dialogueTimer > 0) {
                 dialogueTimer--;
             }
@@ -364,12 +393,13 @@ function gameLoop(timestamp) {
 
             world.regenLoop(agent);
             agent.updateEmotion(enemies);
+            lastTime = timestamp;
         }
         updateUI();
-        lastTime = timestamp;
     }
     
-    renderer.draw(world, agent, enemies, wolf, isEclipse, timestamp);
+    let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120;
+    renderer.draw(world, agent, enemies, wolf, eclipseWarning, timestamp, timeOfDay, particles);
     requestAnimationFrame(gameLoop);
 }
 
