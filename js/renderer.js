@@ -487,6 +487,42 @@ export class Renderer {
                 let sx = frame * 48;
                 let sy = dir * 48;
                 this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
+
+                // Dibujar espada si tiene una
+                if (entity.swordDurability > 0) {
+                    this.ctx.save();
+                    
+                    // Posicionar la espada según a dónde mire
+                    if (dir === 2) { // Izquierda
+                        this.ctx.translate(px - 2, py + 10);
+                        if (entity.isAttacking) this.ctx.rotate(-Math.PI / 2);
+                        else this.ctx.rotate(-Math.PI / 6);
+                    } else if (dir === 3) { // Derecha
+                        this.ctx.translate(px + 18, py + 10);
+                        if (entity.isAttacking) this.ctx.rotate(Math.PI / 2);
+                        else this.ctx.rotate(Math.PI / 6);
+                    } else { // Abajo o Arriba
+                        this.ctx.translate(px + 14, py + 12);
+                        if (entity.isAttacking) this.ctx.rotate(Math.PI / 2);
+                        else this.ctx.rotate(Math.PI / 4);
+                    }
+
+                    // Hoja de la espada
+                    this.ctx.fillStyle = '#cbd5e1'; 
+                    this.ctx.fillRect(-2, -14, 4, 14);
+                    this.ctx.fillStyle = '#f8fafc'; // Brillo
+                    this.ctx.fillRect(-2, -14, 2, 14);
+                    
+                    // Guarda
+                    this.ctx.fillStyle = '#eab308';
+                    this.ctx.fillRect(-5, 0, 10, 2);
+                    
+                    // Mango
+                    this.ctx.fillStyle = '#78350f';
+                    this.ctx.fillRect(-1.5, 2, 3, 5);
+                    
+                    this.ctx.restore();
+                }
             } else {
                 this.ctx.fillStyle = '#ef4444'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
