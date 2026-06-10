@@ -71,6 +71,8 @@ export class Agent {
 
     update(enemies, eclipseWarning = false) {
         this.animationTimer++;
+        this.isAttacking = false;
+        this.isActioning = false;
         this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
@@ -81,7 +83,6 @@ export class Agent {
             return;
         }
 
-        this.isAttacking = false;
         this.hunger += 0.5;
         this.thirst += 0.8;
 
@@ -470,6 +471,14 @@ export class Agent {
         } else {
             this.state = STATES.WANDERING;
             this.target = null;
+        }
+
+        // Action flags for animation
+        if (this.target) {
+            let targetCell = this.world.getCell(this.target.x, this.target.y);
+            if (this.state === STATES.SEEK_WOOD && targetCell && targetCell.type === RESOURCES.WOOD) this.isActioning = true;
+            if (this.state === STATES.SEEK_ROCK && targetCell && targetCell.type === RESOURCES.ROCK) this.isActioning = true;
+            if (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE || this.state === STATES.BUILDING_TELESCOPE || this.state === STATES.BUILDING_WALL) this.isActioning = true;
         }
     }
 

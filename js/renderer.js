@@ -483,10 +483,18 @@ export class Renderer {
             if (!isMoving && Math.floor(t * 0.002) % 2 === 0) frame = 1; // Idle sutil
 
             if (this.images && this.images.sprout_agent) {
-                // Sprout Lands Basic Charakter: 4x4 grid de 48x48
-                let sx = frame * 48;
-                let sy = dir * 48;
-                this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
+                // Si está realizando una acción (talar, picar, construir)
+                if (entity.isActioning && this.images.sprout_agent_actions) {
+                    let actionFrame = Math.floor((timestamp || 0) * 0.004) % 2; // Las acciones suelen tener 2 frames
+                    let sx = actionFrame * 48;
+                    let sy = (4 + dir) * 48; // Fila 4 a 7 son para el Hacha/Pico (Abajo, Arriba, Izquierda, Derecha)
+                    this.ctx.drawImage(this.images.sprout_agent_actions, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
+                } else {
+                    // Caminar normal
+                    let sx = frame * 48;
+                    let sy = dir * 48;
+                    this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
+                }
 
                 // Dibujar espada si tiene una
                 if (entity.swordDurability > 0) {
