@@ -491,15 +491,15 @@ export class Renderer {
             this.ctx.fillStyle = overlayColor;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            // Luces (Glow) que cortan la oscuridad
-            this.ctx.globalCompositeOperation = 'destination-out';
+            // Luces (Glow) superpuestas en lugar de perforar el canvas
+            this.ctx.globalCompositeOperation = 'lighter';
             
-            let drawLight = (worldX, worldY, radius, intensity = 1) => {
+            let drawLight = (worldX, worldY, radius, intensity = 0.4, color = '255, 255, 200') => {
                 let px = (worldX * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraX * ZOOM;
                 let py = (worldY * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraY * ZOOM;
                 let grad = this.ctx.createRadialGradient(px, py, 2, px, py, radius);
-                grad.addColorStop(0, `rgba(0, 0, 0, ${intensity})`);
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                grad.addColorStop(0, `rgba(${color}, ${intensity})`);
+                grad.addColorStop(1, `rgba(${color}, 0)`);
                 this.ctx.fillStyle = grad;
                 this.ctx.beginPath(); this.ctx.arc(px, py, radius, 0, Math.PI*2); this.ctx.fill();
             };
@@ -507,14 +507,14 @@ export class Renderer {
             // Luz del Agente
             if (agent) {
                 let pulse = Math.sin((timestamp||0) * 0.002) * 5;
-                drawLight(agent.x, agent.y, 80 + pulse, 0.9);
+                drawLight(agent.x, agent.y, 90 + pulse, 0.35, '255, 240, 200');
             }
 
             // Luz de casas grandes (iluminación de las ventanas)
             for (let item of renderQueue) {
                 if (item.type === 'bighouse') {
                     // Casa ocupa 2x2. Centro es x+1, y+1
-                    drawLight(item.x + 0.5, item.y + 0.5, 120, 0.7);
+                    drawLight(item.x + 0.5, item.y + 0.5, 140, 0.4, '250, 180, 80');
                 }
             }
 
@@ -522,13 +522,7 @@ export class Renderer {
             if (particles) {
                 for (let p of particles.particles) {
                     if (p.type === 'FIREFLY') {
-                        let px = p.x * ZOOM - this.cameraX * ZOOM;
-                        let py = p.y * ZOOM - this.cameraY * ZOOM;
-                        let grad = this.ctx.createRadialGradient(px, py, 1, px, py, 20);
-                        grad.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-                        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                        this.ctx.fillStyle = grad;
-                        this.ctx.beginPath(); this.ctx.arc(px, py, 20, 0, Math.PI*2); this.ctx.fill();
+                        drawLight(p.x / CELL_SIZE - 0.5, p.y / CELL_SIZE - 0.5, 20, 0.6, '200, 255, 100');
                     }
                 }
             }
