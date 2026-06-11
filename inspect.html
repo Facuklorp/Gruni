@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { background: #333; margin: 0; padding: 20px; }
+canvas { border: 1px solid yellow; display: block; margin: 10px 0; }
+h2 { color: white; }
+</style>
+</head>
+<body>
+<h2>Sprite gruni basicas.png (1024x1024)</h2>
+<canvas id="c1" width="1024" height="1024"></canvas>
+<h2>Sprite gruni acciones.png (2048x2048)</h2>
+<canvas id="c2" width="2048" height="2048"></canvas>
+
+<script>
+function drawWithGrid(canvasId, imgSrc, gridSize) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+        // Pink background -> transparent
+        ctx.drawImage(img, 0, 0);
+        
+        // Draw grid
+        ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= img.width; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, img.height);
+            ctx.stroke();
+            if (x > 0) {
+                ctx.fillStyle = 'yellow';
+                ctx.font = '12px monospace';
+                ctx.fillText(x, x + 2, 14);
+            }
+        }
+        for (let y = 0; y <= img.height; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(img.width, y);
+            ctx.stroke();
+            if (y > 0) {
+                ctx.fillStyle = 'yellow';
+                ctx.font = '12px monospace';
+                ctx.fillText(y, 2, y + 14);
+            }
+        }
+    };
+    img.src = imgSrc;
+}
+
+drawWithGrid('c1', '/assets/Sprite gruni basicas.png', 128);
+drawWithGrid('c2', '/assets/Sprite gruni acciones.png', 256);
+</script>
+</body>
+</html>

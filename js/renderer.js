@@ -238,18 +238,13 @@ export class Renderer {
     drawBridge(x, y) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        this.ctx.fillStyle = '#78350f'; // Base oscura
-        this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
-        
-        this.ctx.fillStyle = '#92400e'; // Tablones
-        for(let i=0; i<4; i++) {
-            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 1, py + 4, (CELL_SIZE/4)-2, CELL_SIZE - 8);
-        }
-        // Clavos
-        this.ctx.fillStyle = '#475569';
-        for(let i=0; i<4; i++) {
-            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 2, py + 6, 2, 2);
-            this.ctx.fillRect(px + (i*CELL_SIZE/4) + 2, py + CELL_SIZE - 10, 2, 2);
+        if (this.images && this.images.sprout_bridge) {
+            // Wood Bridge.png: 80x48 → Un puente horizontal de 5 tiles de 16x16
+            // Usamos el tile del medio (col 1) para rellenar la celda
+            this.ctx.drawImage(this.images.sprout_bridge, 16, 16, 16, 16, px, py + 2, CELL_SIZE, CELL_SIZE - 4);
+        } else {
+            this.ctx.fillStyle = '#92400e';
+            this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
         }
     }
 
@@ -293,7 +288,27 @@ export class Renderer {
         
         this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 28, 10);
 
-        // Offset para centrar la casa verticalmente
+        // ---- Si tenemos el tileset del pack, lo usamos ----
+        // Wooden House.png: 112x80 → tiles de 16x16
+        // Wooden_House_Roof_Tilset.png: 112x80 → tiles de 16x16
+        if (this.images && this.images.sprout_house && this.images.sprout_roof) {
+            const W = CELL_SIZE; // 16px
+            // Wooden House.png (112x80): La casa completa ocupa las primeras 3 columnas
+            // col0=left wall, col1=door, col2=right, rows in 16px increments
+            // Dibujamos paredes (2x2 tiles)
+            this.ctx.drawImage(this.images.sprout_house, 0,  16, 16, 16, px,     py + W,   W, W); // Pared izq arriba
+            this.ctx.drawImage(this.images.sprout_house, 16, 16, 16, 16, px + W, py + W,   W, W); // Pared der arriba
+            this.ctx.drawImage(this.images.sprout_house, 0,  32, 16, 16, px,     py + W*2, W, W); // Pared izq abajo
+            this.ctx.drawImage(this.images.sprout_house, 16, 32, 16, 16, px + W, py + W*2, W, W); // Pared der abajo
+            // Techo (Wooden_House_Roof_Tilset.png: 112x80, usamos top 2x2 tiles)
+            this.ctx.drawImage(this.images.sprout_roof, 32, 0,  16, 16, px,     py,       W, W); // Techo izq
+            this.ctx.drawImage(this.images.sprout_roof, 48, 0,  16, 16, px + W, py,       W, W); // Techo der
+            this.ctx.drawImage(this.images.sprout_roof, 32, 16, 16, 16, px,     py + W/2, W, W); // Techo borde izq
+            this.ctx.drawImage(this.images.sprout_roof, 48, 16, 16, 16, px + W, py + W/2, W, W); // Techo borde der
+            return;
+        }
+
+        // ---- Fallback procedural ----
         py -= 8;
 
         // Base de piedra (Cimientos)
@@ -468,88 +483,105 @@ export class Renderer {
         let cy = py + CELL_SIZE / 2;
         
         let t = timestamp || 0;
-        let frame = Math.floor(t * 0.005) % 4; // Animación 4 frames
 
         if (type === 'agent') {
             this.drawShadow(cx, cy + 6, 6, 2);
 
-            let dir = 0; // 0=down, 1=up, 2=left, 3=right
+            // dir: 0=abajo, 1=arriba, 2=izquierda, 3=derecha
+            let dir = 0;
             if (entity.dx > 0) dir = 3;
             else if (entity.dx < 0) dir = 2;
             else if (entity.dy < 0) dir = 1;
 
             let isMoving = (entity.dx !== 0 || entity.dy !== 0);
-            if (!isMoving) frame = 0; // Idle frame (col 0) o 0/1 para idle respirando
-            if (!isMoving && Math.floor(t * 0.002) % 2 === 0) frame = 1; // Idle sutil
 
-            if (this.images && this.images.sprout_agent) {
-                // Si está realizando una acción (talar, picar, construir)
-                if (entity.isActioning && this.images.sprout_agent_actions) {
-                    let actionFrame = Math.floor((timestamp || 0) * 0.004) % 2; // Las acciones suelen tener 2 frames
-                    let sx = actionFrame * 48;
-                    let sy = (4 + dir) * 48; // Fila 4 a 7 son para el Hacha/Pico (Abajo, Arriba, Izquierda, Derecha)
-                    this.ctx.drawImage(this.images.sprout_agent_actions, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
-                } else {
-                    // Caminar normal
-                    let sx = frame * 48;
-                    let sy = dir * 48;
-                    this.ctx.drawImage(this.images.sprout_agent, sx, sy, 48, 48, px - 16, py - 24, 48, 48);
-                }
+            if (this.images && this.images.gruni_walk) {
+                let img = null, fW, fH, fCount, fRow, flip = false;
+                let isActioning = entity.isActioning;
+                let animSpeed = 0.008;
 
-                // Dibujar espada si tiene una y no está ocupando sus manos con otra herramienta
-                if (entity.swordDurability > 0 && !entity.isActioning) {
-                    this.ctx.save();
-                    
-                    // Posicionar la espada según a dónde mire
-                    if (dir === 2) { // Izquierda
-                        this.ctx.translate(px - 2, py + 10);
-                        if (entity.isAttacking) this.ctx.rotate(-Math.PI / 2);
-                        else this.ctx.rotate(-Math.PI / 6);
-                    } else if (dir === 3) { // Derecha
-                        this.ctx.translate(px + 18, py + 10);
-                        if (entity.isAttacking) this.ctx.rotate(Math.PI / 2);
-                        else this.ctx.rotate(Math.PI / 6);
-                    } else { // Abajo o Arriba
-                        this.ctx.translate(px + 14, py + 12);
-                        if (entity.isAttacking) this.ctx.rotate(Math.PI / 2);
-                        else this.ctx.rotate(Math.PI / 4);
+                if (entity.isAttacking && this.images.gruni_attack) {
+                    img = this.images.gruni_attack;
+                    fW = 219; fH = 284; fCount = 5; animSpeed = 0.012;
+                    if (dir === 1) fRow = 1; // Arriba
+                    else if (dir === 2) { fRow = 0; } // Izquierda = Frontal
+                    else if (dir === 3) { fRow = 0; flip = true; } // Derecha = Frontal reflejado
+                    else fRow = 0; // Abajo
+                } else if (isActioning) {
+                    animSpeed = 0.008;
+                    if (entity.state === 'SEEK_ROCK' && this.images.gruni_mine) {
+                        img = this.images.gruni_mine;
+                        fW = 165; fH = 305; fCount = 5;
+                        if (dir === 2) { fRow = 1; } // Izquierda
+                        else if (dir === 3) { fRow = 1; flip = true; } // Derecha = Izquierda reflejada
+                        else { fRow = 0; } // Abajo/Arriba = Frontal
+                    } else if (this.images.gruni_axe) {
+                        // Talar / Construir
+                        img = this.images.gruni_axe;
+                        fW = 157; fH = 280; fCount = 6;
+                        if (dir === 1) fRow = 1;
+                        else if (dir === 2) fRow = 3;
+                        else if (dir === 3) fRow = 2;
+                        else fRow = 0;
                     }
-
-                    // Hoja de la espada
-                    this.ctx.fillStyle = '#cbd5e1'; 
-                    this.ctx.fillRect(-2, -14, 4, 14);
-                    this.ctx.fillStyle = '#f8fafc'; // Brillo
-                    this.ctx.fillRect(-2, -14, 2, 14);
-                    
-                    // Guarda
-                    this.ctx.fillStyle = '#eab308';
-                    this.ctx.fillRect(-5, 0, 10, 2);
-                    
-                    // Mango
-                    this.ctx.fillStyle = '#78350f';
-                    this.ctx.fillRect(-1.5, 2, 3, 5);
-                    
-                    this.ctx.restore();
                 }
+                
+                // Fallback a caminar/correr si no se seteó imagen
+                if (!img) {
+                    animSpeed = 0.008;
+                    img = this.images.gruni_walk;
+                    fW = 78; fH = 136; fCount = 5;
+                    if (dir === 1) fRow = 1;
+                    else if (dir === 2) fRow = 3;
+                    else if (dir === 3) fRow = 2;
+                    else fRow = 0;
+                }
+
+                let frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
+                
+                let scale = 0.32; 
+                let drawW = fW * scale;
+                let drawH = fH * scale;
+
+                let drawX = cx - drawW / 2;
+                let drawY = py + CELL_SIZE - drawH + 4; 
+
+                this.ctx.save();
+                if (flip) {
+                    this.ctx.translate(cx, 0);
+                    this.ctx.scale(-1, 1);
+                    this.ctx.translate(-cx, 0);
+                }
+                this.ctx.drawImage(img, frame * fW, fRow * fH, fW, fH, drawX, drawY, drawW, drawH);
+                this.ctx.restore();
+
             } else {
-                this.ctx.fillStyle = '#ef4444'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
+                this.ctx.fillStyle = '#ef4444';
+                this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
+
         } else if (type === 'enemy') {
             this.drawShadow(cx, cy + 6, 8, 3);
             if (this.images && this.images.sprout_cow) {
-                // Vaca es 96x64 (3 frames de 32x32?)
-                let cowFrame = Math.floor(t * 0.003) % 3; 
-                this.ctx.drawImage(this.images.sprout_cow, cowFrame * 32, 0, 32, 32, px - 8, py - 16, 32, 32);
+                // Free Cow Sprites.png: 96x64 → 3 filas de 2 frames de 48x32
+                let cowDir = 0; // 0=abajo, 1=izq, 2=der
+                if (entity.dx > 0) cowDir = 2;
+                else if (entity.dx < 0) cowDir = 1;
+                let cowFrame = Math.floor(t * 0.004) % 2;
+                this.ctx.drawImage(this.images.sprout_cow, cowFrame * 48, cowDir * 16, 48, 16, px - 8, py - 8, 32, 20);
             } else {
-                this.ctx.fillStyle = '#d8b4fe'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
+                this.ctx.fillStyle = '#d8b4fe';
+                this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
         } else if (type === 'wolf') {
             this.drawShadow(cx, cy + 6, 6, 2);
             if (this.images && this.images.sprout_chicken) {
-                let chickFrame = Math.floor(t * 0.004) % 2; 
-                this.ctx.drawImage(this.images.sprout_chicken, chickFrame * 16, 0, 16, 16, px, py, 16, 16);
+                // Free Chicken Sprites.png: 64x32 → 4 frames de 16x16 en 2 filas
+                let chickFrame = Math.floor(t * 0.006) % 2;
+                this.ctx.drawImage(this.images.sprout_chicken, chickFrame * 16, 0, 16, 16, px, py, 20, 20);
             } else {
-                this.ctx.fillStyle = '#94a3b8'; this.ctx.fillRect(px + 4, py + 4, 8, 8);
+                this.ctx.fillStyle = '#94a3b8';
+                this.ctx.fillRect(px + 4, py + 4, 8, 8);
             }
         }
     }

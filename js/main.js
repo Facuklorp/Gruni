@@ -13,12 +13,19 @@ const imageUrls = {
     sprout_grass: 'assets/sprout_grass.png',
     sprout_water: 'assets/sprout_water.png',
     sprout_house: 'assets/sprout_house.png',
+    sprout_roof: 'assets/sprout_roof.png',
     sprout_objects: 'assets/sprout_objects.png',
     sprout_bridge: 'assets/sprout_bridge.png',
     sprout_agent: 'assets/sprout_agent.png',
     sprout_agent_actions: 'assets/sprout_agent_actions.png',
+    sprout_tools: 'assets/sprout_tools.png',
     sprout_cow: 'assets/sprout_cow.png',
-    sprout_chicken: 'assets/sprout_chicken.png'
+    sprout_chicken: 'assets/sprout_chicken.png',
+    gruni_walk: 'assets/sprites/gruni/gruni_walk.png',
+    gruni_run: 'assets/sprites/gruni/gruni_run.png',
+    gruni_axe: 'assets/sprites/gruni/gruni_axe.png',
+    gruni_attack: 'assets/sprites/gruni/gruni_attack.png',
+    gruni_mine: 'assets/sprites/gruni/gruni_mine.png'
 };
 
 function loadImage(url) {
@@ -387,5 +394,6 @@ function gameLoop(timestamp) {
 // Iniciar el bucle
 loadAssets().then(() => {
     renderer.initImages(IMAGES);
+    window.game = { world, agent, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, setWolf: (val) => wolf = val, Enemy, Wolf, RESOURCES, STATES };
     requestAnimationFrame(gameLoop);
 });
