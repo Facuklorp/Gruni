@@ -398,12 +398,16 @@ export class Agent {
                 if (this.inventory.wood >= 1) {
                     let emptyWallPos = null;
                     let hx = this.home.x, hy = this.home.y;
-                    for (let y = hy - 1; y <= hy + 2; y++) {
-                        for (let x = hx - 1; x <= hx + 2; x++) {
-                            // Skip the 2x2 house itself
-                            if (x >= hx && x <= hx + 1 && y >= hy && y <= hy + 1) continue;
+                    let R = 3; // Radio más amplio para que la casa no tape las murallas
+                    for (let y = hy - R; y <= hy + 1 + R; y++) {
+                        for (let x = hx - R; x <= hx + 1 + R; x++) {
+                            // Solo construir en el perímetro
+                            if (x > hx - R && x < hx + 1 + R && y > hy - R && y < hy + 1 + R) continue;
+                            
                             let cell = this.world.getCell(x, y);
                             if (cell && cell.type === RESOURCES.EMPTY) {
+                                // Si está ignorado por estar trabado, pasamos al siguiente
+                                if (this.ignoreTarget && this.ignoreTarget.x === x && this.ignoreTarget.y === y) continue;
                                 emptyWallPos = {x, y};
                                 break;
                             }
@@ -665,7 +669,7 @@ export class Agent {
                         this.wanderTimer = 8;
                         this.stuckTimer = 0;
                         // Necesitamos madera para hacer un puente
-                        if (!this.emergencyMission) this.emergencyMission = 'BUILD_WALLS'; // Usamos BUILD_WALLS porque recolecta madera. O creamos uno nuevo.
+                        // Quitamos BUILD_WALLS para que no construya antes de terminar la casa
                     }
                 } else if (this.stuckTimer > 3) {
                     if (this.stuckTimer > 5) {
