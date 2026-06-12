@@ -269,7 +269,9 @@ export class Agent {
                 // Tareas de tiempo libre cuando la casa está en perfectas condiciones
                 if (!enemyThreat && totalCap >= 40) {
                     if (!this.emergencyMission || this.emergencyMission === 'RESTORE_HOUSE') {
-                        if (this.branches.includes('ASTRONOMY') && !this.hasTelescope) {
+                        if (this.homeStage < 3) {
+                            this.emergencyMission = 'BUILD_HOUSE';
+                        } else if (this.branches.includes('ASTRONOMY') && !this.hasTelescope) {
                             this.emergencyMission = 'BUILD_TELESCOPE';
                         } else {
                             this.emergencyMission = 'BUILD_WALLS';

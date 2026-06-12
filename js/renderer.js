@@ -431,26 +431,30 @@ export class Renderer {
     }
 
     drawTelescope(x, y) {
-        let cx = x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = y * CELL_SIZE + CELL_SIZE / 2;
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        let cy = py + CELL_SIZE / 2;
         
-        this.drawShadow(cx, cy + 12, 10, 4);
+        if (this.images && this.images.telescopio) {
+            this.ctx.drawImage(this.images.telescopio, px - 8, py - 16, 32, 32);
+        } else {
+            this.ctx.save();
+            this.ctx.translate(cx, cy + 2);
 
-        this.ctx.save();
-        this.ctx.translate(cx, cy + 2);
-
-        this.ctx.strokeStyle = '#451a03';
+            this.ctx.strokeStyle = '#451a03';
             this.ctx.lineWidth = 3 / ZOOM;
-        this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(-6, 12); this.ctx.stroke();
-        this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(6, 12); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(-6, 12); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(6, 12); this.ctx.stroke();
 
-        this.ctx.fillStyle = '#f59e0b';
-        this.ctx.rotate(-Math.PI / 5);
-        this.ctx.fillRect(-10, -4, 20, 8);
-        this.ctx.fillStyle = '#0ea5e9';
-        this.ctx.fillRect(8, -3, 4, 6);
+            this.ctx.fillStyle = '#f59e0b';
+            this.ctx.rotate(-Math.PI / 5);
+            this.ctx.fillRect(-10, -4, 20, 8);
+            this.ctx.fillStyle = '#0ea5e9';
+            this.ctx.fillRect(8, -3, 4, 6);
 
-        this.ctx.restore();
+            this.ctx.restore();
+        }
     }
 
     drawWall(x, y, hp) {

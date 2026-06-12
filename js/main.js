@@ -34,7 +34,8 @@ const imageUrls = {
     frutal_1: 'Vegetación/Árbol frutal 1.png',
     frutal_2: 'Vegetación/Árbol frutal 2.png',
     arbusto_1: 'Vegetación/Arbusto 1.png',
-    arbusto_2: 'Vegetación/Arbusto 2.png'
+    arbusto_2: 'Vegetación/Arbusto 2.png',
+    telescopio: 'Telescopio/Telescopio.png'
 };
 
 function loadImage(url) {

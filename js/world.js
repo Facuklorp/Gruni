@@ -238,15 +238,13 @@ export class World {
                     else if (r < 0.80) type = RESOURCES.WATER; // 15% agua
                     
                     this.setCell(x, y, type);
-                } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY && Math.random() < 0.1) {
-                    this.grid[y][x].type = RESOURCES.WOOD;
-                    this.grid[y][x].capacity = Math.floor(Math.random() * 3) + 2;
-                } else if (this.grid[y][x].type === RESOURCES.FOOD_EMPTY && Math.random() < 0.1) {
-                    this.grid[y][x].type = RESOURCES.FOOD;
-                    this.grid[y][x].capacity = Math.floor(Math.random() * 2) + 2;
-                } else if (this.grid[y][x].type === RESOURCES.BUSH_EMPTY && Math.random() < 0.1) {
-                    this.grid[y][x].type = RESOURCES.BUSH;
-                    this.grid[y][x].capacity = 1;
+                } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY || 
+                           this.grid[y][x].type === RESOURCES.FOOD_EMPTY || 
+                           this.grid[y][x].type === RESOURCES.BUSH_EMPTY) {
+                    // Desaparecen con el tiempo
+                    if (Math.random() < 0.5) {
+                        this.grid[y][x].type = RESOURCES.EMPTY;
+                    }
                 }
             }
         }
