@@ -44,15 +44,19 @@ const imageUrls = {
     muralla: 'Muralla/Muralla.png',
     rocas_1: 'Rocas/Rocas 1.png',
     rocas_2: 'Rocas/Rocas 2.png',
-    bg_pasto: 'Biomas/Pasto.png',
-    bg_agua: 'Biomas/Agua.png',
-    bg_arena: 'Biomas/Arena.png'
+    bg_pasto: 'Biomas/GRANDES/Pasto.png',
+    bg_agua: 'Biomas/GRANDES/Agua.png',
+    bg_arena: 'Biomas/GRANDES/Arena.png'
 };
 
 function loadImage(url) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
+        img.onerror = () => {
+            console.error('No se pudo cargar la imagen: ' + url);
+            resolve(null); // Resolvemos null en vez de trabar todo
+        };
         img.src = url;
     });
 }
