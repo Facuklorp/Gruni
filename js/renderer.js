@@ -125,8 +125,12 @@ export class Renderer {
             if (item.type === 'resource') {
                 let cell = item.cell;
                 switch(cell.type) {
-                    case RESOURCES.FOOD: this.drawApple(item.x, item.y, timestamp); break;
-                    case RESOURCES.WOOD: this.drawTree(item.x, item.y); break;
+                    case RESOURCES.FOOD: 
+                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type); break;
+                    case RESOURCES.WOOD: 
+                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type); break;
+                    case RESOURCES.BUSH: 
+                    case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
                     case RESOURCES.ROCK: this.drawRock(item.x, item.y); break;
                     case RESOURCES.HOUSE: this.drawHouse(item.x, item.y, cell.capacity); break;
                     case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp); break;
@@ -180,42 +184,48 @@ export class Renderer {
         // Eliminado el borde procedural de arena para mantener el estilo pixel art puro
     }
 
-    drawApple(x, y, timestamp) {
+    drawFruitTree(x, y, type) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
-        let cy = py + CELL_SIZE / 2;
+        this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
 
-        let bounce = Math.abs(Math.sin((timestamp || 0) * 0.005 + x)) * 4;
-        this.drawShadow(cx, cy + 4, 6, 2);
-
-        if (this.images && this.images.sprout_objects) {
-            // El item de manzana está en 32, 32
-            this.ctx.drawImage(this.images.sprout_objects, 32, 32, 16, 16, px, py - 4 - bounce, 16, 16);
+        let img = (type === RESOURCES.FOOD) ? this.images.frutal_1 : this.images.frutal_2;
+        if (img) {
+            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
         } else {
-            this.ctx.fillStyle = '#ef4444';
-            this.ctx.beginPath(); this.ctx.arc(cx, cy - 4 - bounce, 5, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.fillStyle = '#22c55e';
-            this.ctx.beginPath(); this.ctx.ellipse(cx + 3, cy - 8 - bounce, 3, 1.5, Math.PI/4, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = (type === RESOURCES.FOOD) ? '#ef4444' : '#b45309';
+            this.ctx.beginPath(); this.ctx.arc(cx, py + 8, 8, 0, Math.PI*2); this.ctx.fill();
         }
     }
 
-    drawTree(x, y) {
-        let cx = x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        this.drawShadow(cx, cy + 4, 10, 4);
+    drawTree(x, y, type) {
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
 
-        if (this.images && this.images.sprout_objects) {
-            let px = x * CELL_SIZE;
-            let py = y * CELL_SIZE;
-            // Sprout Lands round tree is at 0,0 and is 48x48. Apple tree is 48,0.
-            let isAppleTree = (x + y) % 2 === 0; // Aleatorizar un poco visualmente
-            let sx = isAppleTree ? 48 : 0;
-            this.ctx.drawImage(this.images.sprout_objects, sx, 0, 48, 48, px - 16, py - 32, 48, 48);
+        let img = (type === RESOURCES.WOOD) ? this.images.arbol_1 : this.images.arbol_2;
+        if (img) {
+            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
         } else {
-            // Procedural fallback
-            this.ctx.fillStyle = '#5c2b07'; this.ctx.fillRect(cx - 2, cy, 4, 10);
-            this.ctx.fillStyle = '#14532d'; this.ctx.beginPath(); this.ctx.moveTo(cx, cy - 16); this.ctx.lineTo(cx + 8, cy); this.ctx.lineTo(cx - 8, cy); this.ctx.fill();
+            this.ctx.fillStyle = '#14532d';
+            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 8, py+8); this.ctx.lineTo(cx - 8, py+8); this.ctx.fill();
+        }
+    }
+
+    drawBush(x, y, type) {
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        this.drawShadow(cx, py + CELL_SIZE - 2, 8, 3);
+
+        let img = (type === RESOURCES.BUSH) ? this.images.arbusto_1 : this.images.arbusto_2;
+        if (img) {
+            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
+        } else {
+            this.ctx.fillStyle = (type === RESOURCES.BUSH) ? '#22c55e' : '#b45309';
+            this.ctx.beginPath(); this.ctx.arc(cx, py + 8, 6, 0, Math.PI*2); this.ctx.fill();
         }
     }
 

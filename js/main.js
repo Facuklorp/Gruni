@@ -28,7 +28,13 @@ const imageUrls = {
     gruni_mine: 'assets/sprites/gruni/gruni_mine.png',
     casa_1: 'Casa/Casa 1.png',
     casa_2: 'Casa/Casa 2.png',
-    casa_3: 'Casa/Casa entera.png'
+    casa_3: 'Casa/Casa entera.png',
+    arbol_1: 'Vegetación/Árbol 1.png',
+    arbol_2: 'Vegetación/Árbol 2.png',
+    frutal_1: 'Vegetación/Árbol frutal 1.png',
+    frutal_2: 'Vegetación/Árbol frutal 2.png',
+    arbusto_1: 'Vegetación/Arbusto 1.png',
+    arbusto_2: 'Vegetación/Arbusto 2.png'
 };
 
 function loadImage(url) {
@@ -370,7 +376,7 @@ function gameLoop(timestamp) {
             
             // Book spawning
             if (agent.branches.length < 3) {
-                if (agent.home && !bookSpawned) {
+                if (agent.homeStage === 3 && !bookSpawned) {
                     if (bookCooldownTimer > 0) bookCooldownTimer--;
                     if (bookCooldownTimer === 0) {
                         let emptyX = Math.floor(Math.random() * WORLD_WIDTH);

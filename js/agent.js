@@ -325,7 +325,7 @@ export class Agent {
                 else this.craftedFirstPickaxe = true;
             } else if (this.swordDurability === 0) {
                 this.emergencyMission = 'SWORD';
-            } else if (this.homeStage === 0) {
+            } else if (this.homeStage < 3) {
                 this.emergencyMission = 'BUILD_HOUSE';
             } else if (this.branches.length > 0 && this.swordDurability === 0) {
                 this.emergencyMission = 'SWORD';
@@ -336,7 +336,7 @@ export class Agent {
         if (this.emergencyMission) {
             if (this.emergencyMission === 'PICKAXE') {
                 if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
@@ -349,7 +349,7 @@ export class Agent {
                 }
             } else if (this.emergencyMission === 'SWORD') {
                 if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
@@ -362,7 +362,7 @@ export class Agent {
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
                 if (this.inventory.wood < 3) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 3) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
@@ -389,7 +389,7 @@ export class Agent {
                     this.target = { x: this.home.x, y: this.home.y };
                     return;
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_WALLS') {
@@ -416,7 +416,7 @@ export class Agent {
                         this.emergencyMission = null; // No hay más lugar para murallas
                     }
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_TELESCOPE') {
@@ -428,7 +428,7 @@ export class Agent {
                         return;
                     }
                 } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
                     let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
@@ -470,7 +470,7 @@ export class Agent {
             return;
         }
 
-        let woodTarget = this.world.findNearest(this.x, this.y, RESOURCES.WOOD);
+        let woodTarget = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
         let rockTarget = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
 
         // Límites más altos para poder craftear herramientas caras
@@ -488,7 +488,7 @@ export class Agent {
         // Action flags for animation
         if (this.target) {
             let targetCell = this.world.getCell(this.target.x, this.target.y);
-            if (this.state === STATES.SEEK_WOOD && targetCell && targetCell.type === RESOURCES.WOOD) this.isActioning = true;
+            if (this.state === STATES.SEEK_WOOD && targetCell && (targetCell.type === RESOURCES.WOOD || targetCell.type === RESOURCES.BUSH)) this.isActioning = true;
             if (this.state === STATES.SEEK_ROCK && targetCell && targetCell.type === RESOURCES.ROCK) this.isActioning = true;
             if (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE || this.state === STATES.BUILDING_TELESCOPE || this.state === STATES.BUILDING_WALL) this.isActioning = true;
         }

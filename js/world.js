@@ -14,7 +14,11 @@ export const RESOURCES = {
     HOUSE: 6,
     BOOK: 7,
     TELESCOPE: 8,
-    WALL: 9
+    WALL: 9,
+    BUSH: 10,
+    WOOD_EMPTY: 11,
+    FOOD_EMPTY: 12,
+    BUSH_EMPTY: 13
 };
 
 export class World {
@@ -30,11 +34,16 @@ export class World {
                 const rand = Math.random();
                 let type = RESOURCES.EMPTY;
                 
-                if (rand < 0.08) type = RESOURCES.FOOD;
-                else if (rand < 0.12) type = RESOURCES.WOOD;
-                else if (rand < 0.15) type = RESOURCES.ROCK;
+                if (rand < 0.06) type = RESOURCES.FOOD;
+                else if (rand < 0.10) type = RESOURCES.WOOD;
+                else if (rand < 0.14) type = RESOURCES.BUSH;
+                else if (rand < 0.17) type = RESOURCES.ROCK;
 
-                let capacity = (type === RESOURCES.EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
+                let capacity = 0;
+                if (type === RESOURCES.WOOD) capacity = Math.floor(Math.random() * 3) + 2; // 2-4 wood
+                else if (type === RESOURCES.FOOD) capacity = Math.floor(Math.random() * 2) + 2; // 2-3 food
+                else if (type === RESOURCES.BUSH) capacity = 1; // bush gives 1 wood
+                else if (type === RESOURCES.ROCK) capacity = Math.floor(Math.random() * 3) + 1; // 1-3 rock
                 let terrainVariant = Math.floor(Math.random() * 4);
                 row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant });
             }
@@ -97,8 +106,12 @@ export class World {
                     cap = 10; // La casa tiene 10 de vida
                 } else if (type === RESOURCES.WALL) {
                     cap = 5; // La muralla tiene 5 de vida
+                } else if (type === RESOURCES.WOOD) {
+                    cap = Math.floor(Math.random() * 3) + 2;
+                } else if (type === RESOURCES.BUSH) {
+                    cap = 1;
                 } else {
-                    cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK) ? 0 : Math.floor(Math.random() * 3) + 1;
+                    cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK || type === RESOURCES.WOOD_EMPTY || type === RESOURCES.FOOD_EMPTY || type === RESOURCES.BUSH_EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
                 }
             }
             let tv = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x].terrainVariant : Math.floor(Math.random() * 4);
@@ -112,21 +125,26 @@ export class World {
             if (cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.BRIDGE) {
                 cell.capacity--;
                 if (cell.capacity <= 0) {
-                    cell.type = RESOURCES.EMPTY;
+                    if (cell.type === RESOURCES.WOOD) cell.type = RESOURCES.WOOD_EMPTY;
+                    else if (cell.type === RESOURCES.FOOD) cell.type = RESOURCES.FOOD_EMPTY;
+                    else if (cell.type === RESOURCES.BUSH) cell.type = RESOURCES.BUSH_EMPTY;
+                    else cell.type = RESOURCES.EMPTY;
+                    
                     cell.capacity = 0;
                 }
             }
         }
     }
 
-    findNearest(startX, startY, resourceType, ignoreX = -1, ignoreY = -1) {
+    findNearest(startX, startY, resourceTypes, ignoreX = -1, ignoreY = -1) {
+        if (!Array.isArray(resourceTypes)) resourceTypes = [resourceTypes];
         let nearest = null;
         let minDistance = Infinity;
 
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
                 if (x === ignoreX && y === ignoreY) continue;
-                if (this.grid[y][x].type === resourceType) {
+                if (resourceTypes.includes(this.grid[y][x].type)) {
                     let dist = Math.abs(x - startX) + Math.abs(y - startY);
                     if (dist < minDistance) {
                         minDistance = dist;
@@ -216,9 +234,19 @@ export class World {
                     let type = RESOURCES.FOOD; // 30% comida
                     if (r < 0.25) type = RESOURCES.WOOD; // 25% madera
                     else if (r < 0.50) type = RESOURCES.ROCK; // 25% roca
-                    else if (r < 0.70) type = RESOURCES.WATER; // 20% agua
+                    else if (r < 0.65) type = RESOURCES.BUSH; // 15% arbusto
+                    else if (r < 0.80) type = RESOURCES.WATER; // 15% agua
                     
                     this.setCell(x, y, type);
+                } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY && Math.random() < 0.1) {
+                    this.grid[y][x].type = RESOURCES.WOOD;
+                    this.grid[y][x].capacity = Math.floor(Math.random() * 3) + 2;
+                } else if (this.grid[y][x].type === RESOURCES.FOOD_EMPTY && Math.random() < 0.1) {
+                    this.grid[y][x].type = RESOURCES.FOOD;
+                    this.grid[y][x].capacity = Math.floor(Math.random() * 2) + 2;
+                } else if (this.grid[y][x].type === RESOURCES.BUSH_EMPTY && Math.random() < 0.1) {
+                    this.grid[y][x].type = RESOURCES.BUSH;
+                    this.grid[y][x].capacity = 1;
                 }
             }
         }
