@@ -100,7 +100,7 @@ export class Renderer {
         }
 
         if (agent.home) {
-            renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y });
+            renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y, homeStage: agent.homeStage });
         }
 
         if (enemies) {
@@ -137,7 +137,7 @@ export class Renderer {
                     this.drawResourceDots(item.x, item.y, cell.capacity);
                 }
             } else if (item.type === 'bighouse') {
-                this.drawBigHouse(item.x, item.y);
+                this.drawBigHouse(item.x, item.y, item.homeStage);
             } else {
                 this.drawEntity(item.entity, item.type, timestamp);
             }
@@ -281,12 +281,23 @@ export class Renderer {
         }
     }
 
-    drawBigHouse(x, y) {
+    drawBigHouse(x, y, homeStage) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE;
         
         this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 28, 10);
+
+        if (homeStage === 1 && this.images && this.images.casa_1) {
+            this.ctx.drawImage(this.images.casa_1, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            return;
+        } else if (homeStage === 2 && this.images && this.images.casa_2) {
+            this.ctx.drawImage(this.images.casa_2, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            return;
+        } else if (homeStage === 3 && this.images && this.images.casa_3) {
+            this.ctx.drawImage(this.images.casa_3, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            return;
+        }
 
         // ---- Si tenemos el tileset del pack, lo usamos ----
         // Wooden House.png: 112x80 → tiles de 16x16

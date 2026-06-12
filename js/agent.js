@@ -58,6 +58,7 @@ export class Agent {
         this.craftedFirstSword = false;
         this.craftedFirstBridge = false;
         this.home = null;
+        this.homeStage = 0;
         
         this.branches = []; 
         this.hasTelescope = false;
@@ -124,9 +125,11 @@ export class Agent {
 
     craft(type = null) {
         // Auto-craft: check if we should start building a house
-        if (this.inventory.wood >= 5 && !this.home && this.emergencyMission !== 'BUILD_HOUSE' && this.craftedFirstSword) {
-            this.emergencyMission = 'BUILD_HOUSE';
-            this.happyTimer = 5;
+        if (this.homeStage < 3 && this.emergencyMission !== 'BUILD_HOUSE' && this.craftedFirstSword) {
+            if (this.inventory.wood >= 3 && this.inventory.rock >= 3) {
+                this.emergencyMission = 'BUILD_HOUSE';
+                this.happyTimer = 5;
+            }
         }
 
         // Typed craft from emergency missions
@@ -235,6 +238,7 @@ export class Agent {
 
             if (!houseExists) {
                 this.home = null; // La casa fue destruida totalmente
+                this.homeStage = 0;
                 this.emotion = 'SAD';
             } else {
                 for (let e of enemies) {
@@ -319,10 +323,9 @@ export class Agent {
             if (!this.craftedFirstPickaxe) {
                 if (this.inventory.pickaxes === 0) this.emergencyMission = 'PICKAXE';
                 else this.craftedFirstPickaxe = true;
-            } else if (!this.craftedFirstSword) {
-                if (this.swordDurability === 0) this.emergencyMission = 'SWORD';
-                else this.craftedFirstSword = true;
-            } else if (!this.home) {
+            } else if (this.swordDurability === 0) {
+                this.emergencyMission = 'SWORD';
+            } else if (this.homeStage === 0) {
                 this.emergencyMission = 'BUILD_HOUSE';
             } else if (this.branches.length > 0 && this.swordDurability === 0) {
                 this.emergencyMission = 'SWORD';
@@ -358,17 +361,26 @@ export class Agent {
                     return;
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
-                if (this.inventory.wood < 5) {
+                if (this.inventory.wood < 3) {
                     let w = this.world.findNearest(this.x, this.y, RESOURCES.WOOD, ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                } else if (this.inventory.rock < 3) {
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
-                    let empty = this.world.findNearest2x2Empty(this.x, this.y);
-                    if (empty) { 
-                        this.state = STATES.BUILDING_HOUSE; 
-                        this.target = empty; 
-                        return; 
+                    if (this.homeStage === 0) {
+                        let empty = this.world.findNearest2x2Empty(this.x, this.y);
+                        if (empty) { 
+                            this.state = STATES.BUILDING_HOUSE; 
+                            this.target = empty; 
+                            return; 
+                        } else {
+                            this.emergencyMission = null;
+                        }
                     } else {
-                        this.emergencyMission = null;
+                        this.state = STATES.BUILDING_HOUSE;
+                        this.target = {x: this.home.x, y: this.home.y};
+                        return;
                     }
                 }
             } else if (this.emergencyMission === 'RESTORE_HOUSE') {
@@ -532,14 +544,22 @@ export class Agent {
                 } else if (this.state === STATES.BUILDING_HOUSE) {
                     let tx = this.target.x;
                     let ty = this.target.y;
-                    if (this.isValidCoord(tx, ty) && this.isValidCoord(tx+1, ty+1)) {
-                        if (this.inventory.wood >= 5) {
-                            this.world.setCell(tx, ty, RESOURCES.HOUSE);
-                            this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
-                            this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
-                            this.world.setCell(tx+1, ty+1, RESOURCES.HOUSE);
-                            this.home = {x: tx, y: ty};
-                            this.inventory.wood -= 5;
+                    if (this.inventory.wood >= 3 && this.inventory.rock >= 3) {
+                        if (this.homeStage === 0) {
+                            if (this.isValidCoord(tx, ty) && this.isValidCoord(tx+1, ty+1)) {
+                                this.world.setCell(tx, ty, RESOURCES.HOUSE);
+                                this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
+                                this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
+                                this.world.setCell(tx+1, ty+1, RESOURCES.HOUSE);
+                                this.home = {x: tx, y: ty};
+                                this.homeStage = 1;
+                                this.inventory.wood -= 3;
+                                this.inventory.rock -= 3;
+                            }
+                        } else if (this.homeStage < 3) {
+                            this.homeStage++;
+                            this.inventory.wood -= 3;
+                            this.inventory.rock -= 3;
                         }
                     }
                     this.emergencyMission = null;

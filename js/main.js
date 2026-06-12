@@ -25,7 +25,10 @@ const imageUrls = {
     gruni_run: 'assets/sprites/gruni/gruni_run.png',
     gruni_axe: 'assets/sprites/gruni/gruni_axe.png',
     gruni_attack: 'assets/sprites/gruni/gruni_attack.png',
-    gruni_mine: 'assets/sprites/gruni/gruni_mine.png'
+    gruni_mine: 'assets/sprites/gruni/gruni_mine.png',
+    casa_1: 'Casa/Casa 1.png',
+    casa_2: 'Casa/Casa 2.png',
+    casa_3: 'Casa/Casa entera.png'
 };
 
 function loadImage(url) {
@@ -100,7 +103,8 @@ const craftSwordW = document.getElementById('craft-sword-w');
 const craftSwordR = document.getElementById('craft-sword-r');
 const barCraftSword = document.getElementById('bar-craft-sword');
 
-const craftHouseText = document.getElementById('craft-house-text');
+const craftHouseW = document.getElementById('craft-house-w');
+const craftHouseR = document.getElementById('craft-house-r');
 const barCraftHouse = document.getElementById('bar-craft-house');
 
 let lastTime = 0;
@@ -228,15 +232,17 @@ function updateUI() {
         barCraftSword.style.background = '#a16207';
     }
 
-    let houseWood = Math.min(agent.inventory.wood, 5);
-    craftHouseText.innerText = houseWood;
-    if (agent.home) {
+    let houseWood = Math.min(agent.inventory.wood, 3);
+    let houseRock = Math.min(agent.inventory.rock, 3);
+    craftHouseW.innerText = houseWood;
+    craftHouseR.innerText = houseRock;
+    if (agent.homeStage >= 3) {
         let homeCell = world.getCell(agent.home.x, agent.home.y);
         let hpPct = homeCell ? (homeCell.capacity / 10) * 100 : 100;
         barCraftHouse.style.width = `${hpPct}%`;
         barCraftHouse.style.background = hpPct < 100 ? '#eab308' : '#22c55e'; // Amarillo si está dañada
     } else {
-        barCraftHouse.style.width = `${(houseWood / 5) * 100}%`;
+        barCraftHouse.style.width = `${((houseWood + houseRock) / 6) * 100}%`;
         barCraftHouse.style.background = '#f43f5e'; // Rojo mientras junta madera
     }
 
