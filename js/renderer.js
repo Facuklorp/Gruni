@@ -121,6 +121,7 @@ export class Renderer {
         });
 
         // Dibujar todo en orden
+        this.ctx.filter = 'drop-shadow(0px 3px 2px rgba(0, 0, 0, 0.4))';
         for (let item of renderQueue) {
             if (item.type === 'resource') {
                 let cell = item.cell;
@@ -146,6 +147,7 @@ export class Renderer {
                 this.drawEntity(item.entity, item.type, timestamp);
             }
         }
+        this.ctx.filter = 'none';
 
         // Draw particles
         if (particles) {
@@ -159,13 +161,7 @@ export class Renderer {
     }
 
     drawShadow(cx, cy, width, height) {
-        // Obtenemos la hora del sistema de alguna manera o la simulamos local
-        // Por ahora, sombra direccional fija pero suave
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        this.ctx.beginPath();
-        // Sombra levemente ladeada para dar volumen
-        this.ctx.ellipse(cx + 4, cy + 2, width, height, 0, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Disabled per user request, replaced by drop-shadow filter.
     }
 
     drawContinuousWater(x, y, world, timestamp) {
@@ -296,16 +292,16 @@ export class Renderer {
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE;
         
-        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 28, 10);
+        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 32, 10);
 
         if (homeStage === 1 && this.images && this.images.casa_1) {
-            this.ctx.drawImage(this.images.casa_1, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            this.ctx.drawImage(this.images.casa_1, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
             return;
         } else if (homeStage === 2 && this.images && this.images.casa_2) {
-            this.ctx.drawImage(this.images.casa_2, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            this.ctx.drawImage(this.images.casa_2, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
             return;
         } else if (homeStage === 3 && this.images && this.images.casa_3) {
-            this.ctx.drawImage(this.images.casa_3, px - 16, py - 32, CELL_SIZE * 4, CELL_SIZE * 4);
+            this.ctx.drawImage(this.images.casa_3, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
             return;
         }
 
