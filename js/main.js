@@ -41,7 +41,10 @@ const imageUrls = {
     libro_herreria: 'Libros/Libro-herrería.png',
     muralla: 'Muralla/Muralla.png',
     rocas_1: 'Rocas/Rocas 1.png',
-    rocas_2: 'Rocas/Rocas 2.png'
+    rocas_2: 'Rocas/Rocas 2.png',
+    bg_pasto: 'Biomas/Pasto.png',
+    bg_agua: 'Biomas/Agua.png',
+    bg_arena: 'Biomas/Arena.png'
 };
 
 function loadImage(url) {

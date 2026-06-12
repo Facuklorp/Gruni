@@ -1,5 +1,5 @@
 // js/renderer.js
-import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES } from './world.js';
+import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES, BIOMES } from './world.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -46,16 +46,19 @@ export class Renderer {
 
         for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
-                let px = x * CELL_SIZE;
-                let py = y * CELL_SIZE;
-                
-                let sx = 16, sy = 16; // Tile de pasto verde sólido
-
-                if (this.images && this.images.sprout_grass) {
-                    this.ctx.drawImage(this.images.sprout_grass, sx, sy, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
-                } else {
-                    this.ctx.fillStyle = '#86efac';
-                    this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
+                    let cell = world.getCell(x, y);
+                    let px = x * CELL_SIZE;
+                    let py = y * CELL_SIZE;
+                    
+                    let img = (cell && cell.biome === BIOMES.SAND) ? this.images.bg_arena : this.images.bg_pasto;
+                    
+                    if (img) {
+                        this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+                    } else {
+                        this.ctx.fillStyle = (cell && cell.biome === BIOMES.SAND) ? '#fcd34d' : '#86efac';
+                        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                    }
                 }
             }
         }
@@ -168,7 +171,9 @@ export class Renderer {
         let py = y * CELL_SIZE;
         let t = Math.floor((timestamp || 0) * 0.002) % 4;
         
-        if (this.images && this.images.sprout_water) {
+        if (this.images && this.images.bg_agua) {
+            this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+        } else if (this.images && this.images.sprout_water) {
             // sprout_water es 64x16 (4 frames de 16x16 animado horizontalmente)
             let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
             this.ctx.drawImage(this.images.sprout_water, waterFrame * 16, 0, 16, 16, px, py, CELL_SIZE, CELL_SIZE);

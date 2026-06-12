@@ -22,6 +22,11 @@ export const RESOURCES = {
     ROCK_EMPTY: 14
 };
 
+export const BIOMES = {
+    GRASS: 0,
+    SAND: 1
+};
+
 export class World {
     constructor() {
         this.grid = [];
@@ -46,7 +51,19 @@ export class World {
                 else if (type === RESOURCES.BUSH) capacity = 1; // bush gives 1 wood
                 else if (type === RESOURCES.ROCK) capacity = Math.floor(Math.random() * 3) + 1; // 1-3 rock
                 let terrainVariant = Math.floor(Math.random() * 4);
-                row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant });
+                
+                // Determinar el bioma (Isla central de pasto, bordes de arena)
+                let centerX = WORLD_WIDTH / 2;
+                let centerY = WORLD_HEIGHT / 2;
+                let dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                let biome = dist < 22 ? BIOMES.GRASS : BIOMES.SAND;
+                
+                // Menos arboles en la arena
+                if (biome === BIOMES.SAND && (type === RESOURCES.WOOD || type === RESOURCES.FOOD)) {
+                    if (Math.random() > 0.3) type = RESOURCES.EMPTY;
+                }
+
+                row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant, biome: biome });
             }
             this.grid.push(row);
         }
@@ -62,7 +79,8 @@ export class World {
                     if (x * x + y * y <= radius * radius) {
                         let cx = lx + x, cy = ly + y;
                         if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
-                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0 };
+                            let biome = this.grid[cy][cx].biome;
+                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome: biome };
                         }
                     }
                 }
@@ -81,7 +99,8 @@ export class World {
                     if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
                         // Forma redondeada para el río
                         if (Math.abs(dx) + Math.abs(dy) <= 2) {
-                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0 };
+                            let biome = this.grid[cy][cx].biome;
+                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome: biome };
                         }
                     }
                 }
