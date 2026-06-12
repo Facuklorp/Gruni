@@ -121,7 +121,6 @@ export class Renderer {
         });
 
         // Dibujar todo en orden
-        this.ctx.filter = 'drop-shadow(0px 3px 2px rgba(0, 0, 0, 0.4))';
         for (let item of renderQueue) {
             if (item.type === 'resource') {
                 let cell = item.cell;
@@ -147,7 +146,6 @@ export class Renderer {
                 this.drawEntity(item.entity, item.type, timestamp);
             }
         }
-        this.ctx.filter = 'none';
 
         // Draw particles
         if (particles) {
