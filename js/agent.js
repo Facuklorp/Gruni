@@ -557,6 +557,21 @@ export class Agent {
                     if (this.inventory.wood >= 3 && this.inventory.rock >= 3) {
                         if (this.homeStage === 0) {
                             if (this.isValidCoord(tx, ty) && this.isValidCoord(tx+1, ty+1)) {
+                                // Limpiamos el area visual de la casa (aprox 10x11) para evitar superposiciones
+                                for (let cy = ty - 6; cy <= ty + 4; cy++) {
+                                    for (let cx = tx - 4; cx <= tx + 5; cx++) {
+                                        if (this.isValidCoord(cx, cy)) {
+                                            let cell = this.world.getCell(cx, cy);
+                                            if (cell && (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.FOOD || 
+                                                         cell.type === RESOURCES.ROCK || cell.type === RESOURCES.BUSH ||
+                                                         cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY ||
+                                                         cell.type === RESOURCES.BUSH_EMPTY || cell.type === RESOURCES.ROCK_EMPTY)) {
+                                                this.world.setCell(cx, cy, RESOURCES.EMPTY);
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 this.world.setCell(tx, ty, RESOURCES.HOUSE);
                                 this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
                                 this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
