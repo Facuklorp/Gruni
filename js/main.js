@@ -35,7 +35,10 @@ const imageUrls = {
     frutal_2: 'Vegetación/Árbol frutal 2.png',
     arbusto_1: 'Vegetación/Arbusto 1.png',
     arbusto_2: 'Vegetación/Arbusto 2.png',
-    telescopio: 'Telescopio/Telescopio.png'
+    telescopio: 'Telescopio/Telescopio.png',
+    libro_astronomia: 'Libros/Libro-astronomía.png',
+    libro_fauna: 'Libros/Libro-fauna.png',
+    libro_herreria: 'Libros/Libro-herrería.png'
 };
 
 function loadImage(url) {
@@ -312,11 +315,10 @@ function gameLoop(timestamp) {
             
             // Auto-select book branch (Twitch 24/7 Mode)
             if (agent.bookFound && agent.branches.length < 3) {
-                const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
-                if (availableBranches.length > 0) {
-                    const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];
-                    selectBranch(randomBranch);
-                }
+                let branchName = 'ASTRONOMY';
+                if (agent.pickedBookBranch === 1) branchName = 'BIOLOGY';
+                if (agent.pickedBookBranch === 2) branchName = 'BLACKSMITH';
+                selectBranch(branchName);
                 agent.bookFound = false; // Reset to avoid infinite loop
                 bookSpawned = false; // Allow a new book to spawn later
                 bookCooldownTimer = 180; // 90 seconds cooldown after reading
@@ -383,8 +385,16 @@ function gameLoop(timestamp) {
                         let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
                         let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
                         if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
-                            world.setCell(emptyX, emptyY, RESOURCES.BOOK);
-                            bookSpawned = true;
+                            const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
+                            if (availableBranches.length > 0) {
+                                const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];
+                                world.setCell(emptyX, emptyY, RESOURCES.BOOK);
+                                let branchId = 0;
+                                if (randomBranch === 'BIOLOGY') branchId = 1;
+                                if (randomBranch === 'BLACKSMITH') branchId = 2;
+                                world.getCell(emptyX, emptyY).capacity = branchId;
+                                bookSpawned = true;
+                            }
                         } else {
                             bookCooldownTimer = 1; // Try again next tick
                         }

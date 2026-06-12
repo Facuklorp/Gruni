@@ -536,6 +536,10 @@ export class Agent {
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
                 } else if (this.state === STATES.SEEK_BOOK) {
+                    let bookCell = this.world.getCell(this.target.x, this.target.y);
+                    if (bookCell) {
+                        this.pickedBookBranch = bookCell.capacity;
+                    }
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.WANDERING;
                     this.happyTimer = 10;

@@ -399,12 +399,20 @@ export class Renderer {
     }
 
     drawBook(x, y, timestamp) {
-        let cx = x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = y * CELL_SIZE + CELL_SIZE / 2;
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        let cy = py + CELL_SIZE / 2;
         let t = timestamp ? timestamp * 0.003 : 0;
         let hover = Math.sin(t) * 4; 
 
-        this.drawShadow(cx, cy + 10, 10, 4);
+        let cell = this.world.getCell(x, y);
+        let branchId = cell ? cell.capacity : 0;
+        
+        let img = null;
+        if (branchId === 0 && this.images && this.images.libro_astronomia) img = this.images.libro_astronomia;
+        if (branchId === 1 && this.images && this.images.libro_fauna) img = this.images.libro_fauna;
+        if (branchId === 2 && this.images && this.images.libro_herreria) img = this.images.libro_herreria;
 
         this.ctx.save();
         this.ctx.translate(cx, cy + hover);
@@ -414,18 +422,22 @@ export class Renderer {
         this.ctx.shadowColor = '#fef08a';
         this.ctx.shadowBlur = 10 + aura;
 
-        // Tapas
-        this.ctx.fillStyle = '#431407'; 
-        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-12, -6); this.ctx.lineTo(-12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(12, -6); this.ctx.lineTo(12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
+        if (img) {
+            this.ctx.drawImage(img, -CELL_SIZE/2, -CELL_SIZE/2, CELL_SIZE, CELL_SIZE);
+        } else {
+            // Tapas
+            this.ctx.fillStyle = '#431407'; 
+            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-12, -6); this.ctx.lineTo(-12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(12, -6); this.ctx.lineTo(12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
 
-        // Hojas
-        this.ctx.fillStyle = '#fef08a'; 
-        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-10, -5); this.ctx.lineTo(-10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(10, -5); this.ctx.lineTo(10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
-        
-        this.ctx.fillStyle = '#eab308';
-        this.ctx.fillRect(-2, 0, 4, 14);
+            // Hojas
+            this.ctx.fillStyle = '#fef08a'; 
+            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-10, -5); this.ctx.lineTo(-10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(10, -5); this.ctx.lineTo(10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
+            
+            this.ctx.fillStyle = '#eab308';
+            this.ctx.fillRect(-2, 0, 4, 14);
+        }
         
         this.ctx.restore();
     }
