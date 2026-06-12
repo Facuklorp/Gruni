@@ -472,24 +472,26 @@ export class Renderer {
     drawWall(x, y, hp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE/2;
 
-        this.drawShadow(cx, py + CELL_SIZE - 2, 14, 5);
-
-        this.ctx.fillStyle = '#475569';
-        this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
-        
-        this.ctx.fillStyle = '#334155';
-        this.ctx.fillRect(px, py + CELL_SIZE/2, CELL_SIZE, CELL_SIZE/2 - 4);
-        
-        this.ctx.strokeStyle = '#1e293b';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(px, py + CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE, py+CELL_SIZE/2);
-        this.ctx.moveTo(px+CELL_SIZE/2, py+4); this.ctx.lineTo(px+CELL_SIZE/2, py+CELL_SIZE/2);
-        this.ctx.moveTo(px+CELL_SIZE/4, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE/4, py+CELL_SIZE-4);
-        this.ctx.moveTo(px+CELL_SIZE*0.75, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE*0.75, py+CELL_SIZE-4);
-        this.ctx.stroke();
+        if (this.images && this.images.muralla) {
+            this.ctx.drawImage(this.images.muralla, px - 8, py - 16, 32, 32);
+        } else {
+            let cx = px + CELL_SIZE/2;
+            this.ctx.fillStyle = '#475569';
+            this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
+            
+            this.ctx.fillStyle = '#334155';
+            this.ctx.fillRect(px, py + CELL_SIZE/2, CELL_SIZE, CELL_SIZE/2 - 4);
+            
+            this.ctx.strokeStyle = '#1e293b';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(px, py + CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE, py+CELL_SIZE/2);
+            this.ctx.moveTo(px+CELL_SIZE/2, py+4); this.ctx.lineTo(px+CELL_SIZE/2, py+CELL_SIZE/2);
+            this.ctx.moveTo(px+CELL_SIZE/4, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE/4, py+CELL_SIZE-4);
+            this.ctx.moveTo(px+CELL_SIZE*0.75, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE*0.75, py+CELL_SIZE-4);
+            this.ctx.stroke();
+        }
     }
 
     drawResourceDots(x, y, capacity) {

@@ -38,7 +38,8 @@ const imageUrls = {
     telescopio: 'Telescopio/Telescopio.png',
     libro_astronomia: 'Libros/Libro-astronomía.png',
     libro_fauna: 'Libros/Libro-fauna.png',
-    libro_herreria: 'Libros/Libro-herrería.png'
+    libro_herreria: 'Libros/Libro-herrería.png',
+    muralla: 'Muralla/Muralla.png'
 };
 
 function loadImage(url) {
