@@ -39,7 +39,9 @@ const imageUrls = {
     libro_astronomia: 'Libros/Libro-astronomía.png',
     libro_fauna: 'Libros/Libro-fauna.png',
     libro_herreria: 'Libros/Libro-herrería.png',
-    muralla: 'Muralla/Muralla.png'
+    muralla: 'Muralla/Muralla.png',
+    rocas_1: 'Rocas/Rocas 1.png',
+    rocas_2: 'Rocas/Rocas 2.png'
 };
 
 function loadImage(url) {

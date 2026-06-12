@@ -131,7 +131,8 @@ export class Renderer {
                     case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type); break;
                     case RESOURCES.BUSH: 
                     case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
-                    case RESOURCES.ROCK: this.drawRock(item.x, item.y); break;
+                    case RESOURCES.ROCK: 
+                    case RESOURCES.ROCK_EMPTY: this.drawRock(item.x, item.y, cell.type); break;
                     case RESOURCES.HOUSE: this.drawHouse(item.x, item.y, cell.capacity); break;
                     case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp); break;
                     case RESOURCES.TELESCOPE: this.drawTelescope(item.x, item.y); break;
@@ -223,19 +224,28 @@ export class Renderer {
         }
     }
 
-    drawRock(x, y) {
-        let cx = x * CELL_SIZE + CELL_SIZE / 2;
-        let cy = y * CELL_SIZE + CELL_SIZE / 2;
-        this.drawShadow(cx, cy + 6, 8, 3);
+    drawRock(x, y, type) {
+        let px = x * CELL_SIZE;
+        let py = y * CELL_SIZE;
+        let cx = px + CELL_SIZE / 2;
+        let cy = py + CELL_SIZE / 2;
 
-        if (this.images && this.images.sprout_objects) {
-            let px = x * CELL_SIZE;
-            let py = y * CELL_SIZE;
-            // Small rocks en Sprout Lands suelen estar en 16x16
-            this.ctx.drawImage(this.images.sprout_objects, 112, 16, 16, 16, px, py, 16, 16);
+        if (type === RESOURCES.ROCK_EMPTY) {
+            if (this.images && this.images.rocas_2) {
+                this.ctx.drawImage(this.images.rocas_2, px - 8, py - 16, 32, 32);
+            } else {
+                this.ctx.fillStyle = '#64748b';
+                this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 4, 0, Math.PI*2); this.ctx.fill();
+            }
         } else {
-            this.ctx.fillStyle = '#475569';
-            this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 6, 0, Math.PI*2); this.ctx.fill();
+            if (this.images && this.images.rocas_1) {
+                this.ctx.drawImage(this.images.rocas_1, px - 8, py - 16, 32, 32);
+            } else if (this.images && this.images.sprout_objects) {
+                this.ctx.drawImage(this.images.sprout_objects, 112, 16, 16, 16, px, py, 16, 16);
+            } else {
+                this.ctx.fillStyle = '#475569';
+                this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 6, 0, Math.PI*2); this.ctx.fill();
+            }
         }
     }
 

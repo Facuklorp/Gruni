@@ -18,7 +18,8 @@ export const RESOURCES = {
     BUSH: 10,
     WOOD_EMPTY: 11,
     FOOD_EMPTY: 12,
-    BUSH_EMPTY: 13
+    BUSH_EMPTY: 13,
+    ROCK_EMPTY: 14
 };
 
 export class World {
@@ -111,7 +112,7 @@ export class World {
                 } else if (type === RESOURCES.BUSH) {
                     cap = 1;
                 } else {
-                    cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK || type === RESOURCES.WOOD_EMPTY || type === RESOURCES.FOOD_EMPTY || type === RESOURCES.BUSH_EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
+                    cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK || type === RESOURCES.WOOD_EMPTY || type === RESOURCES.FOOD_EMPTY || type === RESOURCES.BUSH_EMPTY || type === RESOURCES.ROCK_EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
                 }
             }
             let tv = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x].terrainVariant : Math.floor(Math.random() * 4);
@@ -128,6 +129,7 @@ export class World {
                     if (cell.type === RESOURCES.WOOD) cell.type = RESOURCES.WOOD_EMPTY;
                     else if (cell.type === RESOURCES.FOOD) cell.type = RESOURCES.FOOD_EMPTY;
                     else if (cell.type === RESOURCES.BUSH) cell.type = RESOURCES.BUSH_EMPTY;
+                    else if (cell.type === RESOURCES.ROCK) cell.type = RESOURCES.ROCK_EMPTY;
                     else cell.type = RESOURCES.EMPTY;
                     
                     cell.capacity = 0;
@@ -240,7 +242,8 @@ export class World {
                     this.setCell(x, y, type);
                 } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY || 
                            this.grid[y][x].type === RESOURCES.FOOD_EMPTY || 
-                           this.grid[y][x].type === RESOURCES.BUSH_EMPTY) {
+                           this.grid[y][x].type === RESOURCES.BUSH_EMPTY ||
+                           this.grid[y][x].type === RESOURCES.ROCK_EMPTY) {
                     // Desaparecen con el tiempo
                     if (Math.random() < 0.5) {
                         this.grid[y][x].type = RESOURCES.EMPTY;
