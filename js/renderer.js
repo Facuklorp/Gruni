@@ -54,7 +54,7 @@ export class Renderer {
                     let img = (cell && cell.biome === BIOMES.SAND) ? this.images.bg_arena : this.images.bg_pasto;
                     
                     if (img) {
-                        this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+                        this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
                         this.ctx.fillStyle = (cell && cell.biome === BIOMES.SAND) ? '#fcd34d' : '#86efac';
                         this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -172,7 +172,7 @@ export class Renderer {
         let t = Math.floor((timestamp || 0) * 0.002) % 4;
         
         if (this.images && this.images.bg_agua) {
-            this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+            this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE);
         } else if (this.images && this.images.sprout_water) {
             // sprout_water es 64x16 (4 frames de 16x16 animado horizontalmente)
             let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
