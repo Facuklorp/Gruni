@@ -129,9 +129,9 @@ export class Renderer {
                 let cell = item.cell;
                 switch(cell.type) {
                     case RESOURCES.FOOD: 
-                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type); break;
+                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome); break;
                     case RESOURCES.WOOD: 
-                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type); break;
+                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome); break;
                     case RESOURCES.BUSH: 
                     case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
                     case RESOURCES.ROCK: 
@@ -184,13 +184,19 @@ export class Renderer {
         // Eliminado el borde procedural de arena para mantener el estilo pixel art puro
     }
 
-    drawFruitTree(x, y, type) {
+    drawFruitTree(x, y, type, biome) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
         this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
 
-        let img = (type === RESOURCES.FOOD) ? this.images.frutal_1 : this.images.frutal_2;
+        let img = null;
+        if (biome === BIOMES.SAND) {
+            img = (type === RESOURCES.FOOD) ? this.images.arbol_desierto_1 : this.images.arbol_desierto_2;
+        } else {
+            img = (type === RESOURCES.FOOD) ? this.images.frutal_1 : this.images.frutal_2;
+        }
+
         if (img) {
             this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
         } else {
@@ -199,13 +205,19 @@ export class Renderer {
         }
     }
 
-    drawTree(x, y, type) {
+    drawTree(x, y, type, biome) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
         this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
 
-        let img = (type === RESOURCES.WOOD) ? this.images.arbol_1 : this.images.arbol_2;
+        let img = null;
+        if (biome === BIOMES.SAND) {
+            img = (type === RESOURCES.WOOD) ? this.images.arbol_desierto_1 : this.images.arbol_desierto_2;
+        } else {
+            img = (type === RESOURCES.WOOD) ? this.images.arbol_1 : this.images.arbol_2;
+        }
+
         if (img) {
             this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
         } else {

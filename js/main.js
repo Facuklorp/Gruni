@@ -33,6 +33,8 @@ const imageUrls = {
     arbol_2: 'Vegetación/Árbol 2.png',
     frutal_1: 'Vegetación/Árbol frutal 1.png',
     frutal_2: 'Vegetación/Árbol frutal 2.png',
+    arbol_desierto_1: 'Vegetación/Árbol desierto 1.png',
+    arbol_desierto_2: 'Vegetación/Árbol desierto 2.png',
     arbusto_1: 'Vegetación/Arbusto 1.png',
     arbusto_2: 'Vegetación/Arbusto 2.png',
     telescopio: 'Telescopio/Telescopio.png',
