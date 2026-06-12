@@ -422,29 +422,29 @@ export class Agent {
                         this.emergencyMission = null; // No hay más lugar para murallas
                     }
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_TELESCOPE') {
                 if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
-                    let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY);
+                    let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY, ix, iy);
                     if (empty) {
                         this.state = STATES.BUILDING_TELESCOPE;
                         this.target = empty;
                         return;
                     }
                 } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
+                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
             }
         }
 
-        let waterTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER);
-        let foodTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD);
+        let waterTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER, ix, iy);
+        let foodTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD, ix, iy);
 
         let waterPriority = this.thirst > 60 ? this.thirst : 0;
         let foodPriority = this.hunger > 60 ? this.hunger : 0;
@@ -476,8 +476,8 @@ export class Agent {
             return;
         }
 
-        let woodTarget = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH]);
-        let rockTarget = this.world.findNearest(this.x, this.y, RESOURCES.ROCK);
+        let woodTarget = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+        let rockTarget = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
 
         // Límites más altos para poder craftear herramientas caras
         if (this.inventory.wood < 5 && woodTarget) {
