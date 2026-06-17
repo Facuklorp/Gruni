@@ -643,10 +643,10 @@ export class Agent {
         let oldX = this.x;
         let oldY = this.y;
 
-        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.stepOnCell(this.x, this.y); }
-        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.stepOnCell(this.x, this.y); }
-        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.stepOnCell(this.x, this.y); }
-        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.stepOnCell(this.x, this.y); }
+        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.dy = 0; this.stepOnCell(this.x, this.y); }
+        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.dy = 0; this.stepOnCell(this.x, this.y); }
+        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.dx = 0; this.dy = 1; this.stepOnCell(this.x, this.y); }
+        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.dx = 0; this.dy = -1; this.stepOnCell(this.x, this.y); }
 
         if (this.x === oldX && this.y === oldY) {
             this.stuckTimer++;
@@ -745,7 +745,8 @@ export class Agent {
             let nx = this.x + m.dx;
             let ny = this.y + m.dy;
             if (this.tryStep(nx, ny)) {
-                if (m.dx !== 0) this.dx = m.dx;
+                if (m.dx !== 0) { this.dx = m.dx; this.dy = 0; }
+                if (m.dy !== 0) { this.dy = m.dy; this.dx = 0; }
                 this.x = nx;
                 this.y = ny;
                 this.stepOnCell(nx, ny);

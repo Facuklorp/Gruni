@@ -552,6 +552,7 @@ export class Renderer {
             if (entity.dx > 0) dir = 3;
             else if (entity.dx < 0) dir = 2;
             else if (entity.dy < 0) dir = 1;
+            else if (entity.dy > 0) dir = 0;
 
             let isMoving = (entity.dx !== 0 || entity.dy !== 0);
 
@@ -598,10 +599,10 @@ export class Renderer {
                     if (dir === 2 && this.images[`gruni_walk_side_${frame + 1}`]) { 
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
+                        flip = true;
                     } else if (dir === 3 && this.images[`gruni_walk_side_${frame + 1}`]) {
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
-                        flip = true;
                     } else if (dir === 1) { 
                         // UP: usamos el spritesheet original porque no hay "Paso atrás"
                         img = this.images.gruni_walk;
