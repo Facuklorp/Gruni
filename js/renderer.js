@@ -594,20 +594,23 @@ export class Renderer {
                 if (!img) {
                     animSpeed = 0.008;
                     fW = 78; fH = 136; fCount = 5;
+                    
+                    if (dir === 1) {
+                        fCount = 4; // La animación de espalda tiene 4 fotogramas
+                    }
+                    
                     frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
                     
                     if (dir === 2 && this.images[`gruni_walk_side_${frame + 1}`]) { 
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
-                        flip = true;
                     } else if (dir === 3 && this.images[`gruni_walk_side_${frame + 1}`]) {
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
-                    } else if (dir === 1) { 
-                        // UP: usamos el spritesheet original porque no hay "Paso atrás"
-                        img = this.images.gruni_walk;
-                        isSpritesheet = true;
-                        fRow = 1;
+                        flip = true;
+                    } else if (dir === 1 && this.images[`gruni_walk_back_${frame + 1}`]) { 
+                        img = this.images[`gruni_walk_back_${frame + 1}`];
+                        isSpritesheet = false;
                     } else if (this.images[`gruni_walk_front_${frame + 1}`]) {
                         img = this.images[`gruni_walk_front_${frame + 1}`];
                         isSpritesheet = false;
