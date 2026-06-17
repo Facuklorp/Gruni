@@ -559,6 +559,7 @@ export class Renderer {
                 let img = null, fW, fH, fCount, fRow, flip = false;
                 let isActioning = entity.isActioning;
                 let animSpeed = 0.008;
+                let isSpritesheet = true;
 
                 if (entity.isAttacking && this.images.gruni_attack) {
                     img = this.images.gruni_attack;
@@ -586,19 +587,44 @@ export class Renderer {
                     }
                 }
                 
+                let frame = 0;
+                
                 // Fallback a caminar/correr si no se seteó imagen
                 if (!img) {
                     animSpeed = 0.008;
-                    img = this.images.gruni_walk;
                     fW = 78; fH = 136; fCount = 5;
-                    if (dir === 1) fRow = 1;
-                    else if (dir === 2) fRow = 3;
-                    else if (dir === 3) fRow = 2;
-                    else fRow = 0;
+                    frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
+                    
+                    if (dir === 2 && this.images[`gruni_walk_side_${frame + 1}`]) { 
+                        img = this.images[`gruni_walk_side_${frame + 1}`];
+                        isSpritesheet = false;
+                    } else if (dir === 3 && this.images[`gruni_walk_side_${frame + 1}`]) {
+                        img = this.images[`gruni_walk_side_${frame + 1}`];
+                        isSpritesheet = false;
+                        flip = true;
+                    } else if (dir === 1) { 
+                        // UP: usamos el spritesheet original porque no hay "Paso atrás"
+                        img = this.images.gruni_walk;
+                        isSpritesheet = true;
+                        fRow = 1;
+                    } else if (this.images[`gruni_walk_front_${frame + 1}`]) {
+                        img = this.images[`gruni_walk_front_${frame + 1}`];
+                        isSpritesheet = false;
+                    }
+
+                    // Fallback de seguridad al spritesheet viejo
+                    if (!img) {
+                        img = this.images.gruni_walk;
+                        isSpritesheet = true;
+                        if (dir === 1) fRow = 1;
+                        else if (dir === 2) fRow = 3;
+                        else if (dir === 3) fRow = 2;
+                        else fRow = 0;
+                    }
+                } else {
+                    frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
                 }
 
-                let frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
-                
                 let scale = 0.32; 
                 let drawW = fW * scale;
                 let drawH = fH * scale;
@@ -612,7 +638,12 @@ export class Renderer {
                     this.ctx.scale(-1, 1);
                     this.ctx.translate(-cx, 0);
                 }
-                this.ctx.drawImage(img, frame * fW, fRow * fH, fW, fH, drawX, drawY, drawW, drawH);
+                
+                if (isSpritesheet) {
+                    this.ctx.drawImage(img, frame * fW, fRow * fH, fW, fH, drawX, drawY, drawW, drawH);
+                } else {
+                    this.ctx.drawImage(img, 0, 0, fW, fH, drawX, drawY, drawW, drawH);
+                }
                 this.ctx.restore();
 
             } else {
