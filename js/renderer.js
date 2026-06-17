@@ -604,10 +604,10 @@ export class Renderer {
                     if (dir === 2 && this.images[`gruni_walk_side_${frame + 1}`]) { 
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
+                        flip = true;
                     } else if (dir === 3 && this.images[`gruni_walk_side_${frame + 1}`]) {
                         img = this.images[`gruni_walk_side_${frame + 1}`];
                         isSpritesheet = false;
-                        flip = true;
                     } else if (dir === 1 && this.images[`gruni_walk_back_${frame + 1}`]) { 
                         img = this.images[`gruni_walk_back_${frame + 1}`];
                         isSpritesheet = false;
