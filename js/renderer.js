@@ -169,19 +169,109 @@ export class Renderer {
     drawContinuousWater(x, y, world, timestamp) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
-        let t = Math.floor((timestamp || 0) * 0.002) % 4;
+        let cell = world.getCell(x, y);
+        if (!cell) return;
+
+        let isWater = (dx, dy) => {
+            let c = world.getCell(x + dx, y + dy);
+            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
+        };
+
+        let isOuterTL = !isWater(0, -1) && !isWater(-1, 0);
+        let isOuterTR = !isWater(0, -1) && !isWater(1, 0);
+        let isOuterBR = !isWater(0, 1) && !isWater(1, 0);
+        let isOuterBL = !isWater(0, 1) && !isWater(-1, 0);
+
+        let R = 5; // Radio de redondeo
+
+        this.ctx.save();
+        this.ctx.beginPath();
         
+        // Empezar cerca de la esquina superior izquierda
+        if (isOuterTL) {
+            this.ctx.moveTo(px + R, py);
+        } else {
+            this.ctx.moveTo(px, py);
+        }
+
+        // Borde superior hacia TR
+        if (isOuterTR) {
+            this.ctx.lineTo(px + CELL_SIZE - R, py);
+            this.ctx.quadraticCurveTo(px + CELL_SIZE, py, px + CELL_SIZE, py + R);
+        } else {
+            this.ctx.lineTo(px + CELL_SIZE, py);
+        }
+
+        // Borde derecho hacia BR
+        if (isOuterBR) {
+            this.ctx.lineTo(px + CELL_SIZE, py + CELL_SIZE - R);
+            this.ctx.quadraticCurveTo(px + CELL_SIZE, py + CELL_SIZE, px + CELL_SIZE - R, py + CELL_SIZE);
+        } else {
+            this.ctx.lineTo(px + CELL_SIZE, py + CELL_SIZE);
+        }
+
+        // Borde inferior hacia BL
+        if (isOuterBL) {
+            this.ctx.lineTo(px + R, py + CELL_SIZE);
+            this.ctx.quadraticCurveTo(px, py + CELL_SIZE, px, py + CELL_SIZE - R);
+        } else {
+            this.ctx.lineTo(px, py + CELL_SIZE);
+        }
+
+        // Borde izquierdo de vuelta a TL
+        if (isOuterTL) {
+            this.ctx.lineTo(px, py + R);
+            this.ctx.quadraticCurveTo(px, py, px + R, py);
+        } else {
+            this.ctx.lineTo(px, py);
+        }
+
+        this.ctx.closePath();
+        this.ctx.clip();
+
+        // Dibujar el agua dentro de la máscara redondeada
         if (this.images && this.images.bg_agua) {
             this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE);
         } else if (this.images && this.images.sprout_water) {
-            // sprout_water es 64x16 (4 frames de 16x16 animado horizontalmente)
             let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
             this.ctx.drawImage(this.images.sprout_water, waterFrame * 16, 0, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
         } else {
             this.ctx.fillStyle = '#0ea5e9';
             this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
         }
-        // Eliminado el borde procedural de arena para mantener el estilo pixel art puro
+
+        this.ctx.restore();
+
+        // Dibujar esquinas interiores (tierra que entra al agua de forma redondeada)
+        let isInnerTL = isWater(0, -1) && isWater(-1, 0) && !isWater(-1, -1);
+        let isInnerTR = isWater(0, -1) && isWater(1, 0) && !isWater(1, -1);
+        let isInnerBR = isWater(0, 1) && isWater(1, 0) && !isWater(1, 1);
+        let isInnerBL = isWater(0, 1) && isWater(-1, 0) && !isWater(-1, 1);
+
+        let drawInnerCorner = (cx, cy, startAngle, endAngle, diagX, diagY) => {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx, cy);
+            this.ctx.arc(cx, cy, R, startAngle, endAngle);
+            this.ctx.closePath();
+            this.ctx.clip();
+            
+            let diagCell = world.getCell(x + diagX, y + diagY);
+            let biome = diagCell ? diagCell.biome : cell.biome;
+            let img = (biome === BIOMES.SAND) ? this.images.bg_arena : this.images.bg_pasto;
+            if (img) {
+                this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE);
+            } else {
+                this.ctx.fillStyle = (biome === BIOMES.SAND) ? '#fcd34d' : '#86efac';
+                this.ctx.fill();
+            }
+            this.ctx.restore();
+        };
+
+        if (isInnerTL) drawInnerCorner(px, py, 0, Math.PI / 2, -1, -1);
+        if (isInnerTR) drawInnerCorner(px + CELL_SIZE, py, Math.PI / 2, Math.PI, 1, -1);
+        if (isInnerBR) drawInnerCorner(px + CELL_SIZE, py + CELL_SIZE, Math.PI, 3 * Math.PI / 2, 1, 1);
+        if (isInnerBL) drawInnerCorner(px, py + CELL_SIZE, 3 * Math.PI / 2, 2 * Math.PI, -1, 1);
     }
 
     drawFruitTree(x, y, type, biome) {
@@ -198,7 +288,7 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
+            this.ctx.drawImage(img, px - 8, py - 32, 32, 48);
         } else {
             this.ctx.fillStyle = (type === RESOURCES.FOOD) ? '#ef4444' : '#b45309';
             this.ctx.beginPath(); this.ctx.arc(cx, py, 16, 0, Math.PI*2); this.ctx.fill();
@@ -219,10 +309,10 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
+            this.ctx.drawImage(img, px - 8, py - 32, 32, 48);
         } else {
             this.ctx.fillStyle = '#14532d';
-            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 32); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
         }
     }
 
