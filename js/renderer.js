@@ -80,8 +80,8 @@ export class Renderer {
                     let py = y * CELL_SIZE;
                     
                     // Capa 1: Siempre pasto
-                    if (this.images && this.images.bg_pasto) {
-                        this.ctx.drawImage(this.images.bg_pasto, px, py, CELL_SIZE, CELL_SIZE);
+                    if (this.images && this.images.sprout_grass) {
+                        this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
                         this.ctx.fillStyle = '#86efac'; // Pasto
                         this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
