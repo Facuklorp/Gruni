@@ -435,7 +435,14 @@ function gameLoop(timestamp) {
     }
     
     let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120;
-    renderer.draw(world, agent, enemies, wolf, eclipseWarning, timestamp, timeOfDay, particles);
+    try {
+        renderer.draw(world, agent, enemies, wolf, eclipseWarning, timestamp, timeOfDay, particles);
+    } catch (e) {
+        if (!window.renderedError) {
+            window.renderedError = true;
+            document.body.innerHTML += '<div style="position:fixed; top:0; left:0; background:red; color:white; z-index:9999; font-size:20px; padding:20px;">' + e.message + '<br>' + e.stack + '</div>';
+        }
+    }
     requestAnimationFrame(gameLoop);
 }
 
