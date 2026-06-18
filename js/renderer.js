@@ -137,7 +137,7 @@ export class Renderer {
                     case RESOURCES.ROCK: 
                     case RESOURCES.ROCK_EMPTY: this.drawRock(item.x, item.y, cell.type); break;
                     case RESOURCES.HOUSE: this.drawHouse(item.x, item.y, cell.capacity); break;
-                    case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp); break;
+                    case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp, world); break;
                     case RESOURCES.TELESCOPE: this.drawTelescope(item.x, item.y); break;
                     case RESOURCES.WALL: this.drawWall(item.x, item.y, cell.capacity); break;
                 }
@@ -483,7 +483,7 @@ export class Renderer {
         this.ctx.fillRect(px + 19, py - 28, 8, 3);
     }
 
-    drawBook(x, y, timestamp) {
+    drawBook(x, y, timestamp, world) {
         let px = x * CELL_SIZE;
         let py = y * CELL_SIZE;
         let cx = px + CELL_SIZE / 2;
@@ -491,7 +491,7 @@ export class Renderer {
         let t = timestamp ? timestamp * 0.003 : 0;
         let hover = Math.sin(t) * 4; 
 
-        let cell = this.world.getCell(x, y);
+        let cell = world.getCell(x, y);
         let branchId = cell ? cell.capacity : 0;
         
         let img = null;
