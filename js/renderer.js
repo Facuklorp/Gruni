@@ -198,10 +198,10 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
+            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
         } else {
             this.ctx.fillStyle = (type === RESOURCES.FOOD) ? '#ef4444' : '#b45309';
-            this.ctx.beginPath(); this.ctx.arc(cx, py + 8, 8, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(cx, py, 16, 0, Math.PI*2); this.ctx.fill();
         }
     }
 
@@ -219,10 +219,10 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
+            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
         } else {
             this.ctx.fillStyle = '#14532d';
-            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 8, py+8); this.ctx.lineTo(cx - 8, py+8); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
         }
     }
 
