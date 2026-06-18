@@ -256,22 +256,26 @@ export class Renderer {
             this.ctx.closePath();
             this.ctx.clip();
             
-            let diagCell = world.getCell(x + diagX, y + diagY);
-            let biome = diagCell ? diagCell.biome : cell.biome;
-            let img = (biome === BIOMES.SAND) ? this.images.bg_arena : this.images.bg_pasto;
-            if (img) {
-                this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE);
+            // Dibujamos agua sobre la celda de tierra diagonal para recortar la esquina hacia adentro
+            let targetPx = px + diagX * CELL_SIZE;
+            let targetPy = py + diagY * CELL_SIZE;
+            
+            if (this.images && this.images.bg_agua) {
+                this.ctx.drawImage(this.images.bg_agua, targetPx, targetPy, CELL_SIZE, CELL_SIZE);
+            } else if (this.images && this.images.sprout_water) {
+                let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
+                this.ctx.drawImage(this.images.sprout_water, waterFrame * 16, 0, 16, 16, targetPx, targetPy, CELL_SIZE, CELL_SIZE);
             } else {
-                this.ctx.fillStyle = (biome === BIOMES.SAND) ? '#fcd34d' : '#86efac';
-                this.ctx.fill();
+                this.ctx.fillStyle = '#0ea5e9';
+                this.ctx.fillRect(targetPx, targetPy, CELL_SIZE, CELL_SIZE);
             }
             this.ctx.restore();
         };
 
-        if (isInnerTL) drawInnerCorner(px, py, 0, Math.PI / 2, -1, -1);
-        if (isInnerTR) drawInnerCorner(px + CELL_SIZE, py, Math.PI / 2, Math.PI, 1, -1);
-        if (isInnerBR) drawInnerCorner(px + CELL_SIZE, py + CELL_SIZE, Math.PI, 3 * Math.PI / 2, 1, 1);
-        if (isInnerBL) drawInnerCorner(px, py + CELL_SIZE, 3 * Math.PI / 2, 2 * Math.PI, -1, 1);
+        if (isInnerTL) drawInnerCorner(px, py, Math.PI, 3 * Math.PI / 2, -1, -1);
+        if (isInnerTR) drawInnerCorner(px + CELL_SIZE, py, 3 * Math.PI / 2, 2 * Math.PI, 1, -1);
+        if (isInnerBR) drawInnerCorner(px + CELL_SIZE, py + CELL_SIZE, 0, Math.PI / 2, 1, 1);
+        if (isInnerBL) drawInnerCorner(px, py + CELL_SIZE, Math.PI / 2, Math.PI, -1, 1);
     }
 
     drawFruitTree(x, y, type, biome) {
@@ -288,7 +292,11 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 8, py - 32, 32, 48);
+            if (type === RESOURCES.FOOD) {
+                this.ctx.drawImage(img, px - 8, py - 32, 32, 48);
+            } else {
+                this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
+            }
         } else {
             this.ctx.fillStyle = (type === RESOURCES.FOOD) ? '#ef4444' : '#b45309';
             this.ctx.beginPath(); this.ctx.arc(cx, py, 16, 0, Math.PI*2); this.ctx.fill();
@@ -309,10 +317,10 @@ export class Renderer {
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 8, py - 32, 32, 48);
+            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
         } else {
             this.ctx.fillStyle = '#14532d';
-            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 32); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
         }
     }
 
