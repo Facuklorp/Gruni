@@ -38,39 +38,89 @@ export class Renderer {
         this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
+        // Lógica de Autotile
+        const AUTOTILE_MAP = {"0": [0, 0], "1": [1, 0], "2": [2, 0], "3": [3, 0], "4": [4, 0], "5": [5, 0], "6": [6, 0], "7": [0, 1], "8": [1, 1], "9": [2, 1], "10": [3, 1], "11": [4, 1], "12": [5, 1], "13": [6, 1], "14": [0, 2], "15": [1, 2], "21": [2, 2], "23": [3, 2], "29": [4, 2], "31": [5, 2], "41": [6, 2], "43": [0, 3], "45": [1, 3], "47": [2, 3], "61": [3, 3], "63": [4, 3], "70": [5, 3], "71": [6, 3], "78": [0, 4], "79": [1, 4], "87": [2, 4], "95": [3, 4], "111": [4, 4], "127": [5, 4], "138": [6, 4], "139": [0, 5], "142": [1, 5], "143": [2, 5], "159": [3, 5], "171": [4, 5], "175": [5, 5], "191": [6, 5], "206": [0, 6], "207": [1, 6], "223": [2, 6], "239": [3, 6], "255": [4, 6]};
+        
+        let calculateBitmask = (x, y, matchFunc) => {
+            let N = matchFunc(x, y-1) ? 1 : 0;
+            let S = matchFunc(x, y+1) ? 2 : 0;
+            let E = matchFunc(x+1, y) ? 4 : 0;
+            let W = matchFunc(x-1, y) ? 8 : 0;
+            let NE = matchFunc(x+1, y-1) ? 16 : 0;
+            let NW = matchFunc(x-1, y-1) ? 32 : 0;
+            let SE = matchFunc(x+1, y+1) ? 64 : 0;
+            let SW = matchFunc(x-1, y+1) ? 128 : 0;
+
+            let mask = N | S | E | W | NE | NW | SE | SW;
+            if ((mask & 16) && !((mask & 1) && (mask & 4))) mask &= ~16;
+            if ((mask & 32) && !((mask & 1) && (mask & 8))) mask &= ~32;
+            if ((mask & 64) && !((mask & 2) && (mask & 4))) mask &= ~64;
+            if ((mask & 128) && !((mask & 2) && (mask & 8))) mask &= ~128;
+            return mask;
+        };
+
+        let drawAutotile = (img, px, py, mask) => {
+            let coords = AUTOTILE_MAP[mask] || [0, 0];
+            let sx = coords[0] * CELL_SIZE;
+            let sy = coords[1] * CELL_SIZE;
+            this.ctx.drawImage(img, sx, sy, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+        };
+
         // 0. Dibujar Terreno Base (Fondo infinito de pasto)
         let startX = Math.floor(this.cameraX / CELL_SIZE);
         let startY = Math.floor(this.cameraY / CELL_SIZE);
         let endX = Math.ceil((this.cameraX + viewW) / CELL_SIZE);
         let endY = Math.ceil((this.cameraY + viewH) / CELL_SIZE);
 
-        for (let y = startY; y < endY; y++) {
-            for (let x = startX; x < endX; x++) {
+        for (let y = startY - 1; y <= endY + 1; y++) {
+            for (let x = startX - 1; x <= endX + 1; x++) {
                 if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
                     let cell = world.getCell(x, y);
                     let px = x * CELL_SIZE;
                     let py = y * CELL_SIZE;
                     
-                    let img = (cell && cell.biome === BIOMES.SAND) ? this.images.bg_arena : this.images.bg_pasto;
-                    
-                    if (img) {
-                        this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE);
+                    // Capa 1: Siempre pasto
+                    if (this.images && this.images.bg_pasto) {
+                        this.ctx.drawImage(this.images.bg_pasto, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
-                        this.ctx.fillStyle = (cell && cell.biome === BIOMES.SAND) ? '#fcd34d' : '#86efac';
+                        this.ctx.fillStyle = '#86efac'; // Pasto
                         this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
                     }
-                }
-            }
-        }
-        
-        // 1. Dibujar Terreno Base (Agua Continua y Puentes)
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
-            for (let x = 0; x < WORLD_WIDTH; x++) {
-                let cell = world.getCell(x, y);
-                if (cell && (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE)) {
-                    this.drawContinuousWater(x, y, world, timestamp);
-                    if (cell.type === RESOURCES.BRIDGE) {
-                        this.drawBridge(x, y);
+
+                    // Capa 2: Arena
+                    if (cell && cell.biome === BIOMES.SAND) {
+                        let isSand = (cx, cy) => {
+                            let c = world.getCell(cx, cy);
+                            return c && c.biome === BIOMES.SAND;
+                        };
+                        let mask = calculateBitmask(x, y, isSand);
+                        if (this.images && this.images.arena_autotile) {
+                            drawAutotile(this.images.arena_autotile, px, py, mask);
+                        } else {
+                            this.ctx.fillStyle = '#fcd34d'; // Arena
+                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                        }
+                    }
+
+                    // Capa 3: Agua y Puentes
+                    if (cell && (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE)) {
+                        let isWater = (cx, cy) => {
+                            let c = world.getCell(cx, cy);
+                            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
+                        };
+                        let mask = calculateBitmask(x, y, isWater);
+                        let waterImg = (cell.biome === BIOMES.SAND) ? this.images.agua_arena_autotile : this.images.agua_autotile;
+                        
+                        if (this.images && waterImg) {
+                            drawAutotile(waterImg, px, py, mask);
+                        } else {
+                            this.ctx.fillStyle = '#0ea5e9'; // Agua
+                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                        }
+                        
+                        if (cell.type === RESOURCES.BRIDGE) {
+                            this.drawBridge(x, y);
+                        }
                     }
                 }
             }

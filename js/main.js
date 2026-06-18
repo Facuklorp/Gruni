@@ -12,6 +12,9 @@ export const IMAGES = {};
 const imageUrls = {
     sprout_grass: 'assets/sprout_grass.png',
     sprout_water: 'assets/sprout_water.png',
+    agua_autotile: 'Vegetación/Agua_Autotile.png',
+    agua_arena_autotile: 'Vegetación/Agua_Arena_Autotile.png',
+    arena_autotile: 'Vegetación/Arena_Autotile.png',
     sprout_house: 'assets/sprout_house.png',
     sprout_roof: 'assets/sprout_roof.png',
     sprout_objects: 'assets/sprout_objects.png',
