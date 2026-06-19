@@ -149,7 +149,36 @@ const barCraftHouse = document.getElementById('bar-craft-house');
 let lastTime = 0;
 let spawnTimer = 0;
 let currentTickRate = 500; // Milisegundos por cada tick lógico del agente
-let timeOfDay = 600; // Inicia a las 6:00 AM (Rango 0 - 2400)
+let timeOfDay = 0; // Se actualiza dinámicamente
+
+const gruniTimeEl = document.getElementById('gruni-time');
+// Forzamos el reset a "ahora" como pidió el usuario (Año 0, Día 1, Hora 0)
+let gruniEpoch = localStorage.getItem('gruni_epoch_v2'); 
+if (!gruniEpoch) {
+    gruniEpoch = Date.now();
+    localStorage.setItem('gruni_epoch_v2', gruniEpoch);
+} else {
+    gruniEpoch = parseInt(gruniEpoch);
+}
+
+function updateGruniTime() {
+    let elapsedMs = Date.now() - gruniEpoch;
+    let cycleMs = 80000; // 80 segundos reales = 1 día completo en Gruni
+    
+    let gruniDaysTotal = Math.floor(elapsedMs / cycleMs) + 1;
+    let gruniYears = Math.floor((gruniDaysTotal - 1) / 365);
+    let currentDay = ((gruniDaysTotal - 1) % 365) + 1;
+    
+    let msInCycle = elapsedMs % cycleMs;
+    let currentHour = Math.floor((msInCycle / cycleMs) * 24);
+    
+    if (gruniTimeEl) {
+        gruniTimeEl.innerText = `Año ${gruniYears} - Día ${currentDay} - Hora ${currentHour}`;
+    }
+    
+    return (msInCycle / cycleMs) * 2400; // Rango de 0 a 2400 para render
+}
+
 const particles = new ParticleSystem();
 
 const branchText = document.getElementById('agent-branch');
@@ -410,9 +439,8 @@ function runTick() {
 }
 
 function gameLoop(timestamp) {
-    // Smooth time of day progression
-    timeOfDay += 0.5;
-    if (timeOfDay > 2400) timeOfDay = 0;
+    // Sincronizar el tiempo del juego con el tiempo real transcurrido
+    timeOfDay = updateGruniTime();
 
     if (!gamePaused) {
         particles.update(timeOfDay);
