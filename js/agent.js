@@ -709,9 +709,9 @@ export class Agent {
                         this.world.setCell(nx, ny, RESOURCES.BRIDGE);
                         this.happyTimer = 5;
                         this.stuckTimer = 0;
-                    } else if (this.stuckTimer > 3) {
+                    } else if (this.stuckTimer > 5) {
                         // Sin madera para puente: marcar el target como inaccesible
-                        if (this.stuckTimer > 5 && this.target) {
+                        if (this.target) {
                             this.ignoreTarget = {x: this.target.x, y: this.target.y};
                             // Agregar a la lista general de inaccesibles
                             this.inaccessibleTargets.push({x: this.target.x, y: this.target.y});
@@ -723,8 +723,8 @@ export class Agent {
                         this.wanderTimer = 8;
                         this.stuckTimer = 0;
                     }
-                } else if (this.stuckTimer > 3) {
-                    if (this.stuckTimer > 5) {
+                } else if (this.stuckTimer > 5) {
+                    if (this.target) {
                         this.ignoreTarget = {x: this.target.x, y: this.target.y};
                     }
                     this.wanderTimer = 8; // Escape the obstacle
@@ -734,10 +734,12 @@ export class Agent {
                 }
             } else {
                 if (this.stuckTimer > 5) {
-                    this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                    if (this.target) {
+                        this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                    }
+                    this.wanderTimer = 8;
+                    this.stuckTimer = 0;
                 }
-                this.wanderTimer = 8;
-                this.stuckTimer = 0;
                 this.wander();
             }
         } else {
