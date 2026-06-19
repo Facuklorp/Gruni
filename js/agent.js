@@ -63,6 +63,7 @@ export class Agent {
         this.branches = []; 
         this.hasTelescope = false;
         this.inaccessibleBooks = []; // Libros bloqueados por agua sin madera
+        this.inaccessibleTargets = []; // Cualquier recurso bloqueado por agua sin madera
         this.eclipseWarning = false;
         
         // Animaciones
@@ -206,13 +207,31 @@ export class Agent {
         // Clear ignoreTarget after one decision cycle so it doesn't permanently block
         this.ignoreTarget = null;
 
-        // Si conseguimos madera, los libros "inaccesibles" pueden volver a intentarse
-        if (this.inventory.wood > 0 && this.inaccessibleBooks.length > 0) {
+        // Si conseguimos madera, todos los targets inaccesibles pueden volver a intentarse
+        if (this.inventory.wood > 0) {
             this.inaccessibleBooks = [];
+            this.inaccessibleTargets = [];
         }
 
-        let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK, ix, iy);
-        // Filtrar libros marcados como inaccesibles (bloqueados por agua sin madera)
+        // Helper: filtra targets bloqueados por agua de findNearest
+        const findNearestAccessible = (x, y, types, ignX = -1, ignY = -1) => {
+            if (!Array.isArray(types)) types = [types];
+            let nearest = null;
+            let minDist = Infinity;
+            for (let ty = 0; ty < WORLD_HEIGHT; ty++) {
+                for (let tx = 0; tx < WORLD_WIDTH; tx++) {
+                    if (tx === ignX && ty === ignY) continue;
+                    if (this.inaccessibleTargets.some(t => t.x === tx && t.y === ty)) continue;
+                    if (types.includes(this.world.grid[ty][tx].type)) {
+                        let dist = Math.abs(tx - x) + Math.abs(ty - y);
+                        if (dist < minDist) { minDist = dist; nearest = {x: tx, y: ty}; }
+                    }
+                }
+            }
+            return nearest;
+        };
+
+        let bookTarget = findNearestAccessible(this.x, this.y, RESOURCES.BOOK, ix, iy);
         if (bookTarget && this.inaccessibleBooks.some(b => b.x === bookTarget.x && b.y === bookTarget.y)) {
             bookTarget = null;
         }
@@ -313,7 +332,7 @@ export class Agent {
         // Extreme Thirst/Hunger overrides emergency missions
         if (!enemyThreat) {
             if (this.thirst > 80) {
-                let wTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER, ix, iy);
+                let wTarget = findNearestAccessible(this.x, this.y, RESOURCES.WATER, ix, iy);
                 if (wTarget) {
                     this.state = STATES.SEEK_WATER;
                     this.target = wTarget;
@@ -321,7 +340,7 @@ export class Agent {
                 }
             }
             if (this.hunger > 80) {
-                let fTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD, ix, iy);
+                let fTarget = findNearestAccessible(this.x, this.y, RESOURCES.FOOD, ix, iy);
                 if (fTarget) {
                     this.state = STATES.SEEK_FOOD;
                     this.target = fTarget;
@@ -348,10 +367,10 @@ export class Agent {
         if (this.emergencyMission) {
             if (this.emergencyMission === 'PICKAXE') {
                 if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
                     this.craft('PICKAXE');
@@ -361,10 +380,10 @@ export class Agent {
                 }
             } else if (this.emergencyMission === 'SWORD') {
                 if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
                     this.craft('SWORD');
@@ -374,10 +393,10 @@ export class Agent {
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
                 if (this.inventory.wood < 3) {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 3) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 } else {
                     if (this.homeStage === 0) {
@@ -401,7 +420,7 @@ export class Agent {
                     this.target = { x: this.home.x, y: this.home.y };
                     return;
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_WALLS') {
@@ -432,29 +451,29 @@ export class Agent {
                         this.emergencyMission = null; // No hay más lugar para murallas
                     }
                 } else {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_TELESCOPE') {
                 if (this.inventory.wood >= 2 && this.inventory.rock >= 2) {
-                    let empty = this.world.findNearest(this.x, this.y, RESOURCES.EMPTY, ix, iy);
+                    let empty = findNearestAccessible(this.x, this.y, RESOURCES.EMPTY, ix, iy);
                     if (empty) {
                         this.state = STATES.BUILDING_TELESCOPE;
                         this.target = empty;
                         return;
                     }
                 } else if (this.inventory.wood < 2) {
-                    let w = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+                    let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 } else if (this.inventory.rock < 2) {
-                    let r = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                    let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
                     if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
                 }
             }
         }
 
-        let waterTarget = this.world.findNearest(this.x, this.y, RESOURCES.WATER, ix, iy);
-        let foodTarget = this.world.findNearest(this.x, this.y, RESOURCES.FOOD, ix, iy);
+        let waterTarget = findNearestAccessible(this.x, this.y, RESOURCES.WATER, ix, iy);
+        let foodTarget = findNearestAccessible(this.x, this.y, RESOURCES.FOOD, ix, iy);
 
         let waterPriority = this.thirst > 60 ? this.thirst : 0;
         let foodPriority = this.hunger > 60 ? this.hunger : 0;
@@ -486,8 +505,8 @@ export class Agent {
             return;
         }
 
-        let woodTarget = this.world.findNearest(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
-        let rockTarget = this.world.findNearest(this.x, this.y, RESOURCES.ROCK, ix, iy);
+        let woodTarget = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
+        let rockTarget = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
 
         // Límites más altos para poder craftear herramientas caras
         if (this.inventory.wood < 5 && woodTarget) {
@@ -691,10 +710,11 @@ export class Agent {
                         this.happyTimer = 5;
                         this.stuckTimer = 0;
                     } else if (this.stuckTimer > 3) {
-                        // Sin madera para puente: ignorar el target actual para no quedar en bucle
+                        // Sin madera para puente: marcar el target como inaccesible
                         if (this.stuckTimer > 5 && this.target) {
                             this.ignoreTarget = {x: this.target.x, y: this.target.y};
-                            // Si era un libro, marcarlo como inaccesible hasta conseguir madera
+                            // Agregar a la lista general de inaccesibles
+                            this.inaccessibleTargets.push({x: this.target.x, y: this.target.y});
                             if (this.state === STATES.SEEK_BOOK) {
                                 this.inaccessibleBooks.push({x: this.target.x, y: this.target.y});
                             }
