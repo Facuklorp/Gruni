@@ -39,6 +39,14 @@ const imageUrls = {
     gruni_walk_back_2: 'Gruni Sprites/Paso espalda 2.png',
     gruni_walk_back_3: 'Gruni Sprites/Paso espalda 3.png',
     gruni_walk_back_4: 'Gruni Sprites/Paso espalda 4.png',
+    malo_walk_side_1: 'Gruni Sprites/Paso MALO 1.png',
+    malo_walk_side_2: 'Gruni Sprites/Paso MALO 2.png',
+    malo_walk_side_3: 'Gruni Sprites/Paso MALO 3.png',
+    malo_walk_side_4: 'Gruni Sprites/Paso MALO 4.png',
+    malo_walk_front_1: 'Gruni Sprites/Paso MALO frente 1.png',
+    malo_walk_front_2: 'Gruni Sprites/Paso MALO frente 2.png',
+    malo_walk_front_3: 'Gruni Sprites/Paso MALO frente 3.png',
+    malo_walk_front_4: 'Gruni Sprites/Paso MALO frente 4.png',
     gruni_run: 'assets/sprites/gruni/gruni_run.png',
     gruni_axe: 'assets/sprites/gruni/gruni_axe.png',
     gruni_attack: 'assets/sprites/gruni/gruni_attack.png',
@@ -152,31 +160,57 @@ let currentTickRate = 500; // Milisegundos por cada tick lógico del agente
 let timeOfDay = 0; // Se actualiza dinámicamente
 
 const gruniTimeEl = document.getElementById('gruni-time');
-// Forzamos el reset a "ahora" como pidió el usuario (Año 0, Día 1, Hora 0)
-let gruniEpoch = localStorage.getItem('gruni_epoch_v2'); 
+
+// Epoch persistente para contar el "Año" de Gruni (cuántos días reales pasaron desde el primer arranque)
+let gruniEpoch = localStorage.getItem('gruni_birth');
 if (!gruniEpoch) {
     gruniEpoch = Date.now();
-    localStorage.setItem('gruni_epoch_v2', gruniEpoch);
+    localStorage.setItem('gruni_birth', gruniEpoch);
 } else {
     gruniEpoch = parseInt(gruniEpoch);
 }
 
 function updateGruniTime() {
-    let elapsedMs = Date.now() - gruniEpoch;
-    let cycleMs = 80000; // 80 segundos reales = 1 día completo en Gruni
-    
-    let gruniDaysTotal = Math.floor(elapsedMs / cycleMs) + 1;
-    let gruniYears = Math.floor((gruniDaysTotal - 1) / 365);
-    let currentDay = ((gruniDaysTotal - 1) % 365) + 1;
-    
-    let msInCycle = elapsedMs % cycleMs;
-    let currentHour = Math.floor((msInCycle / cycleMs) * 24);
-    
+    // Hora real de Argentina (UTC-3)
+    const now = new Date();
+    const argOffset = -3 * 60; // minutos
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const argDate = new Date(utcMs + argOffset * 60000);
+
+    const hours = argDate.getHours();
+    const minutes = argDate.getMinutes();
+    const seconds = argDate.getSeconds();
+
+    // Hora formateada HH:MM
+    const hStr = String(hours).padStart(2, '0');
+    const mStr = String(minutes).padStart(2, '0');
+
+    // Fecha real
+    const day = argDate.getDate();
+    const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const diaNombre = diasSemana[argDate.getDay()];
+    const mesNombre = meses[argDate.getMonth()];
+    const yearReal = argDate.getFullYear();
+
+    // Año de Gruni: sube 1 en el aniversario exacto de su nacimiento (años calendario completos)
+    const birthDate = new Date(gruniEpoch);
+    let gruniYear = argDate.getFullYear() - birthDate.getFullYear();
+    // Restar 1 si todavía no llegó el aniversario este año
+    const birthThisYear = new Date(argDate.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+    if (argDate < birthThisYear) gruniYear--;
+
+    // Día de Gruni: días reales transcurridos desde el nacimiento + 1
+    const msPerDay = 86400000;
+    const gruniDay = Math.floor((Date.now() - gruniEpoch) / msPerDay) + 1;
+
     if (gruniTimeEl) {
-        gruniTimeEl.innerText = `Año ${gruniYears} - Día ${currentDay} - Hora ${currentHour}`;
+        gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${meses[argDate.getMonth()]} ${yearReal}  ·  ${hStr}:${mStr} 🇦🇷`;
     }
-    
-    return (msInCycle / cycleMs) * 2400; // Rango de 0 a 2400 para render
+
+    // timeOfDay: 0 a 2400 representando las 24hs (para el ciclo día/noche del renderer)
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    return (totalSeconds / 86400) * 2400;
 }
 
 const particles = new ParticleSystem();

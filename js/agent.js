@@ -62,6 +62,7 @@ export class Agent {
         
         this.branches = []; 
         this.hasTelescope = false;
+        this.inaccessibleBooks = []; // Libros bloqueados por agua sin madera
         this.eclipseWarning = false;
         
         // Animaciones
@@ -205,7 +206,16 @@ export class Agent {
         // Clear ignoreTarget after one decision cycle so it doesn't permanently block
         this.ignoreTarget = null;
 
-        let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK);
+        // Si conseguimos madera, los libros "inaccesibles" pueden volver a intentarse
+        if (this.inventory.wood > 0 && this.inaccessibleBooks.length > 0) {
+            this.inaccessibleBooks = [];
+        }
+
+        let bookTarget = this.world.findNearest(this.x, this.y, RESOURCES.BOOK, ix, iy);
+        // Filtrar libros marcados como inaccesibles (bloqueados por agua sin madera)
+        if (bookTarget && this.inaccessibleBooks.some(b => b.x === bookTarget.x && b.y === bookTarget.y)) {
+            bookTarget = null;
+        }
         if (bookTarget && !enemyThreat && this.branches.length < 3) {
             // Cancelar misiones secundarias si aparece un libro
             if (this.emergencyMission === 'BUILD_WALLS' || this.emergencyMission === 'BUILD_TELESCOPE') {
@@ -681,10 +691,17 @@ export class Agent {
                         this.happyTimer = 5;
                         this.stuckTimer = 0;
                     } else if (this.stuckTimer > 3) {
+                        // Sin madera para puente: ignorar el target actual para no quedar en bucle
+                        if (this.stuckTimer > 5 && this.target) {
+                            this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                            // Si era un libro, marcarlo como inaccesible hasta conseguir madera
+                            if (this.state === STATES.SEEK_BOOK) {
+                                this.inaccessibleBooks.push({x: this.target.x, y: this.target.y});
+                            }
+                            this.target = null;
+                        }
                         this.wanderTimer = 8;
                         this.stuckTimer = 0;
-                        // Necesitamos madera para hacer un puente
-                        // Quitamos BUILD_WALLS para que no construya antes de terminar la casa
                     }
                 } else if (this.stuckTimer > 3) {
                     if (this.stuckTimer > 5) {
