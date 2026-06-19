@@ -770,11 +770,52 @@ export class Renderer {
 
         } else if (type === 'enemy') {
             this.drawShadow(cx, cy + 6, 8, 3);
-            if (this.images && this.images.sprout_cow) {
-                // Free Cow Sprites.png: 96x64 → 3 filas de 2 frames de 48x32
-                let cowDir = 0; // 0=abajo, 1=izq, 2=der
-                if (entity.dx > 0) cowDir = 2;
-                else if (entity.dx < 0) cowDir = 1;
+            
+            let dir = 0;
+            if (entity.lastDx > 0) dir = 3;
+            else if (entity.lastDx < 0) dir = 2;
+            else if (entity.lastDy < 0) dir = 1;
+            else if (entity.lastDy > 0) dir = 0;
+            
+            let animSpeed = 3; // ticks por frame (a 500ms/tick = ~1.5 seg por ciclo completo)
+            let fCount = 4;
+            let frame = Math.floor(entity.animationTimer / animSpeed) % fCount;
+            
+            let img = null;
+            let flip = false;
+            
+            if (dir === 2 && this.images[`malo_walk_side_${frame + 1}`]) { 
+                img = this.images[`malo_walk_side_${frame + 1}`];
+                flip = true;
+            } else if (dir === 3 && this.images[`malo_walk_side_${frame + 1}`]) {
+                img = this.images[`malo_walk_side_${frame + 1}`];
+            } else if (this.images[`malo_walk_front_${frame + 1}`]) {
+                img = this.images[`malo_walk_front_${frame + 1}`];
+            }
+
+            if (img) {
+                let fW = img.width || 78;
+                let fH = img.height || 136;
+                let scale = 0.32; // misma escala que Gruni
+                let drawW = fW * scale;
+                let drawH = fH * scale;
+
+                let drawX = cx - drawW / 2;
+                let drawY = py + CELL_SIZE - drawH + 4; 
+
+                this.ctx.save();
+                if (flip) {
+                    this.ctx.translate(cx, 0);
+                    this.ctx.scale(-1, 1);
+                    this.ctx.translate(-cx, 0);
+                }
+                
+                this.ctx.drawImage(img, 0, 0, fW, fH, drawX, drawY, drawW, drawH);
+                this.ctx.restore();
+            } else if (this.images && this.images.sprout_cow) {
+                let cowDir = 0;
+                if (entity.lastDx > 0) cowDir = 2;
+                else if (entity.lastDx < 0) cowDir = 1;
                 let cowFrame = Math.floor(t * 0.004) % 2;
                 this.ctx.drawImage(this.images.sprout_cow, cowFrame * 48, cowDir * 16, 48, 16, px - 8, py - 8, 32, 20);
             } else {

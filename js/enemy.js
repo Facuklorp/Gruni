@@ -12,10 +12,16 @@ export class Enemy {
         this.inventory = { wood: 0, rock: 0 };
         this.swordDurability = 5; // Empieza con espada (durabilidad 5)
         this.isAttacking = false;
+        this.lastDx = 0;
+        this.lastDy = 1;
+        this.animationTimer = 0;
     }
 
     update(gruni, wolf = null) {
+        let startX = this.x;
+        let startY = this.y;
         this.isAttacking = false;
+        this.animationTimer++;
         if (this.hp <= 0) return;
 
         if (this.hurtTimer > 0) {
@@ -108,6 +114,13 @@ export class Enemy {
             } else {
                 this.wander(); // Esperando crafteo
             }
+        }
+        
+        let diffX = this.x - startX;
+        let diffY = this.y - startY;
+        if (diffX !== 0 || diffY !== 0) {
+            this.lastDx = diffX;
+            this.lastDy = diffY;
         }
     }
 

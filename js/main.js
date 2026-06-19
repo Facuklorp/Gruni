@@ -205,7 +205,7 @@ function updateGruniTime() {
     const gruniDay = Math.floor((Date.now() - gruniEpoch) / msPerDay) + 1;
 
     if (gruniTimeEl) {
-        gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${meses[argDate.getMonth()]} ${yearReal}  ·  ${hStr}:${mStr} 🇦🇷`;
+        gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${meses[argDate.getMonth()]} ${yearReal}  ·  ${hStr}:${mStr}`;
     }
 
     // timeOfDay: 0 a 2400 representando las 24hs (para el ciclo día/noche del renderer)
