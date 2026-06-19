@@ -372,7 +372,7 @@ function runTick() {
         dialogueTimer--;
     }
 
-    let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120; // 20 ticks of warning (10 segundos)
+    let eclipseWarning = eclipseTimer > 7100 && eclipseTimer < 7160; // Aviso 50s antes del eclipse
     
     // Auto-select book branch (Twitch 24/7 Mode)
     if (agent.bookFound && agent.branches.length < 3) {
@@ -400,11 +400,11 @@ function runTick() {
     if (firstEnemySpawned) {
         eclipseTimer++;
 
-        if (eclipseTimer === 80 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
+        if (eclipseTimer === 7100 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
             showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
         }
 
-        if (eclipseTimer === 100) { 
+        if (eclipseTimer === 7160) {
             isEclipse = true;
             
             // Spawn inmediato de 2 enemigos al comenzar el eclipse
@@ -420,7 +420,7 @@ function runTick() {
                 showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
             }
         }
-        if (eclipseTimer >= 140) { 
+        if (eclipseTimer >= 7200) {
             isEclipse = false;
             eclipseTimer = 0;
         }
@@ -499,7 +499,7 @@ function gameLoop(timestamp) {
         }
     }
     
-    let eclipseWarning = eclipseTimer > 80 && eclipseTimer < 120;
+    let eclipseWarning = eclipseTimer > 7100 && eclipseTimer < 7160;
     try {
         renderer.draw(world, agent, enemies, wolf, eclipseWarning, timestamp, timeOfDay, particles);
     } catch (e) {
