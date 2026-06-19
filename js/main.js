@@ -171,48 +171,31 @@ if (!gruniEpoch) {
 }
 
 function updateGruniTime() {
-    // Hora real de Argentina usando la timezone correcta (nunca falla sin importar el sistema)
+    // Forma más robusta: parsear con en-US y timezone Buenos_Aires
     const now = new Date();
-    const fmt = new Intl.DateTimeFormat('es-AR', {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        hour: 'numeric', minute: 'numeric', second: 'numeric',
-        day: 'numeric', month: 'numeric', year: 'numeric',
-        weekday: 'short', hour12: false
-    });
-    const parts = Object.fromEntries(fmt.formatToParts(now).map(p => [p.type, p.value]));
+    const argDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
 
-    const hours   = parseInt(parts.hour);
-    const minutes = parseInt(parts.minute);
-    const seconds = parseInt(parts.second);
-    const day     = parseInt(parts.day);
-    const month   = parseInt(parts.month);
-    const year    = parseInt(parts.year);
+    const hours   = argDate.getHours();
+    const minutes = argDate.getMinutes();
+    const seconds = argDate.getSeconds();
+    const day     = argDate.getDate();
+    const month   = argDate.getMonth(); // 0-11
+    const year    = argDate.getFullYear();
 
     // Hora formateada HH:MM
     const hStr = String(hours).padStart(2, '0');
     const mStr = String(minutes).padStart(2, '0');
 
-    // Día de la semana y mes en español
-    const diasSemana = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    // Fecha en español
+    const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    // parts.weekday viene como "lun.", "mar.", etc. — limpiamos el punto
-    const diaNombre = parts.weekday ? parts.weekday.replace('.', '') : '';
-    const mesNombre = meses[month - 1];
+    const diaNombre = diasSemana[argDate.getDay()];
+    const mesNombre = meses[month];
 
-    // Año de Gruni: sube 1 en el aniversario exacto de su nacimiento (años calendario completos)
-    const birthDate = new Date(gruniEpoch);
-    const birthFmt = new Intl.DateTimeFormat('es-AR', {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        day: 'numeric', month: 'numeric', year: 'numeric'
-    });
-    const birthParts = Object.fromEntries(birthFmt.formatToParts(birthDate).map(p => [p.type, p.value]));
-    const birthYear  = parseInt(birthParts.year);
-    const birthMonth = parseInt(birthParts.month);
-    const birthDay   = parseInt(birthParts.day);
-
-    let gruniYear = year - birthYear;
-    // Restar 1 si todavía no llegó el aniversario este año
-    if (month < birthMonth || (month === birthMonth && day < birthDay)) gruniYear--;
+    // Año de Gruni: sube 1 en el aniversario exacto
+    const birthDate = new Date(new Date(gruniEpoch).toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+    let gruniYear = year - birthDate.getFullYear();
+    if (month < birthDate.getMonth() || (month === birthDate.getMonth() && day < birthDate.getDate())) gruniYear--;
 
     // Día de Gruni: días reales transcurridos desde el nacimiento + 1
     const msPerDay = 86400000;
@@ -222,7 +205,7 @@ function updateGruniTime() {
         gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${mesNombre} ${year}  ·  ${hStr}:${mStr}`;
     }
 
-    // timeOfDay: 0 a 2400 representando las 24hs (para el ciclo día/noche del renderer)
+    // timeOfDay: 0 a 2400 representando las 24hs
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     return (totalSeconds / 86400) * 2400;
 }
@@ -445,13 +428,16 @@ function runTick() {
 
     if (agent.branches.length > 0) {
         spawnTimer++;
-        let spawnRate = isEclipse ? 20 : 60; // Más rápido en eclipse (10 seg), normal (30 seg)
-        if (spawnTimer >= spawnRate) { 
+        const MAX_ENEMIES = isEclipse ? 6 : 4; // Límite: 4 normal, 6 en eclipse
+        let spawnRate = isEclipse ? 40 : 120; // Normal: 1 cada 60s | Eclipse: 1 cada 20s
+        if (spawnTimer >= spawnRate && enemies.length < MAX_ENEMIES) {
             spawnTimer = 0;
             let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
             let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
             enemies.push(new Enemy(world, edgeX, edgeY));
             firstEnemySpawned = true;
+        } else if (spawnTimer >= spawnRate) {
+            spawnTimer = 0; // Resetear igual aunque no spawneemos
         }
     }
     
