@@ -171,41 +171,55 @@ if (!gruniEpoch) {
 }
 
 function updateGruniTime() {
-    // Hora real de Argentina (UTC-3)
+    // Hora real de Argentina usando la timezone correcta (nunca falla sin importar el sistema)
     const now = new Date();
-    const argOffset = -3 * 60; // minutos
-    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const argDate = new Date(utcMs + argOffset * 60000);
+    const fmt = new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        day: 'numeric', month: 'numeric', year: 'numeric',
+        weekday: 'short', hour12: false
+    });
+    const parts = Object.fromEntries(fmt.formatToParts(now).map(p => [p.type, p.value]));
 
-    const hours = argDate.getHours();
-    const minutes = argDate.getMinutes();
-    const seconds = argDate.getSeconds();
+    const hours   = parseInt(parts.hour);
+    const minutes = parseInt(parts.minute);
+    const seconds = parseInt(parts.second);
+    const day     = parseInt(parts.day);
+    const month   = parseInt(parts.month);
+    const year    = parseInt(parts.year);
 
     // Hora formateada HH:MM
     const hStr = String(hours).padStart(2, '0');
     const mStr = String(minutes).padStart(2, '0');
 
-    // Fecha real
-    const day = argDate.getDate();
-    const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    // Día de la semana y mes en español
+    const diasSemana = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
     const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const diaNombre = diasSemana[argDate.getDay()];
-    const mesNombre = meses[argDate.getMonth()];
-    const yearReal = argDate.getFullYear();
+    // parts.weekday viene como "lun.", "mar.", etc. — limpiamos el punto
+    const diaNombre = parts.weekday ? parts.weekday.replace('.', '') : '';
+    const mesNombre = meses[month - 1];
 
     // Año de Gruni: sube 1 en el aniversario exacto de su nacimiento (años calendario completos)
     const birthDate = new Date(gruniEpoch);
-    let gruniYear = argDate.getFullYear() - birthDate.getFullYear();
+    const birthFmt = new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        day: 'numeric', month: 'numeric', year: 'numeric'
+    });
+    const birthParts = Object.fromEntries(birthFmt.formatToParts(birthDate).map(p => [p.type, p.value]));
+    const birthYear  = parseInt(birthParts.year);
+    const birthMonth = parseInt(birthParts.month);
+    const birthDay   = parseInt(birthParts.day);
+
+    let gruniYear = year - birthYear;
     // Restar 1 si todavía no llegó el aniversario este año
-    const birthThisYear = new Date(argDate.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-    if (argDate < birthThisYear) gruniYear--;
+    if (month < birthMonth || (month === birthMonth && day < birthDay)) gruniYear--;
 
     // Día de Gruni: días reales transcurridos desde el nacimiento + 1
     const msPerDay = 86400000;
     const gruniDay = Math.floor((Date.now() - gruniEpoch) / msPerDay) + 1;
 
     if (gruniTimeEl) {
-        gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${meses[argDate.getMonth()]} ${yearReal}  ·  ${hStr}:${mStr}`;
+        gruniTimeEl.innerText = `Año ${gruniYear} · Día ${gruniDay}  ·  ${diaNombre} ${day} ${mesNombre} ${year}  ·  ${hStr}:${mStr}`;
     }
 
     // timeOfDay: 0 a 2400 representando las 24hs (para el ciclo día/noche del renderer)
