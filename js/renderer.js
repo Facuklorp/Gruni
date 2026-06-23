@@ -86,21 +86,84 @@ export class Renderer {
                     
                     // Capa 1: Siempre pasto
                     if (this.images && this.images.wakfu_pasto_1) {
-                        let pastoArray = [this.images.wakfu_pasto_1, this.images.wakfu_pasto_2, this.images.wakfu_pasto_3, this.images.wakfu_pasto_4];
-                        
-                        // Dividimos por 2 porque cada textura ocupará 2x2 casillas (4 cuadrados en total)
                         let chunkX = Math.floor(x / 2);
                         let chunkY = Math.floor(y / 2);
-                        let hash = (chunkX * 73856093 ^ chunkY * 19349663);
-                        let img = pastoArray[Math.abs(hash) % 4] || pastoArray[0];
                         
-                        // Calculamos qué porción de la textura gigante le toca a este cuadrado específico
-                        let sWidth = img.width / 2;
-                        let sHeight = img.height / 2;
-                        let sx = Math.abs(x % 2) * sWidth;
-                        let sy = Math.abs(y % 2) * sHeight;
+                        // Helper para generar islas de pasto puro
+                        const isPlainChunk = (cx, cy) => {
+                            let val = 0;
+                            for(let dy=-1; dy<=1; dy++) {
+                                for(let dx=-1; dx<=1; dx++) {
+                                    let hash = Math.sin((cx+dx)*12.9898 + (cy+dy)*78.233) * 43758.5453;
+                                    val += hash - Math.floor(hash);
+                                }
+                            }
+                            return (val / 9) > 0.53; // Umbral para sectores limpios
+                        };
                         
-                        this.ctx.drawImage(img, sx, sy, sWidth, sHeight, px, py, CELL_SIZE, CELL_SIZE);
+                        let isPlain = isPlainChunk(chunkX, chunkY);
+                        let img;
+                        let rotation = 0;
+                        
+                        if (isPlain) {
+                            img = this.images.wakfu_pasto_solo;
+                        } else {
+                            // Check borders
+                            let topPlain = isPlainChunk(chunkX, chunkY - 1);
+                            let botPlain = isPlainChunk(chunkX, chunkY + 1);
+                            let leftPlain = isPlainChunk(chunkX - 1, chunkY);
+                            let rightPlain = isPlainChunk(chunkX + 1, chunkY);
+                            
+                            if (topPlain || botPlain || leftPlain || rightPlain) {
+                                // Borde
+                                let isBorde1 = (chunkX + chunkY) % 2 === 0;
+                                img = isBorde1 ? this.images.wakfu_pasto_borde_1 : this.images.wakfu_pasto_borde_2;
+                                if (!img) img = this.images.wakfu_pasto_borde_1; // fallback
+                                
+                                if (topPlain) {
+                                    rotation = 0; // Parte limpia arriba
+                                } else if (rightPlain) {
+                                    rotation = Math.PI / 2; // 90 deg (parte limpia a la derecha)
+                                } else if (botPlain) {
+                                    rotation = Math.PI; // 180 deg
+                                } else if (leftPlain) {
+                                    rotation = -Math.PI / 2; // 270 deg
+                                }
+                            } else {
+                                // Pasto mixto
+                                let pastoArray = [this.images.wakfu_pasto_1, this.images.wakfu_pasto_2, this.images.wakfu_pasto_3, this.images.wakfu_pasto_4];
+                                let hash = (chunkX * 73856093 ^ chunkY * 19349663);
+                                img = pastoArray[Math.abs(hash) % 4] || pastoArray[0];
+                            }
+                        }
+                        
+                        if (img) {
+                            let sWidth = img.width / 2;
+                            let sHeight = img.height / 2;
+                            let cellOffsetX = x - chunkX * 2;
+                            let cellOffsetY = y - chunkY * 2;
+                            let sx = cellOffsetX * sWidth;
+                            let sy = cellOffsetY * sHeight;
+                            
+                            if (rotation !== 0) {
+                                let chunkCenterX = chunkX * 2 * CELL_SIZE + CELL_SIZE;
+                                let chunkCenterY = chunkY * 2 * CELL_SIZE + CELL_SIZE;
+                                this.ctx.save();
+                                this.ctx.translate(chunkCenterX, chunkCenterY);
+                                this.ctx.rotate(rotation);
+                                
+                                let relX = px - chunkCenterX;
+                                let relY = py - chunkCenterY;
+                                this.ctx.drawImage(img, sx, sy, sWidth, sHeight, relX, relY, CELL_SIZE, CELL_SIZE);
+                                this.ctx.restore();
+                            } else {
+                                this.ctx.drawImage(img, sx, sy, sWidth, sHeight, px, py, CELL_SIZE, CELL_SIZE);
+                            }
+                        } else {
+                            // Fallback si falta la imagen
+                            this.ctx.fillStyle = '#86efac';
+                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                        }
                     } else if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
