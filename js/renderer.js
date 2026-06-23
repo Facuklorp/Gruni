@@ -85,7 +85,17 @@ export class Renderer {
                     let py = y * CELL_SIZE;
                     
                     // Capa 1: Siempre pasto
-                    if (this.images && this.images.sprout_grass) {
+                    if (this.images && this.images.wakfu_pasto_1) {
+                        let pastoArray = [this.images.wakfu_pasto_1, this.images.wakfu_pasto_2, this.images.wakfu_pasto_3, this.images.wakfu_pasto_4];
+                        let chunkX = Math.floor((x * CELL_SIZE) / 1024);
+                        let chunkY = Math.floor((y * CELL_SIZE) / 1024);
+                        let hash = Math.abs(chunkX * 73856093 ^ chunkY * 19349663);
+                        let img = pastoArray[hash % 4] || pastoArray[0];
+                        
+                        let sx = (x * CELL_SIZE) % img.width;
+                        let sy = (y * CELL_SIZE) % img.height;
+                        this.ctx.drawImage(img, sx, sy, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+                    } else if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
                         this.ctx.fillStyle = '#86efac'; // Pasto
