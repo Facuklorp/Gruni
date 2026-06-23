@@ -10,6 +10,9 @@ const canvas = document.getElementById('gameCanvas');
 
 export const IMAGES = {};
 const imageUrls = {
+    wakfu_grass: 'assets/wakfu_grass.png',
+    wakfu_dirt: 'assets/wakfu_dirt.png',
+    wakfu_water: 'assets/wakfu_water.png',
     sprout_grass: 'assets/sprout_grass.png',
     sprout_water: 'assets/sprout_water.png',
     agua_autotile: 'Vegetación/Agua_Autotile.png',

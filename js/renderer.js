@@ -85,7 +85,9 @@ export class Renderer {
                     let py = y * CELL_SIZE;
                     
                     // Capa 1: Siempre pasto
-                    if (this.images && this.images.sprout_grass) {
+                    if (this.images && this.images.wakfu_grass) {
+                        this.ctx.drawImage(this.images.wakfu_grass, px, py, CELL_SIZE, CELL_SIZE);
+                    } else if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
                         this.ctx.fillStyle = '#86efac'; // Pasto
@@ -99,7 +101,9 @@ export class Renderer {
                             return c && c.biome === BIOMES.SAND;
                         };
                         let mask = calculateBitmask(x, y, isSand);
-                        if (this.images && this.images.arena_autotile) {
+                        if (this.images && this.images.wakfu_dirt) {
+                            this.ctx.drawImage(this.images.wakfu_dirt, px, py, CELL_SIZE, CELL_SIZE);
+                        } else if (this.images && this.images.arena_autotile) {
                             drawAutotile(this.images.arena_autotile, px, py, mask);
                         } else {
                             this.ctx.fillStyle = '#fcd34d'; // Arena
@@ -116,7 +120,9 @@ export class Renderer {
                         let mask = calculateBitmask(x, y, isWater);
                         let waterImg = (cell.biome === BIOMES.SAND) ? this.images.agua_arena_autotile : this.images.agua_autotile;
                         
-                        if (this.images && waterImg) {
+                        if (this.images && this.images.wakfu_water) {
+                            this.ctx.drawImage(this.images.wakfu_water, px, py, CELL_SIZE, CELL_SIZE);
+                        } else if (this.images && waterImg) {
                             drawAutotile(waterImg, px, py, mask);
                         } else {
                             this.ctx.fillStyle = '#0ea5e9'; // Agua
@@ -243,7 +249,9 @@ export class Renderer {
         let isInnerBL = isWater(0, 1) && isWater(-1, 0) && !isWater(-1, 1);
 
         // Draw base water
-        if (this.images && this.images.bg_agua) {
+        if (this.images && this.images.wakfu_water) {
+            this.ctx.drawImage(this.images.wakfu_water, px, py, CELL_SIZE, CELL_SIZE);
+        } else if (this.images && this.images.bg_agua) {
             this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE);
         } else if (this.images && this.images.sprout_water) {
             let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
