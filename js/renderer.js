@@ -87,14 +87,12 @@ export class Renderer {
                     // Capa 1: Siempre pasto
                     if (this.images && this.images.wakfu_pasto_1) {
                         let pastoArray = [this.images.wakfu_pasto_1, this.images.wakfu_pasto_2, this.images.wakfu_pasto_3, this.images.wakfu_pasto_4];
-                        let chunkX = Math.floor((x * CELL_SIZE) / 1024);
-                        let chunkY = Math.floor((y * CELL_SIZE) / 1024);
-                        let hash = Math.abs(chunkX * 73856093 ^ chunkY * 19349663);
-                        let img = pastoArray[hash % 4] || pastoArray[0];
+                        // Pseudo-random tile variation based on coordinates
+                        let hash = (x * 73856093 ^ y * 19349663);
+                        let img = pastoArray[Math.abs(hash) % 4] || pastoArray[0];
                         
-                        let sx = (x * CELL_SIZE) % img.width;
-                        let sy = (y * CELL_SIZE) % img.height;
-                        this.ctx.drawImage(img, sx, sy, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
+                        // Draw the full image scaled down into the 16x16 cell to create the grid effect
+                        this.ctx.drawImage(img, px, py, CELL_SIZE, CELL_SIZE);
                     } else if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
