@@ -89,16 +89,13 @@ export class Renderer {
                         let chunkX = Math.floor(x / 2);
                         let chunkY = Math.floor(y / 2);
                         
-                        // Helper para generar islas de pasto puro
+                        // Generar islas de pasto puro usando ondas sinusoidales de baja frecuencia
                         const isPlainChunk = (cx, cy) => {
-                            let val = 0;
-                            for(let dy=-1; dy<=1; dy++) {
-                                for(let dx=-1; dx<=1; dx++) {
-                                    let hash = Math.sin((cx+dx)*12.9898 + (cy+dy)*78.233) * 43758.5453;
-                                    val += hash - Math.floor(hash);
-                                }
-                            }
-                            return (val / 9) > 0.53; // Umbral para sectores limpios
+                            let nx = cx * 0.25;
+                            let ny = cy * 0.25;
+                            // Suma de ondas para crear un patrón orgánico suave
+                            let val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx + ny)) / 3;
+                            return val > 0.15; // Ajustar umbral para determinar el tamaño de las islas
                         };
                         
                         let isPlain = isPlainChunk(chunkX, chunkY);
