@@ -85,82 +85,37 @@ export class Renderer {
                     let py = y * CELL_SIZE;
                     
                     // Capa 1: Siempre pasto
-                    if (this.images && this.images.wakfu_pasto_1) {
+                    if (this.images && this.images.wakfu_pasto_solo_1) {
                         let chunkX = Math.floor(x / 2);
                         let chunkY = Math.floor(y / 2);
                         
-                        // Generar islas de pasto puro usando ondas sinusoidales de baja frecuencia
-                        const isPlainChunk = (cx, cy) => {
-                            let nx = cx * 0.25;
-                            let ny = cy * 0.25;
-                            // Suma de ondas para crear un patrón orgánico suave
-                            let val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx + ny)) / 3;
-                            return val > 0.15; // Ajustar umbral para determinar el tamaño de las islas
-                        };
+                        // Generar pequeños sectores orgánicos para las distintas tonalidades
+                        // Un multiplicador más alto (0.5) hace que los sectores sean más pequeños
+                        let nx = chunkX * 0.5;
+                        let ny = chunkY * 0.5;
+                        let val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx * 0.5 + ny * 0.5)) / 3;
                         
-                        let isPlain = isPlainChunk(chunkX, chunkY);
-                        let img;
-                        let rotation = 0;
+                        // val va de -1 a 1. Lo pasamos a 0..3
+                        let sectorIndex = Math.floor((val + 1) * 2);
+                        if (sectorIndex < 0) sectorIndex = 0;
+                        if (sectorIndex > 3) sectorIndex = 3;
                         
-                        if (isPlain) {
-                            img = this.images.wakfu_pasto_solo;
-                        } else {
-                            // Check borders
-                            let topPlain = isPlainChunk(chunkX, chunkY - 1);
-                            let botPlain = isPlainChunk(chunkX, chunkY + 1);
-                            let leftPlain = isPlainChunk(chunkX - 1, chunkY);
-                            let rightPlain = isPlainChunk(chunkX + 1, chunkY);
-                            
-                            if (topPlain || botPlain || leftPlain || rightPlain) {
-                                // Borde
-                                let isBorde1 = (chunkX + chunkY) % 2 === 0;
-                                img = isBorde1 ? this.images.wakfu_pasto_borde_1 : this.images.wakfu_pasto_borde_2;
-                                if (!img) img = this.images.wakfu_pasto_borde_1; // fallback
-                                
-                                if (topPlain) {
-                                    rotation = 0; // Parte limpia arriba
-                                } else if (rightPlain) {
-                                    rotation = Math.PI / 2; // 90 deg (parte limpia a la derecha)
-                                } else if (botPlain) {
-                                    rotation = Math.PI; // 180 deg
-                                } else if (leftPlain) {
-                                    rotation = -Math.PI / 2; // 270 deg
-                                }
-                            } else {
-                                // Pasto mixto
-                                let pastoArray = [this.images.wakfu_pasto_1, this.images.wakfu_pasto_2, this.images.wakfu_pasto_3, this.images.wakfu_pasto_4];
-                                let hash = (chunkX * 73856093 ^ chunkY * 19349663);
-                                img = pastoArray[Math.abs(hash) % 4] || pastoArray[0];
-                            }
-                        }
+                        let pastoArray = [
+                            this.images.wakfu_pasto_solo_1,
+                            this.images.wakfu_pasto_solo_2,
+                            this.images.wakfu_pasto_solo_3,
+                            this.images.wakfu_pasto_solo_4
+                        ];
+                        let img = pastoArray[sectorIndex] || pastoArray[0];
                         
-                        if (img) {
-                            let sWidth = img.width / 2;
-                            let sHeight = img.height / 2;
-                            let cellOffsetX = x - chunkX * 2;
-                            let cellOffsetY = y - chunkY * 2;
-                            let sx = cellOffsetX * sWidth;
-                            let sy = cellOffsetY * sHeight;
-                            
-                            if (rotation !== 0) {
-                                let chunkCenterX = chunkX * 2 * CELL_SIZE + CELL_SIZE;
-                                let chunkCenterY = chunkY * 2 * CELL_SIZE + CELL_SIZE;
-                                this.ctx.save();
-                                this.ctx.translate(chunkCenterX, chunkCenterY);
-                                this.ctx.rotate(rotation);
-                                
-                                let relX = px - chunkCenterX;
-                                let relY = py - chunkCenterY;
-                                this.ctx.drawImage(img, sx, sy, sWidth, sHeight, relX, relY, CELL_SIZE, CELL_SIZE);
-                                this.ctx.restore();
-                            } else {
-                                this.ctx.drawImage(img, sx, sy, sWidth, sHeight, px, py, CELL_SIZE, CELL_SIZE);
-                            }
-                        } else {
-                            // Fallback si falta la imagen
-                            this.ctx.fillStyle = '#86efac';
-                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                        }
+                        let sWidth = img.width / 2;
+                        let sHeight = img.height / 2;
+                        let cellOffsetX = x - chunkX * 2;
+                        let cellOffsetY = y - chunkY * 2;
+                        let sx = cellOffsetX * sWidth;
+                        let sy = cellOffsetY * sHeight;
+                        
+                        this.ctx.drawImage(img, sx, sy, sWidth, sHeight, px, py, CELL_SIZE, CELL_SIZE);
                     } else if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
