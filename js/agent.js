@@ -23,6 +23,12 @@ export class Agent {
         this.world = world;
         this.x = Math.floor(WORLD_WIDTH / 2);
         this.y = Math.floor(WORLD_HEIGHT / 2);
+        // Find safe spawn
+        while (this.world.grid[this.y] && this.world.grid[this.y][this.x] && (this.world.grid[this.y][this.x].type === RESOURCES.WATER || this.world.grid[this.y][this.x].type === RESOURCES.ROCK)) {
+            this.x++;
+            if (this.x >= WORLD_WIDTH) { this.x = 0; this.y++; }
+            if (this.y >= WORLD_HEIGHT) { this.x = 0; this.y = 0; break; }
+        }
         
         this.hunger = 0;
         this.thirst = 0;

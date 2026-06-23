@@ -85,9 +85,7 @@ export class Renderer {
                     let py = y * CELL_SIZE;
                     
                     // Capa 1: Siempre pasto
-                    if (this.images && this.images.wakfu_grass) {
-                        this.ctx.drawImage(this.images.wakfu_grass, px, py, CELL_SIZE, CELL_SIZE);
-                    } else if (this.images && this.images.sprout_grass) {
+                    if (this.images && this.images.sprout_grass) {
                         this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
                     } else {
                         this.ctx.fillStyle = '#86efac'; // Pasto
@@ -101,9 +99,7 @@ export class Renderer {
                             return c && c.biome === BIOMES.SAND;
                         };
                         let mask = calculateBitmask(x, y, isSand);
-                        if (this.images && this.images.wakfu_dirt) {
-                            this.ctx.drawImage(this.images.wakfu_dirt, px, py, CELL_SIZE, CELL_SIZE);
-                        } else if (this.images && this.images.arena_autotile) {
+                        if (this.images && this.images.arena_autotile) {
                             drawAutotile(this.images.arena_autotile, px, py, mask);
                         } else {
                             this.ctx.fillStyle = '#fcd34d'; // Arena
@@ -120,9 +116,7 @@ export class Renderer {
                         let mask = calculateBitmask(x, y, isWater);
                         let waterImg = (cell.biome === BIOMES.SAND) ? this.images.agua_arena_autotile : this.images.agua_autotile;
                         
-                        if (this.images && this.images.wakfu_water) {
-                            this.ctx.drawImage(this.images.wakfu_water, px, py, CELL_SIZE, CELL_SIZE);
-                        } else if (this.images && waterImg) {
+                        if (this.images && waterImg) {
                             drawAutotile(waterImg, px, py, mask);
                         } else {
                             this.ctx.fillStyle = '#0ea5e9'; // Agua
@@ -741,6 +735,10 @@ export class Renderer {
                     if (!img) {
                         img = this.images.gruni_walk;
                         isSpritesheet = true;
+                        if (img) {
+                            fW = img.width / 5;
+                            fH = img.height / 4;
+                        }
                         if (dir === 1) fRow = 1;
                         else if (dir === 2) fRow = 3;
                         else if (dir === 3) fRow = 2;
