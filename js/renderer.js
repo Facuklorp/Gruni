@@ -7,6 +7,7 @@ export class Renderer {
         this.ctx = canvas.getContext('2d');
         this.cameraX = 0;
         this.cameraY = 0;
+        this.cameraInitialized = false; // Para el primer frame, saltamos directo sin lerp
         this.images = null;
         
         // Deshabilitar el suavizado para mantener el estilo pixel art y evitar sangrado entre tiles
@@ -18,9 +19,6 @@ export class Renderer {
     }
 
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
-        this.cameraX = 0;
-        this.cameraY = 0;
-        
         this.ctx.imageSmoothingEnabled = false;
         
         let viewW = this.canvas.width / ZOOM;
@@ -29,14 +27,26 @@ export class Renderer {
         if (agent) {
             let targetX = agent.x * CELL_SIZE + CELL_SIZE / 2;
             let targetY = agent.y * CELL_SIZE + CELL_SIZE / 2;
-            this.cameraX = targetX - viewW / 2;
-            this.cameraY = targetY - viewH / 2;
+            let desiredX = targetX - viewW / 2;
+            let desiredY = targetY - viewH / 2;
             
             let mapPxWidth = WORLD_WIDTH * CELL_SIZE;
             let mapPxHeight = WORLD_HEIGHT * CELL_SIZE;
             
-            this.cameraX = Math.max(0, Math.min(this.cameraX, mapPxWidth - viewW));
-            this.cameraY = Math.max(0, Math.min(this.cameraY, mapPxHeight - viewH));
+            desiredX = Math.max(0, Math.min(desiredX, mapPxWidth - viewW));
+            desiredY = Math.max(0, Math.min(desiredY, mapPxHeight - viewH));
+
+            if (!this.cameraInitialized) {
+                // Primer frame: ir directo sin interpolación
+                this.cameraX = desiredX;
+                this.cameraY = desiredY;
+                this.cameraInitialized = true;
+            } else {
+                // Lerp suave: 10% por frame hacia el objetivo
+                const LERP = 0.1;
+                this.cameraX += (desiredX - this.cameraX) * LERP;
+                this.cameraY += (desiredY - this.cameraY) * LERP;
+            }
         }
 
         this.ctx.save();
