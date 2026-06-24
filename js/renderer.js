@@ -1,5 +1,5 @@
-// js/renderer.js
-import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES, BIOMES } from './world.js';
+// js/renderer.js — Vista Isométrica
+import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -7,10 +7,9 @@ export class Renderer {
         this.ctx = canvas.getContext('2d');
         this.cameraX = 0;
         this.cameraY = 0;
-        this.cameraInitialized = false; // Para el primer frame, saltamos directo sin lerp
+        this.cameraInitialized = false;
         this.images = null;
-        
-        // Deshabilitar el suavizado para mantener el estilo pixel art y evitar sangrado entre tiles
+
         this.ctx.imageSmoothingEnabled = false;
     }
 
@@ -18,31 +17,66 @@ export class Renderer {
         this.images = images;
     }
 
+    // ─── Proyección isométrica ──────────────────────────────────────────────────
+    // Convierte coords de grilla (x, y) a esquina superior-izquierda del rombo
+    isoProject(x, y) {
+        return {
+            sx: (x - y) * (ISO_W / 2),
+            sy: (x + y) * (ISO_H / 2)
+        };
+    }
+
+    // Dibuja un rombo plano (cara superior de un tile isométrico)
+    drawDiamond(sx, sy, fillColor, edgeColor = null) {
+        const hw = ISO_W / 2;
+        const hh = ISO_H / 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(sx + hw, sy);          // arriba
+        this.ctx.lineTo(sx + ISO_W, sy + hh);  // derecha
+        this.ctx.lineTo(sx + hw, sy + ISO_H);  // abajo
+        this.ctx.lineTo(sx, sy + hh);          // izquierda
+        this.ctx.closePath();
+        this.ctx.fillStyle = fillColor;
+        this.ctx.fill();
+        if (edgeColor) {
+            this.ctx.strokeStyle = edgeColor;
+            this.ctx.lineWidth = 0.4;
+            this.ctx.stroke();
+        }
+    }
+
+    // Helper: todas las coords útiles de un tile de la grilla
+    getIsoBase(x, y) {
+        const { sx, sy } = this.isoProject(x, y);
+        return {
+            sx,
+            sy,
+            cx:    sx + ISO_W / 2,   // centro horizontal del rombo
+            cy:    sy + ISO_H / 2,   // centro vertical del rombo
+            baseY: sy + ISO_H / 2    // "piso" donde se apoyan los objetos
+        };
+    }
+
+    // ─── Draw principal ─────────────────────────────────────────────────────────
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
         this.ctx.imageSmoothingEnabled = false;
-        
-        let viewW = this.canvas.width / ZOOM;
-        let viewH = this.canvas.height / ZOOM;
 
+        const viewW = this.canvas.width  / ZOOM;
+        const viewH = this.canvas.height / ZOOM;
+
+        // Cámara isométrica con lerp suave
         if (agent) {
-            let targetX = agent.x * CELL_SIZE + CELL_SIZE / 2;
-            let targetY = agent.y * CELL_SIZE + CELL_SIZE / 2;
-            let desiredX = targetX - viewW / 2;
-            let desiredY = targetY - viewH / 2;
-            
-            let mapPxWidth = WORLD_WIDTH * CELL_SIZE;
-            let mapPxHeight = WORLD_HEIGHT * CELL_SIZE;
-            
-            desiredX = Math.max(0, Math.min(desiredX, mapPxWidth - viewW));
-            desiredY = Math.max(0, Math.min(desiredY, mapPxHeight - viewH));
+            const { sx, sy } = this.isoProject(agent.x, agent.y);
+            const agentIsoX = sx + ISO_W / 2;
+            const agentIsoY = sy + ISO_H / 2;
+            const desiredX = agentIsoX - viewW / 2;
+            const desiredY = agentIsoY - viewH / 2;
 
             if (!this.cameraInitialized) {
-                // Primer frame: ir directo sin interpolación
                 this.cameraX = desiredX;
                 this.cameraY = desiredY;
                 this.cameraInitialized = true;
             } else {
-                // Lerp suave: 10% por frame hacia el objetivo
                 const LERP = 0.1;
                 this.cameraX += (desiredX - this.cameraX) * LERP;
                 this.cameraY += (desiredY - this.cameraY) * LERP;
@@ -53,146 +87,119 @@ export class Renderer {
         this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // Lógica de Autotile
-        const AUTOTILE_MAP = {"0": [0, 0], "1": [1, 0], "2": [2, 0], "3": [3, 0], "4": [4, 0], "5": [5, 0], "6": [6, 0], "7": [0, 1], "8": [1, 1], "9": [2, 1], "10": [3, 1], "11": [4, 1], "12": [5, 1], "13": [6, 1], "14": [0, 2], "15": [1, 2], "21": [2, 2], "23": [3, 2], "29": [4, 2], "31": [5, 2], "41": [6, 2], "43": [0, 3], "45": [1, 3], "47": [2, 3], "61": [3, 3], "63": [4, 3], "70": [5, 3], "71": [6, 3], "78": [0, 4], "79": [1, 4], "87": [2, 4], "95": [3, 4], "111": [4, 4], "127": [5, 4], "138": [6, 4], "139": [0, 5], "142": [1, 5], "143": [2, 5], "159": [3, 5], "171": [4, 5], "175": [5, 5], "191": [6, 5], "206": [0, 6], "207": [1, 6], "223": [2, 6], "239": [3, 6], "255": [4, 6]};
-        
-        let calculateBitmask = (x, y, matchFunc) => {
-            let N = matchFunc(x, y-1) ? 1 : 0;
-            let S = matchFunc(x, y+1) ? 2 : 0;
-            let E = matchFunc(x+1, y) ? 4 : 0;
-            let W = matchFunc(x-1, y) ? 8 : 0;
-            let NE = matchFunc(x+1, y-1) ? 16 : 0;
-            let NW = matchFunc(x-1, y-1) ? 32 : 0;
-            let SE = matchFunc(x+1, y+1) ? 64 : 0;
-            let SW = matchFunc(x-1, y+1) ? 128 : 0;
+        // ── TERRENO ─────────────────────────────────────────────────────────────
+        // Iterar en bandas diagonales (atrás → adelante) para pintor correcto
+        for (let sum = 0; sum < WORLD_WIDTH + WORLD_HEIGHT - 1; sum++) {
+            const xMin = Math.max(0, sum - WORLD_HEIGHT + 1);
+            const xMax = Math.min(WORLD_WIDTH - 1, sum);
+            for (let x = xMin; x <= xMax; x++) {
+                const y = sum - x;
+                const cell = world.getCell(x, y);
+                if (!cell) continue;
 
-            let mask = N | S | E | W | NE | NW | SE | SW;
-            if ((mask & 16) && !((mask & 1) && (mask & 4))) mask &= ~16;
-            if ((mask & 32) && !((mask & 1) && (mask & 8))) mask &= ~32;
-            if ((mask & 64) && !((mask & 2) && (mask & 4))) mask &= ~64;
-            if ((mask & 128) && !((mask & 2) && (mask & 8))) mask &= ~128;
-            return mask;
-        };
+                const { sx, sy } = this.isoProject(x, y);
+                const hw = ISO_W / 2;
+                const hh = ISO_H / 2;
 
-        let drawAutotile = (img, px, py, mask) => {
-            let coords = AUTOTILE_MAP[mask] || [0, 0];
-            let sx = coords[0] * CELL_SIZE;
-            let sy = coords[1] * CELL_SIZE;
-            this.ctx.drawImage(img, sx, sy, CELL_SIZE, CELL_SIZE, px, py, CELL_SIZE, CELL_SIZE);
-        };
+                // Determinar colores de bioma
+                let topColor, leftColor, rightColor, edgeColor;
+                if (cell.biome === BIOMES.GRASS) {
+                    topColor   = '#7cc654';
+                    leftColor  = '#5a9e42';
+                    rightColor = '#4a8a35';
+                    edgeColor  = '#3e7a2c';
+                } else { // SAND
+                    topColor   = '#f9ca24';
+                    leftColor  = '#d4a820';
+                    rightColor = '#b8901a';
+                    edgeColor  = '#a07a10';
+                }
 
-        // 0. Dibujar Terreno Base (Fondo infinito de pasto)
-        let startX = Math.floor(this.cameraX / CELL_SIZE);
-        let startY = Math.floor(this.cameraY / CELL_SIZE);
-        let endX = Math.ceil((this.cameraX + viewW) / CELL_SIZE);
-        let endY = Math.ceil((this.cameraY + viewH) / CELL_SIZE);
+                // Cara izquierda (NO visible si el tile es solo plano, pero da profundidad)
+                this.ctx.fillStyle = leftColor;
+                this.ctx.beginPath();
+                this.ctx.moveTo(sx,      sy + hh);
+                this.ctx.lineTo(sx + hw, sy + ISO_H);
+                this.ctx.lineTo(sx + hw, sy + ISO_H + 3);
+                this.ctx.lineTo(sx,      sy + hh + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
 
-        for (let y = startY - 1; y <= endY + 1; y++) {
-            for (let x = startX - 1; x <= endX + 1; x++) {
-                if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
-                    let cell = world.getCell(x, y);
-                    let px = x * CELL_SIZE;
-                    let py = y * CELL_SIZE;
-                    
-                    // Capa 1: Siempre pasto
-                    if (this.images && this.images.wakfu_pasto_solo_1) {
-                        let chunkX = Math.floor(x / 2);
-                        let chunkY = Math.floor(y / 2);
-                        
-                        // Generar pequeños sectores orgánicos para las distintas tonalidades
-                        // Un multiplicador más alto (0.5) hace que los sectores sean más pequeños
-                        let nx = chunkX * 0.5;
-                        let ny = chunkY * 0.5;
-                        let val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx * 0.5 + ny * 0.5)) / 3;
-                        
-                        // val va de -1 a 1. Lo pasamos a 0..3
-                        let sectorIndex = Math.floor((val + 1) * 2);
-                        if (sectorIndex < 0) sectorIndex = 0;
-                        if (sectorIndex > 3) sectorIndex = 3;
-                        
-                        let pastoArray = [
-                            this.images.wakfu_pasto_solo_1,
-                            this.images.wakfu_pasto_solo_2,
-                            this.images.wakfu_pasto_solo_3,
-                            this.images.wakfu_pasto_solo_4
-                        ];
-                        let img = pastoArray[sectorIndex] || pastoArray[0];
-                        
-                        let sWidth = img.width / 2;
-                        let sHeight = img.height / 2;
-                        let cellOffsetX = x - chunkX * 2;
-                        let cellOffsetY = y - chunkY * 2;
-                        let sx = cellOffsetX * sWidth;
-                        let sy = cellOffsetY * sHeight;
-                        
-                        this.ctx.drawImage(img, sx, sy, sWidth, sHeight, px, py, CELL_SIZE, CELL_SIZE);
-                    } else if (this.images && this.images.sprout_grass) {
-                        this.ctx.drawImage(this.images.sprout_grass, px, py, CELL_SIZE, CELL_SIZE);
-                    } else {
-                        this.ctx.fillStyle = '#86efac'; // Pasto
-                        this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                    }
+                // Cara derecha
+                this.ctx.fillStyle = rightColor;
+                this.ctx.beginPath();
+                this.ctx.moveTo(sx + hw,     sy + ISO_H);
+                this.ctx.lineTo(sx + ISO_W,  sy + hh);
+                this.ctx.lineTo(sx + ISO_W,  sy + hh + 3);
+                this.ctx.lineTo(sx + hw,     sy + ISO_H + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
 
-                    // Capa 2: Arena
-                    if (cell && cell.biome === BIOMES.SAND) {
-                        let isSand = (cx, cy) => {
-                            let c = world.getCell(cx, cy);
-                            return c && c.biome === BIOMES.SAND;
-                        };
-                        let mask = calculateBitmask(x, y, isSand);
-                        if (this.images && this.images.arena_autotile) {
-                            drawAutotile(this.images.arena_autotile, px, py, mask);
-                        } else {
-                            this.ctx.fillStyle = '#fcd34d'; // Arena
-                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                        }
-                    }
+                // Cara superior (rombo)
+                this.drawDiamond(sx, sy, topColor, edgeColor);
 
-                    // Capa 3: Agua y Puentes
-                    if (cell && (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE)) {
-                        let isWater = (cx, cy) => {
-                            let c = world.getCell(cx, cy);
-                            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
-                        };
-                        let mask = calculateBitmask(x, y, isWater);
-                        let waterImg = (cell.biome === BIOMES.SAND) ? this.images.agua_arena_autotile : this.images.agua_autotile;
-                        
-                        if (this.images && waterImg) {
-                            drawAutotile(waterImg, px, py, mask);
-                        } else {
-                            this.ctx.fillStyle = '#0ea5e9'; // Agua
-                            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                        }
-                        
-                        if (cell.type === RESOURCES.BRIDGE) {
-                            this.drawBridge(x, y);
-                        }
-                    }
+                // ── AGUA ──────────────────────────────────────────────────────────
+                if (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE) {
+                    const wave = Math.sin(timestamp * 0.002 + x * 0.6 + y * 0.6) * 0.06;
+
+                    // Cara lateral izquierda del agua
+                    this.ctx.fillStyle = '#1565a0';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(sx,      sy + hh);
+                    this.ctx.lineTo(sx + hw, sy + ISO_H);
+                    this.ctx.lineTo(sx + hw, sy + ISO_H + 3);
+                    this.ctx.lineTo(sx,      sy + hh + 3);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+
+                    // Cara lateral derecha del agua
+                    this.ctx.fillStyle = '#0e4d8a';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(sx + hw,    sy + ISO_H);
+                    this.ctx.lineTo(sx + ISO_W, sy + hh);
+                    this.ctx.lineTo(sx + ISO_W, sy + hh + 3);
+                    this.ctx.lineTo(sx + hw,    sy + ISO_H + 3);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+
+                    // Cara superior del agua (rombo animado)
+                    const alpha = (0.88 + wave).toFixed(2);
+                    this.drawDiamond(sx, sy, `rgba(28, 130, 210, ${alpha})`, '#1060a8');
+
+                    // Destello
+                    const shimX = sx + hw * 0.7 + Math.sin(timestamp * 0.004 + x + y) * 2;
+                    const shimY = sy + hh * 0.6;
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(shimX, shimY, 3, 1.2, 0.4, 0, Math.PI * 2);
+                    this.ctx.fill();
                 }
             }
         }
 
-        // 2. Dibujar Entidades y Objetos (Y-Sorted)
-        // Guardaremos todo en un array para dibujarlo ordenado por Y
-        let renderQueue = [];
+        // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
+        const renderQueue = [];
 
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             for (let x = 0; x < WORLD_WIDTH; x++) {
-                let cell = world.getCell(x, y);
+                const cell = world.getCell(x, y);
                 if (!cell) continue;
-                
+
                 let isAgentHome = false;
                 if (agent && agent.home) {
-                    if (x >= agent.home.x && x <= agent.home.x + 1 && y >= agent.home.y && y <= agent.home.y + 1) {
+                    if (x >= agent.home.x && x <= agent.home.x + 1 &&
+                        y >= agent.home.y && y <= agent.home.y + 1) {
                         isAgentHome = true;
                     }
                 }
 
-                if (cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.WATER && cell.type !== RESOURCES.BRIDGE) {
+                if (cell.type !== RESOURCES.EMPTY &&
+                    cell.type !== RESOURCES.WATER &&
+                    cell.type !== RESOURCES.BRIDGE) {
                     if (cell.type === RESOURCES.HOUSE && isAgentHome) {
-                        // Lo saltamos, se dibuja la casa grande
+                        // Se dibuja como bighouse
                     } else {
-                        renderQueue.push({ type: 'resource', x: x, y: y, cell: cell });
+                        renderQueue.push({ type: 'resource', x, y, cell });
                     }
                 }
             }
@@ -201,41 +208,40 @@ export class Renderer {
         if (agent.home) {
             renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y, homeStage: agent.homeStage });
         }
-
         if (enemies) {
-            enemies.forEach(e => renderQueue.push({ type: 'enemy', entity: e, y: e.y }));
+            enemies.forEach(e => renderQueue.push({ type: 'enemy', entity: e, x: e.x, y: e.y }));
         }
         if (wolf) {
-            renderQueue.push({ type: 'wolf', entity: wolf, y: wolf.y });
+            renderQueue.push({ type: 'wolf', entity: wolf, x: wolf.x, y: wolf.y });
         }
-        renderQueue.push({ type: 'agent', entity: agent, y: agent.y });
+        renderQueue.push({ type: 'agent', entity: agent, x: agent.x, y: agent.y });
 
-        // Ordenar por Y para dar perspectiva de profundidad
+        // Ordenar por profundidad isométrica: x + y ascendente (atrás → adelante)
         renderQueue.sort((a, b) => {
-            let ay = a.y;
-            let by = b.y;
-            if (a.type === 'bighouse') ay += 1; // Ajuste para que la casa grande cubra correctamente
-            if (b.type === 'bighouse') by += 1;
-            return ay - by;
+            let da = a.x + a.y;
+            let db = b.x + b.y;
+            if (a.type === 'bighouse') da += 1;
+            if (b.type === 'bighouse') db += 1;
+            if (da !== db) return da - db;
+            return a.x - b.x; // desempate por x
         });
 
-        // Dibujar todo en orden
-        for (let item of renderQueue) {
+        for (const item of renderQueue) {
             if (item.type === 'resource') {
-                let cell = item.cell;
-                switch(cell.type) {
-                    case RESOURCES.FOOD: 
+                const cell = item.cell;
+                switch (cell.type) {
+                    case RESOURCES.FOOD:
                     case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome); break;
-                    case RESOURCES.WOOD: 
+                    case RESOURCES.WOOD:
                     case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome); break;
-                    case RESOURCES.BUSH: 
+                    case RESOURCES.BUSH:
                     case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
-                    case RESOURCES.ROCK: 
+                    case RESOURCES.ROCK:
                     case RESOURCES.ROCK_EMPTY: this.drawRock(item.x, item.y, cell.type); break;
-                    case RESOURCES.HOUSE: this.drawHouse(item.x, item.y, cell.capacity); break;
-                    case RESOURCES.BOOK: this.drawBook(item.x, item.y, timestamp, world); break;
-                    case RESOURCES.TELESCOPE: this.drawTelescope(item.x, item.y); break;
-                    case RESOURCES.WALL: this.drawWall(item.x, item.y, cell.capacity); break;
+                    case RESOURCES.HOUSE:      this.drawHouse(item.x, item.y, cell.capacity); break;
+                    case RESOURCES.BOOK:       this.drawBook(item.x, item.y, timestamp, world); break;
+                    case RESOURCES.TELESCOPE:  this.drawTelescope(item.x, item.y); break;
+                    case RESOURCES.WALL:       this.drawWall(item.x, item.y, cell.capacity); break;
                 }
                 if (cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
                     this.drawResourceDots(item.x, item.y, cell.capacity);
@@ -247,614 +253,528 @@ export class Renderer {
             }
         }
 
-        // Draw particles
+        // Partículas (en espacio iso)
         if (particles) {
-            particles.draw(this.ctx);
+            particles.drawIso(this.ctx, this);
         }
 
         this.ctx.restore();
 
-        // Global Lighting Overlay (Day/Night Cycle)
+        // Iluminación global (día/noche/eclipse)
         this.drawGlobalLighting(timeOfDay, renderQueue, agent, particles, timestamp, isEclipse);
     }
 
-    drawShadow(cx, cy, width, height) {
-        // Disabled per user request, replaced by drop-shadow filter.
-    }
+    // ─── Sombra (desactivada, reemplazada por elipse en drawEntity) ─────────────
+    drawShadow(cx, cy, width, height) { /* desactivada */ }
 
-    drawContinuousWater(x, y, world, timestamp) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cell = world.getCell(x, y);
-        if (!cell) return;
-
-        let isWater = (dx, dy) => {
-            let c = world.getCell(x + dx, y + dy);
-            return c && (c.type === RESOURCES.WATER || c.type === RESOURCES.BRIDGE);
-        };
-
-        let isOuterTL = !isWater(0, -1) && !isWater(-1, 0);
-        let isOuterTR = !isWater(0, -1) && !isWater(1, 0);
-        let isOuterBR = !isWater(0, 1) && !isWater(1, 0);
-        let isOuterBL = !isWater(0, 1) && !isWater(-1, 0);
-
-        let isInnerTL = isWater(0, -1) && isWater(-1, 0) && !isWater(-1, -1);
-        let isInnerTR = isWater(0, -1) && isWater(1, 0) && !isWater(1, -1);
-        let isInnerBR = isWater(0, 1) && isWater(1, 0) && !isWater(1, 1);
-        let isInnerBL = isWater(0, 1) && isWater(-1, 0) && !isWater(-1, 1);
-
-        // Draw base water
-        if (this.images && this.images.wakfu_water) {
-            this.ctx.drawImage(this.images.wakfu_water, px, py, CELL_SIZE, CELL_SIZE);
-        } else if (this.images && this.images.bg_agua) {
-            this.ctx.drawImage(this.images.bg_agua, px, py, CELL_SIZE, CELL_SIZE);
-        } else if (this.images && this.images.sprout_water) {
-            let waterFrame = Math.floor((timestamp || 0) * 0.002) % 4;
-            this.ctx.drawImage(this.images.sprout_water, waterFrame * 16, 0, 16, 16, px, py, CELL_SIZE, CELL_SIZE);
-        } else {
-            this.ctx.fillStyle = '#0ea5e9';
-            this.ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-        }
-
-        let R = 5;
-        this.ctx.fillStyle = (cell.biome === 2) ? '#fcd34d' : '#86efac'; // 2 = SAND
-        
-        let drawCornerMask = (cx, cy, arcCenterX, arcCenterY, startAng, endAng) => {
-            this.ctx.beginPath();
-            this.ctx.moveTo(cx, cy);
-            this.ctx.arc(arcCenterX, arcCenterY, R, startAng, endAng, false);
-            this.ctx.lineTo(cx, cy);
-            this.ctx.fill();
-        };
-
-        // Outer corners (water is rounded, grass fills the corner tip)
-        if (isOuterTL) drawCornerMask(px, py, px + R, py + R, Math.PI, Math.PI * 1.5);
-        if (isOuterTR) drawCornerMask(px + CELL_SIZE, py, px + CELL_SIZE - R, py + R, Math.PI * 1.5, Math.PI * 2);
-        if (isOuterBR) drawCornerMask(px + CELL_SIZE, py + CELL_SIZE, px + CELL_SIZE - R, py + CELL_SIZE - R, 0, Math.PI * 0.5);
-        if (isOuterBL) drawCornerMask(px, py + CELL_SIZE, px + R, py + CELL_SIZE - R, Math.PI * 0.5, Math.PI);
-
-        // Inner corners (grass is rounded, protruding into water)
-        if (isInnerTL) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(px, py);
-            this.ctx.arc(px, py, R, 0, Math.PI * 0.5, false);
-            this.ctx.fill();
-        }
-        if (isInnerTR) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(px + CELL_SIZE, py);
-            this.ctx.arc(px + CELL_SIZE, py, R, Math.PI * 0.5, Math.PI, false);
-            this.ctx.fill();
-        }
-        if (isInnerBR) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(px + CELL_SIZE, py + CELL_SIZE);
-            this.ctx.arc(px + CELL_SIZE, py + CELL_SIZE, R, Math.PI, Math.PI * 1.5, false);
-            this.ctx.fill();
-        }
-        if (isInnerBL) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(px, py + CELL_SIZE);
-            this.ctx.arc(px, py + CELL_SIZE, R, Math.PI * 1.5, Math.PI * 2, false);
-            this.ctx.fill();
-        }
-    }
-
+    // ─── Árboles ────────────────────────────────────────────────────────────────
     drawFruitTree(x, y, type, biome) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const isAlive = type === RESOURCES.FOOD;
 
         let img = null;
         if (biome === BIOMES.SAND) {
-            img = (type === RESOURCES.FOOD) ? this.images.arbol_desierto_1 : this.images.arbol_desierto_2;
+            img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
         } else {
-            img = (type === RESOURCES.FOOD) ? this.images.frutal_1 : this.images.frutal_2;
+            img = isAlive ? this.images?.frutal_1 : this.images?.frutal_2;
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
+            const w = 40, h = 48;
+            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {
-            this.ctx.fillStyle = (type === RESOURCES.FOOD) ? '#ef4444' : '#b45309';
-            this.ctx.beginPath(); this.ctx.arc(cx, py, 16, 0, Math.PI*2); this.ctx.fill();
+            // Tronco
+            this.ctx.fillStyle = '#92400e';
+            this.ctx.fillRect(cx - 1.5, sy - 8, 3, 10);
+            // Copa
+            this.ctx.fillStyle = isAlive ? '#15803d' : '#7c2d12';
+            this.ctx.beginPath();
+            this.ctx.arc(cx, sy - 12, 9, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Frutos
+            if (isAlive) {
+                this.ctx.fillStyle = '#ef4444';
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cx + Math.cos(angle) * 6, sy - 12 + Math.sin(angle) * 5, 1.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
         }
     }
 
     drawTree(x, y, type, biome) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        this.drawShadow(cx, py + CELL_SIZE - 2, 10, 4);
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const isAlive = type === RESOURCES.WOOD;
 
         let img = null;
         if (biome === BIOMES.SAND) {
-            img = (type === RESOURCES.WOOD) ? this.images.arbol_desierto_1 : this.images.arbol_desierto_2;
+            img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
         } else {
-            img = (type === RESOURCES.WOOD) ? this.images.arbol_1 : this.images.arbol_2;
+            img = isAlive ? this.images?.arbol_1 : this.images?.arbol_2;
         }
 
         if (img) {
-            this.ctx.drawImage(img, px - 16, py - 32, 48, 48);
+            const w = 40, h = 48;
+            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {
-            this.ctx.fillStyle = '#14532d';
-            this.ctx.beginPath(); this.ctx.moveTo(cx, py - 16); this.ctx.lineTo(cx + 16, py + 16); this.ctx.lineTo(cx - 16, py + 16); this.ctx.fill();
+            this.ctx.fillStyle = isAlive ? '#78350f' : '#57534e';
+            this.ctx.fillRect(cx - 2, sy - 10, 4, 12);
+            this.ctx.fillStyle = isAlive ? '#166534' : '#44403c';
+            this.ctx.beginPath();
+            this.ctx.arc(cx, sy - 15, 10, 0, Math.PI * 2);
+            this.ctx.fill();
         }
     }
 
+    // ─── Arbusto ────────────────────────────────────────────────────────────────
     drawBush(x, y, type) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        this.drawShadow(cx, py + CELL_SIZE - 2, 8, 3);
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const isAlive = type === RESOURCES.BUSH;
 
-        let img = (type === RESOURCES.BUSH) ? this.images.arbusto_1 : this.images.arbusto_2;
+        let img = isAlive ? this.images?.arbusto_1 : this.images?.arbusto_2;
         if (img) {
-            this.ctx.drawImage(img, px - 8, py - 16, 32, 32);
+            const w = 26, h = 26;
+            this.ctx.drawImage(img, cx - w / 2, sy - h / 2 + 2, w, h);
         } else {
-            this.ctx.fillStyle = (type === RESOURCES.BUSH) ? '#22c55e' : '#b45309';
-            this.ctx.beginPath(); this.ctx.arc(cx, py + 8, 6, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = isAlive ? '#22c55e' : '#854d0e';
+            this.ctx.beginPath();
+            this.ctx.ellipse(cx, sy - 3, 8, 6, 0, 0, Math.PI * 2);
+            this.ctx.fill();
         }
     }
 
+    // ─── Roca ───────────────────────────────────────────────────────────────────
     drawRock(x, y, type) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        let cy = py + CELL_SIZE / 2;
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const isEmpty = type === RESOURCES.ROCK_EMPTY;
 
-        if (type === RESOURCES.ROCK_EMPTY) {
-            if (this.images && this.images.rocas_2) {
-                this.ctx.drawImage(this.images.rocas_2, px - 8, py - 16, 32, 32);
+        if (isEmpty) {
+            if (this.images?.rocas_2) {
+                this.ctx.drawImage(this.images.rocas_2, cx - 12, sy - 10, 24, 22);
             } else {
+                this.ctx.fillStyle = '#94a3b8';
+                this.ctx.beginPath();
+                this.ctx.ellipse(cx, sy - 1, 6, 3.5, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        } else {
+            if (this.images?.rocas_1) {
+                this.ctx.drawImage(this.images.rocas_1, cx - 12, sy - 14, 24, 24);
+            } else {
+                // Roca isométrica procedural
                 this.ctx.fillStyle = '#64748b';
-                this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 4, 0, Math.PI*2); this.ctx.fill();
-            }
-        } else {
-            if (this.images && this.images.rocas_1) {
-                this.ctx.drawImage(this.images.rocas_1, px - 8, py - 16, 32, 32);
-            } else if (this.images && this.images.sprout_objects) {
-                this.ctx.drawImage(this.images.sprout_objects, 112, 16, 16, 16, px, py, 16, 16);
-            } else {
-                this.ctx.fillStyle = '#475569';
-                this.ctx.beginPath(); this.ctx.arc(cx, cy+4, 6, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.moveTo(cx,      sy - 12);
+                this.ctx.lineTo(cx + 8,  sy - 5);
+                this.ctx.lineTo(cx + 6,  sy + 1);
+                this.ctx.lineTo(cx - 6,  sy + 1);
+                this.ctx.lineTo(cx - 8,  sy - 5);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Cara clara
+                this.ctx.fillStyle = '#94a3b8';
+                this.ctx.beginPath();
+                this.ctx.moveTo(cx - 1, sy - 12);
+                this.ctx.lineTo(cx + 4, sy - 6);
+                this.ctx.lineTo(cx - 3, sy - 4);
+                this.ctx.closePath();
+                this.ctx.fill();
             }
         }
     }
 
+    // ─── Puente ─────────────────────────────────────────────────────────────────
     drawBridge(x, y) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        if (this.images && this.images.sprout_bridge) {
-            // Wood Bridge.png: 80x48 → Un puente horizontal de 5 tiles de 16x16
-            // Usamos el tile del medio (col 1) para rellenar la celda
-            this.ctx.drawImage(this.images.sprout_bridge, 16, 16, 16, 16, px, py + 2, CELL_SIZE, CELL_SIZE - 4);
-        } else {
-            this.ctx.fillStyle = '#92400e';
-            this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
-        }
-    }
-
-    drawHouse(x, y, hp) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE/2;
-        
-        this.drawShadow(cx, py + CELL_SIZE - 2, 14, 6);
-
-        // Base de la casa en construcción
-        this.ctx.fillStyle = '#b45309';
-        this.ctx.fillRect(px + 2, py + 4, CELL_SIZE - 4, CELL_SIZE - 4);
-        
+        const { sx, sy } = this.getIsoBase(x, y);
+        this.drawDiamond(sx, sy, '#92400e', '#78350f');
         // Tablones
-        this.ctx.fillStyle = '#92400e'; 
-        for(let i=0; i<3; i++) {
-            this.ctx.fillRect(px + 2, py + 6 + i*4, CELL_SIZE - 4, 1);
-        }
-
-        // Techo plano / en construcción
-        this.ctx.fillStyle = '#991b1b';
-        this.ctx.fillRect(px, py, CELL_SIZE, 4);
-        
-        // Puerta chica
-        this.ctx.fillStyle = '#451a03';
-        this.ctx.fillRect(cx - 4, py + CELL_SIZE - 8, 8, 8);
-
-        if (hp < 10) {
-            let barWidth = 20;
-            let segWidth = barWidth / 10;
-            this.ctx.fillStyle = '#475569'; this.ctx.fillRect(cx - 10, py - 6, 20, 4);
-            this.ctx.fillStyle = '#22c55e'; this.ctx.fillRect(cx - 10, py - 6, segWidth * hp, 4);
-        }
+        this.ctx.strokeStyle = '#78350f';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(sx + 4,         sy + ISO_H / 2);
+        this.ctx.lineTo(sx + ISO_W - 4, sy + ISO_H / 2);
+        this.ctx.stroke();
     }
 
-    drawBigHouse(x, y, homeStage) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE;
-        
-        this.drawShadow(cx, py + CELL_SIZE * 2 - 4, 32, 10);
+    // ─── Casa en construcción ───────────────────────────────────────────────────
+    drawHouse(x, y, hp) {
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const h = 12; // altura de la caja
 
-        if (homeStage === 1 && this.images && this.images.casa_1) {
-            this.ctx.drawImage(this.images.casa_1, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
-            return;
-        } else if (homeStage === 2 && this.images && this.images.casa_2) {
-            this.ctx.drawImage(this.images.casa_2, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
-            return;
-        } else if (homeStage === 3 && this.images && this.images.casa_3) {
-            this.ctx.drawImage(this.images.casa_3, px - 24, py - 32, CELL_SIZE * 5, CELL_SIZE * 4);
-            return;
-        }
+        // Cara superior
+        this.drawDiamond(sx, sy - h, '#b45309', '#92400e');
 
-        // ---- Si tenemos el tileset del pack, lo usamos ----
-        // Wooden House.png: 112x80 → tiles de 16x16
-        // Wooden_House_Roof_Tilset.png: 112x80 → tiles de 16x16
-        if (this.images && this.images.sprout_house && this.images.sprout_roof) {
-            const W = CELL_SIZE; // 16px
-            // Wooden House.png (112x80): La casa completa ocupa las primeras 3 columnas
-            // col0=left wall, col1=door, col2=right, rows in 16px increments
-            // Dibujamos paredes (2x2 tiles)
-            this.ctx.drawImage(this.images.sprout_house, 0,  16, 16, 16, px,     py + W,   W, W); // Pared izq arriba
-            this.ctx.drawImage(this.images.sprout_house, 16, 16, 16, 16, px + W, py + W,   W, W); // Pared der arriba
-            this.ctx.drawImage(this.images.sprout_house, 0,  32, 16, 16, px,     py + W*2, W, W); // Pared izq abajo
-            this.ctx.drawImage(this.images.sprout_house, 16, 32, 16, 16, px + W, py + W*2, W, W); // Pared der abajo
-            // Techo (Wooden_House_Roof_Tilset.png: 112x80, usamos top 2x2 tiles)
-            this.ctx.drawImage(this.images.sprout_roof, 32, 0,  16, 16, px,     py,       W, W); // Techo izq
-            this.ctx.drawImage(this.images.sprout_roof, 48, 0,  16, 16, px + W, py,       W, W); // Techo der
-            this.ctx.drawImage(this.images.sprout_roof, 32, 16, 16, 16, px,     py + W/2, W, W); // Techo borde izq
-            this.ctx.drawImage(this.images.sprout_roof, 48, 16, 16, 16, px + W, py + W/2, W, W); // Techo borde der
-            return;
-        }
-
-        // ---- Fallback procedural ----
-        py -= 8;
-
-        // Base de piedra (Cimientos)
-        this.ctx.fillStyle = '#94a3b8'; 
-        this.ctx.fillRect(px - 4, py + 20, CELL_SIZE * 2 + 8, 16);
-        this.ctx.fillStyle = '#64748b'; 
-        for(let i=0; i<4; i++) {
-            this.ctx.fillRect(px - 2 + i*9, py + 22, 7, 5);
-            this.ctx.fillRect(px + 2 + i*9, py + 29, 7, 5);
-        }
-
-        // Paredes de madera
-        this.ctx.fillStyle = '#b45309'; 
-        this.ctx.fillRect(px - 2, py - 4, CELL_SIZE * 2 + 4, 24);
-        this.ctx.fillStyle = '#92400e'; 
-        for(let i=0; i<3; i++) {
-            this.ctx.fillRect(px - 2, py + i*8, CELL_SIZE * 2 + 4, 1);
-        }
-
-        // Puerta (Centro)
-        this.ctx.fillStyle = '#451a03'; 
-        this.ctx.fillRect(px + 10, py + 8, 12, 16);
-        this.ctx.fillStyle = '#f59e0b'; 
-        this.ctx.fillRect(px + 19, py + 16, 2, 2); // Pomo dorado
-
-        // Ventanas
-        let drawWindow = (wx, wy) => {
-            this.ctx.fillStyle = '#451a03'; // Marco
-            this.ctx.fillRect(wx - 1, wy - 1, 10, 12);
-            this.ctx.fillStyle = '#0ea5e9'; // Vidrio
-            this.ctx.fillRect(wx, wy, 8, 10);
-            this.ctx.fillStyle = '#38bdf8'; // Reflejo
-            this.ctx.fillRect(wx + 4, wy + 2, 2, 6);
-            this.ctx.fillStyle = '#451a03'; // Divisiones de vidrio
-            this.ctx.fillRect(wx, wy + 4, 8, 1);
-            this.ctx.fillRect(wx + 3, wy, 1, 10);
-        };
-        drawWindow(px - 1, py + 2); // Ventana izquierda
-        drawWindow(px + 23, py + 2); // Ventana derecha
-
-        // Techo principal rojo
-        this.ctx.fillStyle = '#991b1b'; 
+        // Cara izquierda
+        this.ctx.fillStyle = '#92400e';
         this.ctx.beginPath();
-        this.ctx.moveTo(px - 8, py - 4);
-        this.ctx.lineTo(cx, py - 20); // Pico del techo
-        this.ctx.lineTo(px + CELL_SIZE * 2 + 8, py - 4);
+        this.ctx.moveTo(sx,           sy - h + ISO_H / 2);
+        this.ctx.lineTo(sx + ISO_W/2, sy - h + ISO_H);
+        this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
+        this.ctx.lineTo(sx,           sy + ISO_H / 2);
         this.ctx.closePath();
         this.ctx.fill();
 
-        // Borde del techo (Madera gruesa)
+        // Cara derecha
         this.ctx.fillStyle = '#78350f';
         this.ctx.beginPath();
-        this.ctx.moveTo(px - 10, py - 2);
-        this.ctx.lineTo(cx, py - 22);
-        this.ctx.lineTo(cx, py - 18);
-        this.ctx.lineTo(px - 4, py + 2);
+        this.ctx.moveTo(sx + ISO_W/2, sy - h + ISO_H);
+        this.ctx.lineTo(sx + ISO_W,   sy - h + ISO_H / 2);
+        this.ctx.lineTo(sx + ISO_W,   sy + ISO_H / 2);
+        this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
         this.ctx.closePath();
         this.ctx.fill();
-        
+
+        if (hp < 10) {
+            this.ctx.fillStyle = '#475569';
+            this.ctx.fillRect(cx - 10, sy - h - 5, 20, 3);
+            this.ctx.fillStyle = '#22c55e';
+            this.ctx.fillRect(cx - 10, sy - h - 5, 20 * hp / 10, 3);
+        }
+    }
+
+    // ─── Casa grande ────────────────────────────────────────────────────────────
+    drawBigHouse(x, y, homeStage) {
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+
+        if (homeStage === 1 && this.images?.casa_1) {
+            this.ctx.drawImage(this.images.casa_1, cx - 44, sy - 52, 88, 68);
+            return;
+        } else if (homeStage === 2 && this.images?.casa_2) {
+            this.ctx.drawImage(this.images.casa_2, cx - 44, sy - 52, 88, 68);
+            return;
+        } else if (homeStage === 3 && this.images?.casa_3) {
+            this.ctx.drawImage(this.images.casa_3, cx - 44, sy - 52, 88, 68);
+            return;
+        }
+
+        // Casa isométrica procedural 2×2
+        const houseH = 22;
+
+        // Techo (rombo doble de ancho, centrado en cx)
+        const rx = cx - ISO_W;
+        this.ctx.fillStyle = '#991b1b';
         this.ctx.beginPath();
-        this.ctx.moveTo(px + CELL_SIZE * 2 + 10, py - 2);
-        this.ctx.lineTo(cx, py - 22);
-        this.ctx.lineTo(cx, py - 18);
-        this.ctx.lineTo(px + CELL_SIZE * 2 + 4, py + 2);
+        this.ctx.moveTo(cx,           sy - houseH);
+        this.ctx.lineTo(cx + ISO_W,   sy - houseH + ISO_H / 2);
+        this.ctx.lineTo(cx,           sy - houseH + ISO_H);
+        this.ctx.lineTo(cx - ISO_W,   sy - houseH + ISO_H / 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#7f1d1d';
+        this.ctx.lineWidth = 0.5;
+        this.ctx.stroke();
+
+        // Pared izquierda
+        this.ctx.fillStyle = '#b45309';
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx - ISO_W, sy - houseH + ISO_H / 2);
+        this.ctx.lineTo(cx,         sy - houseH + ISO_H);
+        this.ctx.lineTo(cx,         sy + ISO_H / 2);
+        this.ctx.lineTo(cx - ISO_W, sy);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Pared derecha
+        this.ctx.fillStyle = '#92400e';
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx,         sy - houseH + ISO_H);
+        this.ctx.lineTo(cx + ISO_W, sy - houseH + ISO_H / 2);
+        this.ctx.lineTo(cx + ISO_W, sy);
+        this.ctx.lineTo(cx,         sy + ISO_H / 2);
         this.ctx.closePath();
         this.ctx.fill();
 
         // Chimenea
         this.ctx.fillStyle = '#475569';
-        this.ctx.fillRect(px + 20, py - 26, 6, 12);
+        this.ctx.fillRect(cx + 5, sy - houseH - 7, 5, 7);
         this.ctx.fillStyle = '#334155';
-        this.ctx.fillRect(px + 19, py - 28, 8, 3);
+        this.ctx.fillRect(cx + 4, sy - houseH - 9, 7, 3);
     }
 
+    // ─── Libro mágico ───────────────────────────────────────────────────────────
     drawBook(x, y, timestamp, world) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        let cy = py + CELL_SIZE / 2;
-        let t = timestamp ? timestamp * 0.003 : 0;
-        let hover = Math.sin(t) * 4; 
+        const { cx, sy } = this.getIsoBase(x, y);
+        const t = (timestamp || 0) * 0.003;
+        const hover = Math.sin(t) * 3;
 
-        let cell = world.getCell(x, y);
-        let branchId = cell ? cell.capacity : 0;
-        
+        const cell = world.getCell(x, y);
+        const branchId = cell ? cell.capacity : 0;
+
         let img = null;
-        if (branchId === 0 && this.images && this.images.libro_astronomia) img = this.images.libro_astronomia;
-        if (branchId === 1 && this.images && this.images.libro_fauna) img = this.images.libro_fauna;
-        if (branchId === 2 && this.images && this.images.libro_herreria) img = this.images.libro_herreria;
+        if (branchId === 0 && this.images?.libro_astronomia) img = this.images.libro_astronomia;
+        if (branchId === 1 && this.images?.libro_fauna)      img = this.images.libro_fauna;
+        if (branchId === 2 && this.images?.libro_herreria)   img = this.images.libro_herreria;
 
         this.ctx.save();
-        this.ctx.translate(cx, cy + hover);
+        this.ctx.translate(cx, sy - 6 + hover);
 
-        // Aura
-        let aura = Math.abs(Math.sin(t*0.5)) * 5;
+        const aura = Math.abs(Math.sin(t * 0.5)) * 5;
         this.ctx.shadowColor = '#fef08a';
         this.ctx.shadowBlur = 10 + aura;
 
         if (img) {
-            this.ctx.drawImage(img, -CELL_SIZE/2, -CELL_SIZE/2, CELL_SIZE, CELL_SIZE);
+            const s = 14;
+            this.ctx.drawImage(img, -s / 2, -s / 2, s, s);
         } else {
-            // Tapas
-            this.ctx.fillStyle = '#431407'; 
-            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-12, -6); this.ctx.lineTo(-12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(12, -6); this.ctx.lineTo(12, 8); this.ctx.lineTo(0, 14); this.ctx.closePath(); this.ctx.fill();
-
-            // Hojas
-            this.ctx.fillStyle = '#fef08a'; 
-            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(-10, -5); this.ctx.lineTo(-10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.lineTo(10, -5); this.ctx.lineTo(10, 7); this.ctx.lineTo(0, 12); this.ctx.closePath(); this.ctx.fill();
-            
-            this.ctx.fillStyle = '#eab308';
-            this.ctx.fillRect(-2, 0, 4, 14);
+            this.ctx.fillStyle = '#431407';
+            this.ctx.beginPath();
+            this.ctx.moveTo(0,0); this.ctx.lineTo(-8,-4); this.ctx.lineTo(-8,6); this.ctx.lineTo(0,10);
+            this.ctx.closePath(); this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.moveTo(0,0); this.ctx.lineTo(8,-4); this.ctx.lineTo(8,6); this.ctx.lineTo(0,10);
+            this.ctx.closePath(); this.ctx.fill();
+            this.ctx.fillStyle = '#fef08a';
+            this.ctx.fillRect(-1, 0, 2, 10);
         }
-        
+
         this.ctx.restore();
     }
 
+    // ─── Telescopio ─────────────────────────────────────────────────────────────
     drawTelescope(x, y) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        let cy = py + CELL_SIZE / 2;
-        
-        if (this.images && this.images.telescopio) {
-            this.ctx.drawImage(this.images.telescopio, px - 8, py - 16, 32, 32);
+        const { cx, sy } = this.getIsoBase(x, y);
+
+        if (this.images?.telescopio) {
+            const w = 22, h = 26;
+            this.ctx.drawImage(this.images.telescopio, cx - w / 2, sy - h / 2, w, h);
         } else {
             this.ctx.save();
-            this.ctx.translate(cx, cy + 2);
-
+            this.ctx.translate(cx, sy - 4);
             this.ctx.strokeStyle = '#451a03';
-            this.ctx.lineWidth = 3 / ZOOM;
-            this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(-6, 12); this.ctx.stroke();
-            this.ctx.beginPath(); this.ctx.moveTo(0, 2); this.ctx.lineTo(6, 12); this.ctx.stroke();
-
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath(); this.ctx.moveTo(0,0); this.ctx.lineTo(-5,8); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(0,0); this.ctx.lineTo(5,8); this.ctx.stroke();
             this.ctx.fillStyle = '#f59e0b';
             this.ctx.rotate(-Math.PI / 5);
-            this.ctx.fillRect(-10, -4, 20, 8);
+            this.ctx.fillRect(-7, -3, 14, 5);
             this.ctx.fillStyle = '#0ea5e9';
-            this.ctx.fillRect(8, -3, 4, 6);
-
+            this.ctx.fillRect(6, -2, 3, 4);
             this.ctx.restore();
         }
     }
 
+    // ─── Muralla ────────────────────────────────────────────────────────────────
     drawWall(x, y, hp) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const wh = 9; // altura de la muralla
 
-        if (this.images && this.images.muralla) {
-            this.ctx.drawImage(this.images.muralla, px - 8, py - 16, 32, 32);
+        if (this.images?.muralla) {
+            this.ctx.drawImage(this.images.muralla, cx - 14, sy - wh - 2, 28, wh + ISO_H + 2);
         } else {
-            let cx = px + CELL_SIZE/2;
+            // Cara superior
+            this.drawDiamond(sx, sy - wh, '#64748b', '#475569');
+            // Cara izquierda
             this.ctx.fillStyle = '#475569';
-            this.ctx.fillRect(px, py + 4, CELL_SIZE, CELL_SIZE - 8);
-            
-            this.ctx.fillStyle = '#334155';
-            this.ctx.fillRect(px, py + CELL_SIZE/2, CELL_SIZE, CELL_SIZE/2 - 4);
-            
-            this.ctx.strokeStyle = '#1e293b';
-            this.ctx.lineWidth = 1;
             this.ctx.beginPath();
-            this.ctx.moveTo(px, py + CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE, py+CELL_SIZE/2);
-            this.ctx.moveTo(px+CELL_SIZE/2, py+4); this.ctx.lineTo(px+CELL_SIZE/2, py+CELL_SIZE/2);
-            this.ctx.moveTo(px+CELL_SIZE/4, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE/4, py+CELL_SIZE-4);
-            this.ctx.moveTo(px+CELL_SIZE*0.75, py+CELL_SIZE/2); this.ctx.lineTo(px+CELL_SIZE*0.75, py+CELL_SIZE-4);
-            this.ctx.stroke();
+            this.ctx.moveTo(sx,           sy - wh + ISO_H / 2);
+            this.ctx.lineTo(sx + ISO_W/2, sy - wh + ISO_H);
+            this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
+            this.ctx.lineTo(sx,           sy + ISO_H / 2);
+            this.ctx.closePath();
+            this.ctx.fill();
+            // Cara derecha
+            this.ctx.fillStyle = '#334155';
+            this.ctx.beginPath();
+            this.ctx.moveTo(sx + ISO_W/2, sy - wh + ISO_H);
+            this.ctx.lineTo(sx + ISO_W,   sy - wh + ISO_H / 2);
+            this.ctx.lineTo(sx + ISO_W,   sy + ISO_H / 2);
+            this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
+            this.ctx.closePath();
+            this.ctx.fill();
         }
     }
 
+    // ─── Puntos de capacidad ────────────────────────────────────────────────────
     drawResourceDots(x, y, capacity) {
-        let px = x * CELL_SIZE;
-        let py = y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        let startX = cx - (capacity * 6) / 2 + 3;
+        const { cx, sy } = this.getIsoBase(x, y);
+        const startX = cx - (capacity * 5) / 2 + 2.5;
         for (let i = 0; i < capacity; i++) {
             this.ctx.fillStyle = '#f8fafc';
             this.ctx.beginPath();
-            this.ctx.arc(startX + i * 6, py + CELL_SIZE - 2, 2, 0, Math.PI * 2);
+            this.ctx.arc(startX + i * 5, sy - 2, 1.5, 0, Math.PI * 2);
             this.ctx.fill();
         }
     }
 
+    // ─── Entidades (Gruni, enemigos, lobo) ──────────────────────────────────────
     drawEntity(entity, type, timestamp = 0) {
         if (type !== 'agent' && entity.hp <= 0) return;
 
-        let px = entity.x * CELL_SIZE;
-        let py = entity.y * CELL_SIZE;
-        let cx = px + CELL_SIZE / 2;
-        let cy = py + CELL_SIZE / 2;
-        
-        let t = timestamp || 0;
+        const { cx, sy, baseY } = this.getIsoBase(entity.x, entity.y);
+        const t = timestamp || 0;
+
+        // Animación de bobbing mientras se mueve
+        const moving = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
+        const bob = moving ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
+        const bodyY = baseY - 6 - bob;
+
+        // Sombra elíptica sobre el tile
+        this.ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, baseY, 5, 2.5, 0, 0, Math.PI * 2);
+        this.ctx.fill();
 
         if (type === 'agent') {
-            this.drawShadow(cx, cy + 6, 6, 2);
-
-            // Bola principal (cuerpo)
-            this.ctx.fillStyle = '#facc15'; // amarillo pastel
+            // Bola amarilla (Gruni)
+            this.ctx.fillStyle = '#facc15';
             this.ctx.beginPath();
-            this.ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            this.ctx.arc(cx, bodyY, 5.5, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.strokeStyle = '#ca8a04';
-            this.ctx.lineWidth = 0.8;
+            this.ctx.lineWidth = 0.7;
             this.ctx.stroke();
 
-            // Ojos
-            let eyeOffX = 0, eyeOffY = -1;
-            if (entity.dx > 0) eyeOffX = 2;
-            else if (entity.dx < 0) eyeOffX = -2;
-            else if (entity.dy < 0) eyeOffY = -3;
-            else if (entity.dy > 0) eyeOffY = 1;
+            // Ojos que siguen la dirección de movimiento
+            let eyeOffX = 0, eyeOffY = -0.5;
+            if (entity.dx > 0) eyeOffX = 1.5;
+            else if (entity.dx < 0) eyeOffX = -1.5;
+            else if (entity.dy < 0) eyeOffY = -2;
+            else if (entity.dy > 0) eyeOffY = 0.5;
 
             this.ctx.fillStyle = '#1e293b';
             this.ctx.beginPath();
-            this.ctx.arc(cx + eyeOffX - 2, cy + eyeOffY, 1.2, 0, Math.PI * 2);
-            this.ctx.arc(cx + eyeOffX + 2, cy + eyeOffY, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx + eyeOffX - 1.5, bodyY + eyeOffY, 1.1, 0, Math.PI * 2);
+            this.ctx.arc(cx + eyeOffX + 1.5, bodyY + eyeOffY, 1.1, 0, Math.PI * 2);
             this.ctx.fill();
 
         } else if (type === 'enemy') {
-            this.drawShadow(cx, cy + 6, 8, 3);
-
-            // Bola roja (enemigo)
+            // Bola roja (malo)
             this.ctx.fillStyle = '#f87171';
             this.ctx.beginPath();
-            this.ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+            this.ctx.arc(cx, bodyY, 6, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.strokeStyle = '#b91c1c';
-            this.ctx.lineWidth = 0.8;
+            this.ctx.lineWidth = 0.7;
             this.ctx.stroke();
 
-            // Ojos enojados
             this.ctx.fillStyle = '#1e293b';
             this.ctx.beginPath();
-            this.ctx.arc(cx - 2.5, cy - 1, 1.2, 0, Math.PI * 2);
-            this.ctx.arc(cx + 2.5, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx - 2, bodyY - 0.5, 1.1, 0, Math.PI * 2);
+            this.ctx.arc(cx + 2, bodyY - 0.5, 1.1, 0, Math.PI * 2);
             this.ctx.fill();
+
             // Cejas fruncidas
             this.ctx.strokeStyle = '#1e293b';
             this.ctx.lineWidth = 0.8;
             this.ctx.beginPath();
-            this.ctx.moveTo(cx - 4, cy - 3.5); this.ctx.lineTo(cx - 1.5, cy - 2.5);
-            this.ctx.moveTo(cx + 4, cy - 3.5); this.ctx.lineTo(cx + 1.5, cy - 2.5);
+            this.ctx.moveTo(cx - 3.5, bodyY - 3); this.ctx.lineTo(cx - 1, bodyY - 2);
+            this.ctx.moveTo(cx + 3.5, bodyY - 3); this.ctx.lineTo(cx + 1, bodyY - 2);
             this.ctx.stroke();
 
         } else if (type === 'wolf') {
-            this.drawShadow(cx, cy + 6, 6, 2);
-
             // Bola gris (lobo)
             this.ctx.fillStyle = '#94a3b8';
             this.ctx.beginPath();
-            this.ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            this.ctx.arc(cx, bodyY, 5.5, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.strokeStyle = '#475569';
-            this.ctx.lineWidth = 0.8;
+            this.ctx.lineWidth = 0.7;
             this.ctx.stroke();
 
-            // Ojos
             this.ctx.fillStyle = '#fde68a';
             this.ctx.beginPath();
-            this.ctx.arc(cx - 2, cy - 1, 1.2, 0, Math.PI * 2);
-            this.ctx.arc(cx + 2, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx - 1.5, bodyY - 0.5, 1.1, 0, Math.PI * 2);
+            this.ctx.arc(cx + 1.5, bodyY - 0.5, 1.1, 0, Math.PI * 2);
             this.ctx.fill();
         }
     }
 
+    // ─── Barra de HP (no se usa actualmente pero se preserva) ───────────────────
     drawHpBar(hp, max, color) {
-        let barWidth = 16;
-        let segWidth = barWidth / max;
+        const barWidth = 16;
+        const segWidth = barWidth / max;
         this.ctx.fillStyle = '#475569';
-        this.ctx.fillRect(-barWidth/2, -18, barWidth, 3);
+        this.ctx.fillRect(-barWidth / 2, -18, barWidth, 3);
         this.ctx.fillStyle = color;
-        this.ctx.fillRect(-barWidth/2, -18, segWidth * hp, 3);
-        // Borde oscuro
+        this.ctx.fillRect(-barWidth / 2, -18, segWidth * hp, 3);
         this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(-barWidth/2, -18, barWidth, 3);
+        this.ctx.strokeRect(-barWidth / 2, -18, barWidth, 3);
     }
 
+    // ─── Iluminación global (día / noche / eclipse) ──────────────────────────────
     drawGlobalLighting(timeOfDay, renderQueue, agent, particles, timestamp, isEclipse) {
         this.ctx.save();
-        
+
         let overlayColor = 'rgba(0,0,0,0)';
         let opacity = 0;
-        
+
         if (isEclipse) {
-            overlayColor = 'rgba(2, 6, 23, 0.85)'; // Oscuro profundo
+            overlayColor = 'rgba(2, 6, 23, 0.85)';
             opacity = 0.85;
         } else {
-            // Ciclo de día
-            // 600: Amanecer (naranja) -> 1200: Mediodía (claro) -> 1800: Atardecer (rosado) -> 2400/0: Noche (azul oscuro)
             if (timeOfDay > 1800 || timeOfDay < 500) {
-                // Noche - un tono azul más agradable y místico, menos grisáceo opresivo
                 opacity = 0.65;
-                overlayColor = `rgba(12, 18, 55, ${opacity})`; 
+                overlayColor = `rgba(12, 18, 55, ${opacity})`;
             } else if (timeOfDay >= 500 && timeOfDay <= 700) {
-                // Amanecer
                 opacity = 0.35;
                 overlayColor = `rgba(234, 100, 20, ${opacity})`;
             } else if (timeOfDay >= 1700 && timeOfDay <= 1800) {
-                // Atardecer
                 opacity = 0.35;
                 overlayColor = `rgba(190, 40, 80, ${opacity})`;
             }
         }
 
         if (opacity > 0) {
-            // Capa oscura principal
             this.ctx.globalCompositeOperation = 'source-over';
             this.ctx.fillStyle = overlayColor;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            // Luces (Glow) superpuestas en lugar de perforar el canvas
             this.ctx.globalCompositeOperation = 'lighter';
-            
-            let drawLight = (worldX, worldY, radius, intensity = 0.4, color = '255, 255, 200') => {
-                let px = (worldX * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraX * ZOOM;
-                let py = (worldY * CELL_SIZE + CELL_SIZE/2) * ZOOM - this.cameraY * ZOOM;
-                let grad = this.ctx.createRadialGradient(px, py, 2, px, py, radius);
+
+            // Convierte posición de grilla a posición en pantalla (con cámara iso)
+            const isoToScreen = (worldX, worldY) => {
+                const { sx, sy } = this.isoProject(worldX, worldY);
+                return {
+                    px: (sx + ISO_W / 2 - this.cameraX) * ZOOM,
+                    py: (sy + ISO_H / 2 - this.cameraY) * ZOOM
+                };
+            };
+
+            const drawLight = (worldX, worldY, radius, intensity = 0.4, color = '255, 255, 200') => {
+                const { px, py } = isoToScreen(worldX, worldY);
+                const grad = this.ctx.createRadialGradient(px, py, 2, px, py, radius);
                 grad.addColorStop(0, `rgba(${color}, ${intensity})`);
                 grad.addColorStop(1, `rgba(${color}, 0)`);
                 this.ctx.fillStyle = grad;
-                this.ctx.beginPath(); this.ctx.arc(px, py, radius, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, radius, 0, Math.PI * 2);
+                this.ctx.fill();
             };
 
-            // Luz del Agente
             if (agent) {
-                let pulse = Math.sin((timestamp||0) * 0.002) * 5;
+                const pulse = Math.sin((timestamp || 0) * 0.002) * 5;
                 drawLight(agent.x, agent.y, 90 + pulse, 0.35, '255, 240, 200');
             }
 
-            // Luz de casas grandes (iluminación de las ventanas)
-            for (let item of renderQueue) {
+            for (const item of renderQueue) {
                 if (item.type === 'bighouse') {
-                    // Casa ocupa 2x2. Centro es x+1, y+1
                     drawLight(item.x + 0.5, item.y + 0.5, 140, 0.4, '250, 180, 80');
                 }
             }
 
-            // Luz de luciérnagas
             if (particles) {
-                for (let p of particles.particles) {
+                for (const p of particles.particles) {
                     if (p.type === 'FIREFLY') {
-                        drawLight(p.x / CELL_SIZE - 0.5, p.y / CELL_SIZE - 0.5, 20, 0.6, '200, 255, 100');
+                        // p.x / p.y están en píxeles de mundo → convertir a grilla iso
+                        const gx = p.x / CELL_SIZE;
+                        const gy = p.y / CELL_SIZE;
+                        const { px, py } = isoToScreen(gx, gy);
+                        const grad = this.ctx.createRadialGradient(px, py, 0.5, px, py, 25);
+                        grad.addColorStop(0, 'rgba(200, 255, 150, 0.6)');
+                        grad.addColorStop(1, 'rgba(200, 255, 150, 0)');
+                        this.ctx.fillStyle = grad;
+                        this.ctx.beginPath();
+                        this.ctx.arc(px, py, 25, 0, Math.PI * 2);
+                        this.ctx.fill();
                     }
                 }
             }
         }
-        
+
+        this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.restore();
     }
 }

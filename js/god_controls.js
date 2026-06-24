@@ -1,6 +1,5 @@
 // js/god_controls.js
-import { RESOURCES, CELL_SIZE, ZOOM } from './world.js';
-
+import { RESOURCES, CELL_SIZE, ZOOM, ISO_W, ISO_H } from './world.js';
 import { Enemy } from './enemy.js';
 
 export class GodControls {
@@ -20,8 +19,8 @@ export class GodControls {
             btn.addEventListener('click', (e) => {
                 buttons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
-                let tool = btn.dataset.tool;
+
+                const tool = btn.dataset.tool;
                 if (tool === 'ENEMY') {
                     this.currentTool = 'ENEMY';
                 } else if (tool === 'clear') {
@@ -38,17 +37,17 @@ export class GodControls {
         });
 
         document.getElementById('btn-rain').addEventListener('click', () => {
-            for(let i=0; i<15; i++){
-                let x = Math.floor(Math.random() * this.world.grid[0].length);
-                let y = Math.floor(Math.random() * this.world.grid.length);
+            for (let i = 0; i < 15; i++) {
+                const x = Math.floor(Math.random() * this.world.grid[0].length);
+                const y = Math.floor(Math.random() * this.world.grid.length);
                 this.world.setCell(x, y, RESOURCES.WATER);
             }
         });
 
         document.getElementById('btn-lightning').addEventListener('click', () => {
-             for(let i=0; i<10; i++){
-                let x = Math.floor(Math.random() * this.world.grid[0].length);
-                let y = Math.floor(Math.random() * this.world.grid.length);
+            for (let i = 0; i < 10; i++) {
+                const x = Math.floor(Math.random() * this.world.grid[0].length);
+                const y = Math.floor(Math.random() * this.world.grid.length);
                 this.world.setCell(x, y, RESOURCES.EMPTY);
             }
         });
@@ -56,21 +55,28 @@ export class GodControls {
 
     handleCanvasClick(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Escala real del canvas vs CSS
-        const scaleX = this.canvas.width / rect.width;
+        const scaleX = this.canvas.width  / rect.width;
         const scaleY = this.canvas.height / rect.height;
-        const canvasX = (e.clientX - rect.left) * scaleX;
-        const canvasY = (e.clientY - rect.top) * scaleY;
 
-        // Desplazamiento de la cámara
+        // Coordenada en el canvas (píxeles físicos)
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top)  * scaleY;
+
+        // Coordenada en espacio iso (pre-zoom, con cámara)
         const camX = this.renderer ? (this.renderer.cameraX || 0) : 0;
         const camY = this.renderer ? (this.renderer.cameraY || 0) : 0;
 
-        const worldX = (canvasX / ZOOM) + camX;
-        const worldY = (canvasY / ZOOM) + camY;
+        const isoX = (canvasX / ZOOM) + camX;  // posición en espacio iso
+        const isoY = (canvasY / ZOOM) + camY;
 
-        const gridX = Math.floor(worldX / CELL_SIZE);
-        const gridY = Math.floor(worldY / CELL_SIZE);
+        // Conversión inversa isométrica:
+        // sx = (x - y) * ISO_W/2  →  x - y = sx / (ISO_W/2) = sx * 2/ISO_W
+        // sy = (x + y) * ISO_H/2  →  x + y = sy / (ISO_H/2) = sy * 2/ISO_H
+        const a = isoX * 2 / ISO_W;  // x - y
+        const b = isoY * 2 / ISO_H;  // x + y
+
+        const gridX = Math.floor((a + b) / 2);
+        const gridY = Math.floor((b - a) / 2);
 
         if (this.currentTool === 'ENEMY') {
             if (e.type === 'mousedown') {

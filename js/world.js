@@ -1,8 +1,10 @@
 // js/world.js
 export const CELL_SIZE = 16; // Base size for 16-bit tiles
-export const ZOOM = 3.5; // Visual scale multiplier
+export const ZOOM = 3.5;     // Visual scale multiplier
 export const WORLD_WIDTH = 60;
 export const WORLD_HEIGHT = 60;
+export const ISO_W = 32;     // Ancho del rombo isométrico (píxeles, pre-zoom)
+export const ISO_H = 16;     // Alto del rombo isométrico (píxeles, pre-zoom)
 
 export const RESOURCES = {
     EMPTY: 0,
