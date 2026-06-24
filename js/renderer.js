@@ -104,18 +104,18 @@ export class Renderer {
                 // Determinar colores de bioma
                 let topColor, leftColor, rightColor, edgeColor;
                 if (cell.biome === BIOMES.GRASS) {
-                    topColor   = '#7cc654';
                     leftColor  = '#5a9e42';
                     rightColor = '#4a8a35';
                     edgeColor  = '#3e7a2c';
+                    topColor   = '#7cc654'; // fallback
                 } else { // SAND
-                    topColor   = '#f9ca24';
                     leftColor  = '#d4a820';
                     rightColor = '#b8901a';
                     edgeColor  = '#a07a10';
+                    topColor   = '#f9ca24'; // fallback
                 }
 
-                // Cara izquierda (NO visible si el tile es solo plano, pero da profundidad)
+                // Caras laterales (dan profundidad 3D, siempre con color)
                 this.ctx.fillStyle = leftColor;
                 this.ctx.beginPath();
                 this.ctx.moveTo(sx,      sy + hh);
@@ -125,18 +125,37 @@ export class Renderer {
                 this.ctx.closePath();
                 this.ctx.fill();
 
-                // Cara derecha
                 this.ctx.fillStyle = rightColor;
                 this.ctx.beginPath();
-                this.ctx.moveTo(sx + hw,     sy + ISO_H);
-                this.ctx.lineTo(sx + ISO_W,  sy + hh);
-                this.ctx.lineTo(sx + ISO_W,  sy + hh + 3);
-                this.ctx.lineTo(sx + hw,     sy + ISO_H + 3);
+                this.ctx.moveTo(sx + hw,    sy + ISO_H);
+                this.ctx.lineTo(sx + ISO_W, sy + hh);
+                this.ctx.lineTo(sx + ISO_W, sy + hh + 3);
+                this.ctx.lineTo(sx + hw,    sy + ISO_H + 3);
                 this.ctx.closePath();
                 this.ctx.fill();
 
-                // Cara superior (rombo)
-                this.drawDiamond(sx, sy, topColor, edgeColor);
+                // Cara superior: imagen iso si está disponible, sino color sólido
+                if (cell.biome === BIOMES.GRASS && this.images) {
+                    // Variación orgánica por posición (igual que antes)
+                    const chunkX = Math.floor(x / 2);
+                    const chunkY = Math.floor(y / 2);
+                    const nx = chunkX * 0.5;
+                    const ny = chunkY * 0.5;
+                    const val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx * 0.5 + ny * 0.5)) / 3;
+                    let idx = Math.floor((val + 1) * 2);
+                    if (idx < 0) idx = 0;
+                    if (idx > 3) idx = 3;
+                    const isoImg = this.images[`pasto_iso_${idx + 1}`];
+
+                    if (isoImg) {
+                        // El tile iso ya tiene forma de rombo con fondo transparente
+                        this.ctx.drawImage(isoImg, sx, sy, ISO_W, ISO_H);
+                    } else {
+                        this.drawDiamond(sx, sy, topColor, edgeColor);
+                    }
+                } else {
+                    this.drawDiamond(sx, sy, topColor, edgeColor);
+                }
 
                 // ── AGUA ──────────────────────────────────────────────────────────
                 if (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE) {
