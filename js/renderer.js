@@ -703,182 +703,72 @@ export class Renderer {
         if (type === 'agent') {
             this.drawShadow(cx, cy + 6, 6, 2);
 
-            // dir: 0=abajo, 1=arriba, 2=izquierda, 3=derecha
-            let dir = 0;
-            if (entity.dx > 0) dir = 3;
-            else if (entity.dx < 0) dir = 2;
-            else if (entity.dy < 0) dir = 1;
-            else if (entity.dy > 0) dir = 0;
+            // Bola principal (cuerpo)
+            this.ctx.fillStyle = '#facc15'; // amarillo pastel
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ca8a04';
+            this.ctx.lineWidth = 0.8;
+            this.ctx.stroke();
 
-            let isMoving = (entity.dx !== 0 || entity.dy !== 0);
+            // Ojos
+            let eyeOffX = 0, eyeOffY = -1;
+            if (entity.dx > 0) eyeOffX = 2;
+            else if (entity.dx < 0) eyeOffX = -2;
+            else if (entity.dy < 0) eyeOffY = -3;
+            else if (entity.dy > 0) eyeOffY = 1;
 
-            if (this.images && this.images.gruni_walk) {
-                let img = null, fW, fH, fCount, fRow, flip = false;
-                let isActioning = entity.isActioning;
-                let animSpeed = 0.008;
-                let isSpritesheet = true;
-
-                if (entity.isAttacking && this.images.gruni_attack) {
-                    img = this.images.gruni_attack;
-                    fW = 219; fH = 284; fCount = 5; animSpeed = 0.012;
-                    if (dir === 1) fRow = 1; // Arriba
-                    else if (dir === 2) { fRow = 0; } // Izquierda = Frontal
-                    else if (dir === 3) { fRow = 0; flip = true; } // Derecha = Frontal reflejado
-                    else fRow = 0; // Abajo
-                } else if (isActioning) {
-                    animSpeed = 0.008;
-                    if (entity.state === 'SEEK_ROCK' && this.images.gruni_mine) {
-                        img = this.images.gruni_mine;
-                        fW = 165; fH = 305; fCount = 5;
-                        if (dir === 2) { fRow = 1; } // Izquierda
-                        else if (dir === 3) { fRow = 1; flip = true; } // Derecha = Izquierda reflejada
-                        else { fRow = 0; } // Abajo/Arriba = Frontal
-                    } else if (this.images.gruni_axe) {
-                        // Talar / Construir
-                        img = this.images.gruni_axe;
-                        fW = 157; fH = 280; fCount = 6;
-                        if (dir === 1) fRow = 1;
-                        else if (dir === 2) fRow = 3;
-                        else if (dir === 3) fRow = 2;
-                        else fRow = 0;
-                    }
-                }
-                
-                let frame = 0;
-                
-                // Fallback a caminar/correr si no se seteó imagen
-                if (!img) {
-                    animSpeed = 0.008;
-                    fW = 78; fH = 136; fCount = 5;
-                    
-                    if (dir === 1) {
-                        fCount = 4; // La animación de espalda tiene 4 fotogramas
-                    }
-                    
-                    frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
-                    
-                    if (dir === 2 && this.images[`gruni_walk_side_${frame + 1}`]) { 
-                        img = this.images[`gruni_walk_side_${frame + 1}`];
-                        isSpritesheet = false;
-                        flip = true;
-                    } else if (dir === 3 && this.images[`gruni_walk_side_${frame + 1}`]) {
-                        img = this.images[`gruni_walk_side_${frame + 1}`];
-                        isSpritesheet = false;
-                    } else if (dir === 1 && this.images[`gruni_walk_back_${frame + 1}`]) { 
-                        img = this.images[`gruni_walk_back_${frame + 1}`];
-                        isSpritesheet = false;
-                    } else if (this.images[`gruni_walk_front_${frame + 1}`]) {
-                        img = this.images[`gruni_walk_front_${frame + 1}`];
-                        isSpritesheet = false;
-                    }
-
-                    // Fallback de seguridad al spritesheet viejo
-                    if (!img) {
-                        img = this.images.gruni_walk;
-                        isSpritesheet = true;
-                        if (img) {
-                            fW = img.width / 5;
-                            fH = img.height / 4;
-                        }
-                        if (dir === 1) fRow = 1;
-                        else if (dir === 2) fRow = 3;
-                        else if (dir === 3) fRow = 2;
-                        else fRow = 0;
-                    }
-                } else {
-                    frame = (isMoving || isActioning || entity.isAttacking) ? (Math.floor(t * animSpeed) % fCount) : 0;
-                }
-
-                let scale = 0.32; 
-                let drawW = fW * scale;
-                let drawH = fH * scale;
-
-                let drawX = cx - drawW / 2;
-                let drawY = py + CELL_SIZE - drawH + 4; 
-
-                this.ctx.save();
-                if (flip) {
-                    this.ctx.translate(cx, 0);
-                    this.ctx.scale(-1, 1);
-                    this.ctx.translate(-cx, 0);
-                }
-                
-                if (isSpritesheet) {
-                    this.ctx.drawImage(img, frame * fW, fRow * fH, fW, fH, drawX, drawY, drawW, drawH);
-                } else {
-                    this.ctx.drawImage(img, 0, 0, fW, fH, drawX, drawY, drawW, drawH);
-                }
-                this.ctx.restore();
-
-            } else {
-                this.ctx.fillStyle = '#ef4444';
-                this.ctx.fillRect(px + 4, py + 4, 8, 8);
-            }
+            this.ctx.fillStyle = '#1e293b';
+            this.ctx.beginPath();
+            this.ctx.arc(cx + eyeOffX - 2, cy + eyeOffY, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx + eyeOffX + 2, cy + eyeOffY, 1.2, 0, Math.PI * 2);
+            this.ctx.fill();
 
         } else if (type === 'enemy') {
             this.drawShadow(cx, cy + 6, 8, 3);
-            
-            let dir = 0;
-            if (entity.lastDx > 0) dir = 3;
-            else if (entity.lastDx < 0) dir = 2;
-            else if (entity.lastDy < 0) dir = 1;
-            else if (entity.lastDy > 0) dir = 0;
-            
-            let animSpeed = 3; // ticks por frame (a 500ms/tick = ~1.5 seg por ciclo completo)
-            let fCount = 4;
-            let frame = Math.floor(entity.animationTimer / animSpeed) % fCount;
-            
-            let img = null;
-            let flip = false;
-            
-            if (dir === 2 && this.images[`malo_walk_side_${frame + 1}`]) { 
-                img = this.images[`malo_walk_side_${frame + 1}`];
-                flip = true;
-            } else if (dir === 3 && this.images[`malo_walk_side_${frame + 1}`]) {
-                img = this.images[`malo_walk_side_${frame + 1}`];
-            } else if (this.images[`malo_walk_front_${frame + 1}`]) {
-                img = this.images[`malo_walk_front_${frame + 1}`];
-            }
 
-            if (img) {
-                let fW = img.width || 78;
-                let fH = img.height || 136;
-                let scale = 0.32; // misma escala que Gruni
-                let drawW = fW * scale;
-                let drawH = fH * scale;
+            // Bola roja (enemigo)
+            this.ctx.fillStyle = '#f87171';
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#b91c1c';
+            this.ctx.lineWidth = 0.8;
+            this.ctx.stroke();
 
-                let drawX = cx - drawW / 2;
-                let drawY = py + CELL_SIZE - drawH + 4; 
+            // Ojos enojados
+            this.ctx.fillStyle = '#1e293b';
+            this.ctx.beginPath();
+            this.ctx.arc(cx - 2.5, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx + 2.5, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Cejas fruncidas
+            this.ctx.strokeStyle = '#1e293b';
+            this.ctx.lineWidth = 0.8;
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx - 4, cy - 3.5); this.ctx.lineTo(cx - 1.5, cy - 2.5);
+            this.ctx.moveTo(cx + 4, cy - 3.5); this.ctx.lineTo(cx + 1.5, cy - 2.5);
+            this.ctx.stroke();
 
-                this.ctx.save();
-                if (flip) {
-                    this.ctx.translate(cx, 0);
-                    this.ctx.scale(-1, 1);
-                    this.ctx.translate(-cx, 0);
-                }
-                
-                this.ctx.drawImage(img, 0, 0, fW, fH, drawX, drawY, drawW, drawH);
-                this.ctx.restore();
-            } else if (this.images && this.images.sprout_cow) {
-                let cowDir = 0;
-                if (entity.lastDx > 0) cowDir = 2;
-                else if (entity.lastDx < 0) cowDir = 1;
-                let cowFrame = Math.floor(t * 0.004) % 2;
-                this.ctx.drawImage(this.images.sprout_cow, cowFrame * 48, cowDir * 16, 48, 16, px - 8, py - 8, 32, 20);
-            } else {
-                this.ctx.fillStyle = '#d8b4fe';
-                this.ctx.fillRect(px + 4, py + 4, 8, 8);
-            }
         } else if (type === 'wolf') {
             this.drawShadow(cx, cy + 6, 6, 2);
-            if (this.images && this.images.sprout_chicken) {
-                // Free Chicken Sprites.png: 64x32 → 4 frames de 16x16 en 2 filas
-                let chickFrame = Math.floor(t * 0.006) % 2;
-                this.ctx.drawImage(this.images.sprout_chicken, chickFrame * 16, 0, 16, 16, px, py, 20, 20);
-            } else {
-                this.ctx.fillStyle = '#94a3b8';
-                this.ctx.fillRect(px + 4, py + 4, 8, 8);
-            }
+
+            // Bola gris (lobo)
+            this.ctx.fillStyle = '#94a3b8';
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#475569';
+            this.ctx.lineWidth = 0.8;
+            this.ctx.stroke();
+
+            // Ojos
+            this.ctx.fillStyle = '#fde68a';
+            this.ctx.beginPath();
+            this.ctx.arc(cx - 2, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.arc(cx + 2, cy - 1, 1.2, 0, Math.PI * 2);
+            this.ctx.fill();
         }
     }
 

@@ -40,10 +40,10 @@ export class World {
                 const rand = Math.random();
                 let type = RESOURCES.EMPTY;
                 
-                if (rand < 0.06) type = RESOURCES.FOOD;
-                else if (rand < 0.10) type = RESOURCES.WOOD;
-                else if (rand < 0.14) type = RESOURCES.BUSH;
-                else if (rand < 0.17) type = RESOURCES.ROCK;
+                if (rand < 0.03) type = RESOURCES.FOOD;      // 3% comida
+                else if (rand < 0.05) type = RESOURCES.WOOD;  // 2% madera
+                else if (rand < 0.07) type = RESOURCES.BUSH;  // 2% arbusto
+                else if (rand < 0.08) type = RESOURCES.ROCK;  // 1% roca
 
                 let capacity = 0;
                 if (type === RESOURCES.WOOD) capacity = Math.floor(Math.random() * 3) + 2; // 2-4 wood
@@ -235,38 +235,35 @@ export class World {
     }
 
     regenLoop(agent) {
-        for (let i = 0; i < 2; i++) {
-            if (Math.random() < 0.2) { // 20% de probabilidad por intento
-                let x = Math.floor(Math.random() * WORLD_WIDTH);
-                let y = Math.floor(Math.random() * WORLD_HEIGHT);
-                
-                // Evitar spawnear recursos muy cerca de la casa para dejar espacio a las murallas
-                if (agent && agent.home) {
-                    let hx = agent.home.x;
-                    let hy = agent.home.y;
-                    // La casa ocupa (hx, hy) hasta (hx+1, hy+1). Dejamos 2 casilleros de margen.
-                    if (x >= hx - 2 && x <= hx + 3 && y >= hy - 2 && y <= hy + 3) {
-                        continue;
-                    }
+        // Solo 1 intento por tick, con 5% de probabilidad → mucho más lento
+        if (Math.random() < 0.05) {
+            let x = Math.floor(Math.random() * WORLD_WIDTH);
+            let y = Math.floor(Math.random() * WORLD_HEIGHT);
+            
+            // Evitar spawnear recursos muy cerca de la casa para dejar espacio a las murallas
+            if (agent && agent.home) {
+                let hx = agent.home.x;
+                let hy = agent.home.y;
+                if (x >= hx - 2 && x <= hx + 3 && y >= hy - 2 && y <= hy + 3) {
+                    return;
                 }
+            }
 
-                if (this.grid[y][x].type === RESOURCES.EMPTY) {
-                    const r = Math.random();
-                    let type = RESOURCES.FOOD; // 30% comida
-                    if (r < 0.25) type = RESOURCES.WOOD; // 25% madera
-                    else if (r < 0.50) type = RESOURCES.ROCK; // 25% roca
-                    else if (r < 0.65) type = RESOURCES.BUSH; // 15% arbusto
-                    else if (r < 0.80) type = RESOURCES.WATER; // 15% agua
-                    
-                    this.setCell(x, y, type);
-                } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY || 
-                           this.grid[y][x].type === RESOURCES.FOOD_EMPTY || 
-                           this.grid[y][x].type === RESOURCES.BUSH_EMPTY ||
-                           this.grid[y][x].type === RESOURCES.ROCK_EMPTY) {
-                    // Desaparecen con el tiempo
-                    if (Math.random() < 0.5) {
-                        this.grid[y][x].type = RESOURCES.EMPTY;
-                    }
+            if (this.grid[y][x].type === RESOURCES.EMPTY) {
+                const r = Math.random();
+                let type = RESOURCES.FOOD;
+                if (r < 0.30) type = RESOURCES.WOOD;
+                else if (r < 0.50) type = RESOURCES.BUSH;
+                // Sin regeneración de roca ni agua espontánea
+                
+                this.setCell(x, y, type);
+            } else if (this.grid[y][x].type === RESOURCES.WOOD_EMPTY || 
+                       this.grid[y][x].type === RESOURCES.FOOD_EMPTY || 
+                       this.grid[y][x].type === RESOURCES.BUSH_EMPTY ||
+                       this.grid[y][x].type === RESOURCES.ROCK_EMPTY) {
+                // Desaparecen con el tiempo
+                if (Math.random() < 0.7) {
+                    this.grid[y][x].type = RESOURCES.EMPTY;
                 }
             }
         }
