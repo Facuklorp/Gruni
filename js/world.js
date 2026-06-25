@@ -137,7 +137,11 @@ export class World {
                 }
             }
             let tv = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x].terrainVariant : Math.floor(Math.random() * 4);
-            this.grid[y][x] = { type: type, capacity: cap, terrainVariant: tv };
+            // Preservar el bioma existente; si no existe, recalcularlo por distancia al centro
+            let existingBiome = (this.grid[y] && this.grid[y][x] && this.grid[y][x].biome !== undefined)
+                ? this.grid[y][x].biome
+                : (Math.sqrt((x - WORLD_WIDTH / 2) ** 2 + (y - WORLD_HEIGHT / 2) ** 2) < 22 ? BIOMES.GRASS : BIOMES.SAND);
+            this.grid[y][x] = { type: type, capacity: cap, terrainVariant: tv, biome: existingBiome };
         }
     }
 
