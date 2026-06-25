@@ -87,6 +87,65 @@ export class Renderer {
         this.ctx.scale(ZOOM, ZOOM);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
+        // ── FONDO: rellenar con color arena para eliminar el vacío negro ────────
+        // Extendemos tiles de arena MAS ALLÁ de los límites del mundo real
+        // para que jamas aparezca el fondo negro en los extremos.
+        // Calculamos cuántos tiles extra necesitamos basados en el viewport.
+        const EXTRA = Math.ceil(Math.max(this.canvas.width, this.canvas.height) / (ISO_W * ZOOM)) + 4;
+        const sumMin = -(EXTRA * 2);
+        const sumMax = WORLD_WIDTH + WORLD_HEIGHT - 1 + EXTRA * 2;
+        for (let sum = sumMin; sum < sumMax; sum++) {
+            const xMin = Math.max(-EXTRA, sum - (WORLD_HEIGHT - 1 + EXTRA));
+            const xMax = Math.min(WORLD_WIDTH - 1 + EXTRA, sum + EXTRA);
+            for (let x = xMin; x <= xMax; x++) {
+                const y = sum - x;
+                // Solo dibujar si está FUERA del mundo real (dentro se dibuja en el loop principal)
+                if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) continue;
+
+                const { sx, sy } = this.isoProject(x, y);
+                const hw = ISO_W / 2;
+                const hh = ISO_H / 2;
+
+                // Cara lateral izquierda (extensión)
+                this.ctx.fillStyle = '#d4a820';
+                this.ctx.beginPath();
+                this.ctx.moveTo(sx,      sy + hh);
+                this.ctx.lineTo(sx + hw, sy + ISO_H);
+                this.ctx.lineTo(sx + hw, sy + ISO_H + 3);
+                this.ctx.lineTo(sx,      sy + hh + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                // Cara lateral derecha (extensión)
+                this.ctx.fillStyle = '#b8901a';
+                this.ctx.beginPath();
+                this.ctx.moveTo(sx + hw,    sy + ISO_H);
+                this.ctx.lineTo(sx + ISO_W, sy + hh);
+                this.ctx.lineTo(sx + ISO_W, sy + hh + 3);
+                this.ctx.lineTo(sx + hw,    sy + ISO_H + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                // Cara superior — imagen ISO de arena si está disponible
+                if (this.images) {
+                    const ax = x * 0.37;
+                    const ay = y * 0.41;
+                    const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
+                    let aidx = Math.floor((aval + 1) * 1.5);
+                    if (aidx < 0) aidx = 0;
+                    if (aidx > 2) aidx = 2;
+                    const arenaImg = this.images[`arena_iso_${aidx + 1}`];
+                    if (arenaImg) {
+                        this.ctx.drawImage(arenaImg, sx, sy, ISO_W, ISO_H);
+                    } else {
+                        this.drawDiamond(sx, sy, '#f9ca24', '#a07a10');
+                    }
+                } else {
+                    this.drawDiamond(sx, sy, '#f9ca24', '#a07a10');
+                }
+            }
+        }
+
         // ── TERRENO ─────────────────────────────────────────────────────────────
         // Iterar en bandas diagonales (atrás → adelante) para pintor correcto
         for (let sum = 0; sum < WORLD_WIDTH + WORLD_HEIGHT - 1; sum++) {
@@ -136,7 +195,7 @@ export class Renderer {
 
                 // Cara superior: imagen iso si está disponible, sino color sólido
                 if (cell.biome === BIOMES.GRASS && this.images) {
-                    // Variación orgánica por posición (igual que antes)
+                    // Variación orgánica por posición — 4 variantes de pasto
                     const chunkX = Math.floor(x / 2);
                     const chunkY = Math.floor(y / 2);
                     const nx = chunkX * 0.5;
@@ -148,8 +207,22 @@ export class Renderer {
                     const isoImg = this.images[`pasto_iso_${idx + 1}`];
 
                     if (isoImg) {
-                        // El tile iso ya tiene forma de rombo con fondo transparente
                         this.ctx.drawImage(isoImg, sx, sy, ISO_W, ISO_H);
+                    } else {
+                        this.drawDiamond(sx, sy, topColor, edgeColor);
+                    }
+                } else if (cell.biome === BIOMES.SAND && this.images) {
+                    // Variación orgánica por posición — 3 variantes de arena
+                    const ax = x * 0.37;
+                    const ay = y * 0.41;
+                    const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
+                    let aidx = Math.floor((aval + 1) * 1.5); // 0, 1, 2
+                    if (aidx < 0) aidx = 0;
+                    if (aidx > 2) aidx = 2;
+                    const arenaImg = this.images[`arena_iso_${aidx + 1}`];
+
+                    if (arenaImg) {
+                        this.ctx.drawImage(arenaImg, sx, sy, ISO_W, ISO_H);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
