@@ -1,14 +1,13 @@
 """
-make_iso_arena.py  v2
-Genera 3 tiles isometricos de arena con tonalidades MUY distintas
-y detalles de granos/ondas visibles al estilo pixel-art.
+make_iso_arena.py  v3
+3 tiles de arena con variaciones MUY SUTILES entre si,
+como los 4 tiles de pasto (misma familia de color, patron diferente).
 
-Variantes:
-  arena_iso_1  -> Arena dorada viva      (amarillo intenso)
-  arena_iso_2  -> Arena palida blanquecina (crema claro)
-  arena_iso_3  -> Arena rojiza ocre      (naranja terroso)
-
-Salida: Biomas/ARENA/iso/ (128x64 px, RGBA, fondo transparente)
+Base comun: amarillo-dorado calido ~(215, 175, 70)
+Las 3 variantes solo difieren en:
+  - brillo interno (+/- 15 niveles maximo)
+  - densidad de grano
+  - angulo de ondula de viento
 """
 
 from PIL import Image, ImageFilter
@@ -16,12 +15,12 @@ import os, math, random
 
 ISO_W    = 128
 ISO_H    = 64
-TEX_SIZE = 256   # textura fuente cuadrada
+TEX_SIZE = 256
 
 OUT_DIR = r"C:\Users\tecno\OneDrive\Documentos\Hola\Otros\Grunis\Biomas\ARENA\iso"
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# ── Ruido value-noise con interpolacion suave ─────────────────────────────────
+# ── Noise ─────────────────────────────────────────────────────────────────────
 def fade(t): return t*t*t*(t*(t*6-15)+10)
 def lerp(a, b, t): return a + (b-a)*t
 
@@ -43,7 +42,6 @@ def value_noise(size, scale, seed=0):
     return out
 
 def fbm(size, octaves, base_scale, seed=0):
-    """Fractal Brownian Motion: suma octavas de ruido."""
     result = [[0.0]*size for _ in range(size)]
     amp, total = 1.0, 0.0
     for o in range(octaves):
@@ -61,144 +59,114 @@ def fbm(size, octaves, base_scale, seed=0):
     return result
 
 def clamp(v): return max(0, min(255, int(v)))
+
 def blend(c1, c2, t):
+    t = max(0.0, min(1.0, t))
     return tuple(clamp(c1[i] + (c2[i]-c1[i])*t) for i in range(3))
 
-# ── Ondas de arena (ripples) ─────────────────────────────────────────────────
 def ripple(x, y, freq, angle, amp):
-    """Onda sinusoidal orientada — simula ondulas de viento en la arena."""
     nx = math.cos(angle)*x + math.sin(angle)*y
     return (math.sin(nx * freq * math.pi * 2) + 1) / 2 * amp
 
-# ── Paletas ───────────────────────────────────────────────────────────────────
+# ── Paletas — misma familia dorada, variaciones muy leves ─────────────────────
+# Color base compartido: dorado arena calido
+BASE  = (215, 178,  72)   # dorado medio — comun a los 3
+DARK  = (185, 148,  45)   # sombra leve  (solo ~30 niveles mas oscuro)
+LITE  = (238, 208, 105)   # brillo leve  (solo ~30 niveles mas claro)
+
 PALETTES = [
-    {   # 1 — Arena dorada viva
-        "name":   "arena_iso_1",
-        "c_base": (220, 170,  55),   # dorado medio
-        "c_dark": (165, 110,  10),   # sombra oscura
-        "c_lite": (255, 230, 120),   # brillo calido
-        "c_spec": (240, 195,  70),   # especular
-        "ripple_amp":   0.18,        # ondulas suaves
-        "ripple_freq":  3.5,
-        "ripple_angle": math.radians(30),
-        "grain_scale":  12,
-        "macro_scale":  80,
-        "contrast":     0.55,
+    {
+        # Variante 1: ligeramente mas brillante, grano fino
+        "name":          "arena_iso_1",
+        "c_base":        BASE,
+        "c_dark":        DARK,
+        "c_lite":        (242, 212, 108),   # +4 sobre LITE
+        "contrast":      0.22,              # diferencia de tono muy baja
+        "ripple_amp":    0.08,
+        "ripple_freq":   3.0,
+        "ripple_angle":  math.radians(25),
+        "grain_scale":   18,
+        "macro_scale":   80,
         "seed": 42,
     },
-    {   # 2 — Arena palida blanquecina
-        "name":   "arena_iso_2",
-        "c_base": (235, 218, 170),   # crema palido
-        "c_dark": (190, 165, 100),   # sombra suave
-        "c_lite": (255, 248, 225),   # casi blanco
-        "c_spec": (245, 232, 195),
-        "ripple_amp":   0.10,        # ondulas muy suaves
-        "ripple_freq":  4.0,
-        "ripple_angle": math.radians(15),
-        "grain_scale":  16,
-        "macro_scale":  90,
-        "contrast":     0.28,
+    {
+        # Variante 2: tono medio, grano medio, ondula diferente
+        "name":          "arena_iso_2",
+        "c_base":        BASE,
+        "c_dark":        (180, 143,  40),   # -5 sobre DARK
+        "c_lite":        LITE,
+        "contrast":      0.20,
+        "ripple_amp":    0.07,
+        "ripple_freq":   3.8,
+        "ripple_angle":  math.radians(10),
+        "grain_scale":   14,
+        "macro_scale":   90,
         "seed": 137,
     },
-    {   # 3 — Arena rojiza ocre
-        "name":   "arena_iso_3",
-        "c_base": (195, 105,  35),   # naranja terroso
-        "c_dark": (130,  55,  10),   # marron oscuro
-        "c_lite": (240, 155,  75),   # naranja claro
-        "c_spec": (215, 125,  50),
-        "ripple_amp":   0.22,        # ondulas mas marcadas
-        "ripple_freq":  3.0,
-        "ripple_angle": math.radians(45),
-        "grain_scale":  10,
-        "macro_scale":  70,
-        "contrast":     0.65,
+    {
+        # Variante 3: ligeramente mas opaco/calido, grano grueso
+        "name":          "arena_iso_3",
+        "c_base":        (210, 172,  65),   # -5 sobre BASE (toque mas calido)
+        "c_dark":        (178, 140,  38),
+        "c_lite":        (234, 200,  95),
+        "contrast":      0.23,
+        "ripple_amp":    0.09,
+        "ripple_freq":   2.5,
+        "ripple_angle":  math.radians(40),
+        "grain_scale":   11,
+        "macro_scale":   70,
         "seed": 271,
     },
 ]
 
-def generate_sand_texture(p, size):
-    seed = p["seed"]
+def generate(p, size):
+    macro = fbm(size, 4, p["macro_scale"], p["seed"])
+    micro = fbm(size, 5, p["grain_scale"], p["seed"]+500)
+    norm  = size - 1
 
-    # Ruido macro (variacion de tono a gran escala)
-    macro = fbm(size, 4, p["macro_scale"], seed)
-    # Ruido micro (granos finos)
-    micro = fbm(size, 5, p["grain_scale"], seed + 500)
-
-    pixels = []
-    norm = size - 1
-
+    img = Image.new("RGBA", (size, size))
     for y in range(size):
-        row = []
         for x in range(size):
-            m  = macro[y][x]    # 0..1
-            mi = micro[y][x]    # 0..1
-
-            # Ondula de viento — valor entre 0 y ripple_amp
+            m  = macro[y][x]
+            mi = micro[y][x]
             rip = ripple(x/norm, y/norm,
                          p["ripple_freq"],
                          p["ripple_angle"],
                          p["ripple_amp"])
 
-            # Combinar macro + ripple para el desplazamiento de tono
             t = (m - 0.5) * p["contrast"] * 2 + rip - p["ripple_amp"]/2
+            color = blend(p["c_base"], p["c_lite"], t) if t >= 0 \
+                    else blend(p["c_base"], p["c_dark"], -t)
 
-            if t >= 0:
-                color = blend(p["c_base"], p["c_lite"], min(t, 1.0))
-            else:
-                color = blend(p["c_base"], p["c_dark"], min(-t, 1.0))
+            # grano muy sutil
+            grain_t = max(0.0, mi - 0.60) * 1.8
+            color = blend(color, p["c_dark"], grain_t * 0.30)
 
-            # Granos finos superpuestos (micro oscurece ligeramente)
-            grain_t = max(0.0, mi - 0.55) * 2.2   # solo los picos de micro
-            color = blend(color, p["c_dark"], grain_t * 0.45)
+            img.putpixel((x, y), color + (255,))
 
-            # Destello especular en los picos de onda
-            if rip > p["ripple_amp"] * 0.75:
-                spec_t = (rip - p["ripple_amp"]*0.75) / (p["ripple_amp"]*0.25)
-                color = blend(color, p["c_spec"], spec_t * 0.35)
+    return img.filter(ImageFilter.GaussianBlur(radius=0.5))
 
-            row.append(color + (255,))
-        pixels.append(row)
-
-    img = Image.new("RGBA", (size, size))
-    for y in range(size):
-        for x in range(size):
-            img.putpixel((x, y), pixels[y][x])
-
-    # Suavizado muy leve para cohesion visual
-    img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
-    return img
-
-# ── Proyeccion iso (igual que el script de pasto) ────────────────────────────
-def make_iso_tile(src_img, out_path):
+def to_iso(src_img, out_path):
     size = src_img.size[0]
     src  = src_img.load()
     out  = Image.new("RGBA", (ISO_W, ISO_H), (0,0,0,0))
     dst  = out.load()
     hw, hh = ISO_W/2, ISO_H/2
-
     for py in range(ISO_H):
         for px in range(ISO_W):
-            nx = (px - hw) / hw
-            ny = (py - hh) / hh
-            if abs(nx) + abs(ny) > 1.0:
-                continue
-            u = (nx + ny) / 2
-            v = (ny - nx) / 2
-            sx = int((u*0.5 + 0.5) * (size-1))
-            sy = int((v*0.5 + 0.5) * (size-1))
-            sx = max(0, min(size-1, sx))
-            sy = max(0, min(size-1, sy))
+            nx = (px-hw)/hw
+            ny = (py-hh)/hh
+            if abs(nx)+abs(ny) > 1.0: continue
+            u = (nx+ny)/2
+            v = (ny-nx)/2
+            sx = max(0, min(size-1, int((u*0.5+0.5)*(size-1))))
+            sy = max(0, min(size-1, int((v*0.5+0.5)*(size-1))))
             dst[px, py] = src[sx, sy]
-
     out.save(out_path, "PNG")
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-print("Generando tiles ISO de arena v2...")
+print("Generando tiles ISO de arena v3 (variaciones sutiles)...")
 for i, p in enumerate(PALETTES, 1):
-    print(f"  [{i}/3] {p['name']}  (base RGB={p['c_base']})")
-    tex      = generate_sand_texture(p, TEX_SIZE)
-    out_path = os.path.join(OUT_DIR, f"{p['name']}.png")
-    make_iso_tile(tex, out_path)
-    print(f"         -> {out_path}")
-
-print("\nListo!")
+    print(f"  [{i}/3] {p['name']}")
+    tex = generate(p, TEX_SIZE)
+    to_iso(tex, os.path.join(OUT_DIR, f"{p['name']}.png"))
+print("Listo!")
