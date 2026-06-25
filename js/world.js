@@ -187,53 +187,55 @@ export class World {
         let nearest = null;
         let minDistance = Infinity;
 
-        // Try to find purely empty first
+        // Helper: verifica que ninguna de las 4 celdas 2x2 sea agua
+        const noWater = (x, y) => {
+            for (let dy = 0; dy < 2; dy++)
+                for (let dx = 0; dx < 2; dx++)
+                    if (this.grid[y+dy][x+dx].type === RESOURCES.WATER) return false;
+            return true;
+        };
+
+        // Intento 1: área 2x2 completamente vacía y sin agua
         for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
             for (let x = 0; x < WORLD_WIDTH - 1; x++) {
-                if (this.grid[y][x].type === RESOURCES.EMPTY &&
+                if (this.grid[y][x].type   === RESOURCES.EMPTY &&
                     this.grid[y][x+1].type === RESOURCES.EMPTY &&
                     this.grid[y+1][x].type === RESOURCES.EMPTY &&
-                    this.grid[y+1][x+1].type === RESOURCES.EMPTY) {
-                    
+                    this.grid[y+1][x+1].type === RESOURCES.EMPTY &&
+                    noWater(x, y)) {
+
                     let dist = Math.abs(x - startX) + Math.abs(y - startY);
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        nearest = {x, y};
-                    }
+                    if (dist < minDistance) { minDistance = dist; nearest = {x, y}; }
                 }
             }
         }
         if (nearest) return nearest;
 
-        // Fallback: any 2x2 area without water/rock
+        // Intento 2: área 2x2 sin agua ni roca (puede tener recursos)
         for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
             for (let x = 0; x < WORLD_WIDTH - 1; x++) {
                 let valid = true;
-                for (let dy=0; dy<2; dy++) {
-                    for (let dx=0; dx<2; dx++) {
+                for (let dy = 0; dy < 2; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
                         let t = this.grid[y+dy][x+dx].type;
-                        if (t === RESOURCES.WATER || t === RESOURCES.ROCK) valid = false;
+                        if (t === RESOURCES.WATER || t === RESOURCES.ROCK) { valid = false; break; }
                     }
+                    if (!valid) break;
                 }
                 if (valid) {
                     let dist = Math.abs(x - startX) + Math.abs(y - startY);
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        nearest = {x, y};
-                    }
+                    if (dist < minDistance) { minDistance = dist; nearest = {x, y}; }
                 }
             }
         }
         if (nearest) return nearest;
 
-        // Extreme Fallback: ANY 2x2 area inside bounds (he clears everything)
+        // Intento 3 (extremo): cualquier 2x2 seco — NUNCA sobre agua
         for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
             for (let x = 0; x < WORLD_WIDTH - 1; x++) {
+                if (!noWater(x, y)) continue; // siempre excluir agua
                 let dist = Math.abs(x - startX) + Math.abs(y - startY);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    nearest = {x, y};
-                }
+                if (dist < minDistance) { minDistance = dist; nearest = {x, y}; }
             }
         }
 
