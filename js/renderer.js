@@ -365,23 +365,34 @@ export class Renderer {
         const isAlive = type === RESOURCES.FOOD;
 
         let img = null;
+        let isStump = false;
+        
         if (biome === BIOMES.SAND) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
+            isStump = !isAlive;
         } else {
             if (isAlive) {
                 const idx = ((x * 7 + y * 13) % 6) + 1; // 1 to 6
                 img = this.images?.[`iso_frutal_${idx}`];
             } else {
-                img = this.images?.arbol_desierto_2; // Fallback for empty
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 17 + y * 19) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
             }
         }
 
         if (img) {
-            let w = 38;
-            let h = 60;
+            let w = isStump && biome !== BIOMES.SAND ? 28 : 38;
+            let h = isStump && biome !== BIOMES.SAND ? 20 : 60;
+            
             if (img.width && img.height) {
-                h = w * (img.height / img.width) * 1.25; // Force taller proportions
-                if (h < 50) h = 50;
+                if (isStump && biome !== BIOMES.SAND) {
+                    h = w * (img.height / img.width);
+                } else {
+                    h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
+                    if (h < 50) h = 50;
+                }
             }
             this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {
@@ -411,23 +422,34 @@ export class Renderer {
         const isAlive = type === RESOURCES.WOOD;
 
         let img = null;
+        let isStump = false;
+
         if (biome === BIOMES.SAND) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
+            isStump = !isAlive;
         } else {
             if (isAlive) {
                 const idx = ((x * 5 + y * 11) % 5) + 1; // 1 to 5
                 img = this.images?.[`iso_arbol_${idx}`];
             } else {
-                img = this.images?.arbol_desierto_2; // Fallback for empty
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 23 + y * 29) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
             }
         }
 
         if (img) {
-            let w = 38;
-            let h = 60;
+            let w = isStump && biome !== BIOMES.SAND ? 28 : 38;
+            let h = isStump && biome !== BIOMES.SAND ? 20 : 60;
+            
             if (img.width && img.height) {
-                h = w * (img.height / img.width) * 1.25; // Force taller proportions
-                if (h < 50) h = 50;
+                if (isStump && biome !== BIOMES.SAND) {
+                    h = w * (img.height / img.width);
+                } else {
+                    h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
+                    if (h < 50) h = 50;
+                }
             }
             this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {

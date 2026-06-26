@@ -81,10 +81,13 @@ if __name__ == '__main__':
     base_dir = r"C:\Users\tecno\OneDrive\Documentos\Hola\Otros\Grunis"
     assets_dir = os.path.join(base_dir, "assets")
     
+    # Directorio de salida en la RAIZ (no en assets) para que main.js lo lea correctamente
+    out_dir = os.path.join(base_dir, "Vegetación")
+    
     tree_normal = os.path.join(assets_dir, "arboles_isometricos.png")
     tree_fruit  = os.path.join(assets_dir, "arboles_fruta_isometricos.png")
+    troncos_iso = os.path.join(assets_dir, "troncos_isometricos.png")
     
-    out_dir = os.path.join(assets_dir, "Vegetación")
-    
-    process_trees(tree_normal, "iso_arbol", out_dir)
-    process_trees(tree_fruit, "iso_frutal", out_dir)
+    # process_trees(tree_normal, "iso_arbol", out_dir)
+    # process_trees(tree_fruit, "iso_frutal", out_dir)
+    process_trees(troncos_iso, "iso_tronco", out_dir)
