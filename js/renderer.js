@@ -368,11 +368,21 @@ export class Renderer {
         if (biome === BIOMES.SAND) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
         } else {
-            img = isAlive ? this.images?.frutal_1 : this.images?.frutal_2;
+            if (isAlive) {
+                const idx = ((x * 7 + y * 13) % 6) + 1; // 1 to 6
+                img = this.images?.[`iso_frutal_${idx}`];
+            } else {
+                img = this.images?.arbol_desierto_2; // Fallback for empty
+            }
         }
 
         if (img) {
-            const w = 40, h = 48;
+            let w = 38;
+            let h = 60;
+            if (img.width && img.height) {
+                h = w * (img.height / img.width) * 1.25; // Force taller proportions
+                if (h < 50) h = 50;
+            }
             this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {
             // Tronco
@@ -404,11 +414,21 @@ export class Renderer {
         if (biome === BIOMES.SAND) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
         } else {
-            img = isAlive ? this.images?.arbol_1 : this.images?.arbol_2;
+            if (isAlive) {
+                const idx = ((x * 5 + y * 11) % 5) + 1; // 1 to 5
+                img = this.images?.[`iso_arbol_${idx}`];
+            } else {
+                img = this.images?.arbol_desierto_2; // Fallback for empty
+            }
         }
 
         if (img) {
-            const w = 40, h = 48;
+            let w = 38;
+            let h = 60;
+            if (img.width && img.height) {
+                h = w * (img.height / img.width) * 1.25; // Force taller proportions
+                if (h < 50) h = 50;
+            }
             this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
         } else {
             this.ctx.fillStyle = isAlive ? '#78350f' : '#57534e';
