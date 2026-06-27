@@ -25,8 +25,11 @@ export const RESOURCES = {
 };
 
 export const BIOMES = {
-    GRASS: 0,
-    SAND: 1
+    GRASS:       0,
+    DESERT:      1,
+    WATER_BIOME: 2,
+    SWAMP:       3,
+    SAND:        1   // alias para retrocompatibilidad
 };
 
 export class World {
@@ -36,80 +39,89 @@ export class World {
     }
 
     generateWorld() {
+        // ── Generación de biomas con Voronoi ────────────────────────────────
+        // Proporción de semillas: 12 pasto : 3 desierto : 3 agua : 2 pantano
+        // ≈ 60% : 15% : 15% : 10%
+        const seeds = [];
+        const addSeeds = (biome, count) => {
+            for (let i = 0; i < count; i++) {
+                seeds.push({ x: Math.random() * WORLD_WIDTH, y: Math.random() * WORLD_HEIGHT, biome });
+            }
+        };
+        addSeeds(BIOMES.GRASS,       12);
+        addSeeds(BIOMES.DESERT,       3);
+        addSeeds(BIOMES.WATER_BIOME,  3);
+        addSeeds(BIOMES.SWAMP,        2);
+
+        // Para cada celda, encontrar la semilla más cercana
+        const getBiome = (x, y) => {
+            let minDist = Infinity, result = BIOMES.GRASS;
+            for (const s of seeds) {
+                const d = (x - s.x) ** 2 + (y - s.y) ** 2;
+                if (d < minDist) { minDist = d; result = s.biome; }
+            }
+            return result;
+        };
+
+        // ── Poblar grilla ────────────────────────────────────────────────────
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             let row = [];
             for (let x = 0; x < WORLD_WIDTH; x++) {
-                const rand = Math.random();
+                const biome = getBiome(x, y);
                 let type = RESOURCES.EMPTY;
-                
-                if (rand < 0.03) type = RESOURCES.FOOD;      // 3% comida
-                else if (rand < 0.05) type = RESOURCES.WOOD;  // 2% madera
-                else if (rand < 0.07) type = RESOURCES.BUSH;  // 2% arbusto
-                else if (rand < 0.08) type = RESOURCES.ROCK;  // 1% roca
 
-                let capacity = 0;
-                if (type === RESOURCES.WOOD) capacity = Math.floor(Math.random() * 3) + 2; // 2-4 wood
-                else if (type === RESOURCES.FOOD) capacity = Math.floor(Math.random() * 2) + 2; // 2-3 food
-                else if (type === RESOURCES.BUSH) capacity = 1; // bush gives 1 wood
-                else if (type === RESOURCES.ROCK) capacity = Math.floor(Math.random() * 3) + 1; // 1-3 rock
-                let terrainVariant = Math.floor(Math.random() * 4);
-                
-                // Determinar el bioma (Isla central de pasto, bordes de arena)
-                let centerX = WORLD_WIDTH / 2;
-                let centerY = WORLD_HEIGHT / 2;
-                let dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-                let biome = dist < 22 ? BIOMES.GRASS : BIOMES.SAND;
-                
-                // Menos arboles en la arena
-                if (biome === BIOMES.SAND && (type === RESOURCES.WOOD || type === RESOURCES.FOOD)) {
-                    if (Math.random() > 0.3) type = RESOURCES.EMPTY;
+                if (biome === BIOMES.WATER_BIOME) {
+                    // Las celdas del bioma agua son agua navegable
+                    type = RESOURCES.WATER;
+                } else if (biome === BIOMES.GRASS) {
+                    const r = Math.random();
+                    if      (r < 0.03) type = RESOURCES.FOOD;
+                    else if (r < 0.05) type = RESOURCES.WOOD;
+                    else if (r < 0.07) type = RESOURCES.BUSH;
+                    else if (r < 0.08) type = RESOURCES.ROCK;
+                } else if (biome === BIOMES.DESERT) {
+                    const r = Math.random();
+                    if      (r < 0.01)  type = RESOURCES.FOOD;  // muy poca comida
+                    else if (r < 0.02)  type = RESOURCES.ROCK;  // algunas rocas
+                } else if (biome === BIOMES.SWAMP) {
+                    const r = Math.random();
+                    if      (r < 0.02) type = RESOURCES.FOOD;
+                    else if (r < 0.04) type = RESOURCES.WOOD;
+                    else if (r < 0.06) type = RESOURCES.BUSH;
                 }
 
-                row.push({ type: type, capacity: capacity, terrainVariant: terrainVariant, biome: biome });
+                let capacity = 0;
+                if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 3) + 2;
+                else if (type === RESOURCES.FOOD)  capacity = Math.floor(Math.random() * 2) + 2;
+                else if (type === RESOURCES.BUSH)  capacity = 1;
+                else if (type === RESOURCES.ROCK)  capacity = Math.floor(Math.random() * 3) + 1;
+                else if (type === RESOURCES.WATER) capacity = 5;
+
+                const terrainVariant = Math.floor(Math.random() * 4);
+                row.push({ type, capacity, terrainVariant, biome });
             }
             this.grid.push(row);
         }
 
-        // Generar lagos
-        let numLakes = Math.floor(Math.random() * 3) + 2;
-        for (let i = 0; i < numLakes; i++) {
-            let lx = Math.floor(Math.random() * WORLD_WIDTH);
-            let ly = Math.floor(Math.random() * WORLD_HEIGHT);
-            let radius = Math.floor(Math.random() * 4) + 3; // Radio 3 a 6
-            for (let y = -radius; y <= radius; y++) {
-                for (let x = -radius; x <= radius; x++) {
-                    if (x * x + y * y <= radius * radius) {
-                        let cx = lx + x, cy = ly + y;
-                        if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
-                            let biome = this.grid[cy][cx].biome;
-                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome: biome };
-                        }
-                    }
-                }
-            }
-        }
-
-        // Generar un río largo y sinuoso
+        // ── Río sinuoso (cruza cualquier bioma) ─────────────────────────────
         let rx = Math.floor(Math.random() * WORLD_WIDTH);
         let ry = 0;
         let dir = Math.random() < 0.5 ? 1 : -1;
         while (ry < WORLD_HEIGHT) {
-            // Un río de ancho variable
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -2; dx <= 2; dx++) {
                     let cx = rx + dx, cy = ry + dy;
                     if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
-                        // Forma redondeada para el río
                         if (Math.abs(dx) + Math.abs(dy) <= 2) {
-                            let biome = this.grid[cy][cx].biome;
-                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome: biome };
+                            const biome = this.grid[cy][cx].biome;
+                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome };
                         }
                     }
                 }
             }
             ry += 1;
             if (Math.random() < 0.4) rx += dir;
-            if (Math.random() < 0.1) dir *= -1; // A veces cambia de dirección
+            if (Math.random() < 0.1) dir *= -1;
         }
     }
 
@@ -140,7 +152,7 @@ export class World {
             // Preservar el bioma existente; si no existe, recalcularlo por distancia al centro
             let existingBiome = (this.grid[y] && this.grid[y][x] && this.grid[y][x].biome !== undefined)
                 ? this.grid[y][x].biome
-                : (Math.sqrt((x - WORLD_WIDTH / 2) ** 2 + (y - WORLD_HEIGHT / 2) ** 2) < 22 ? BIOMES.GRASS : BIOMES.SAND);
+                : BIOMES.GRASS;
             this.grid[y][x] = { type: type, capacity: cap, terrainVariant: tv, biome: existingBiome };
         }
     }

@@ -126,7 +126,7 @@ export class Renderer {
                 this.ctx.closePath();
                 this.ctx.fill();
 
-                // Cara superior — imagen ISO de arena si está disponible
+                // Cara superior — tile de desierto en el borde exterior
                 if (this.images) {
                     const ax = x * 0.37;
                     const ay = y * 0.41;
@@ -134,9 +134,9 @@ export class Renderer {
                     let aidx = Math.floor((aval + 1) * 1.5);
                     if (aidx < 0) aidx = 0;
                     if (aidx > 2) aidx = 2;
-                    const arenaImg = this.images[`arena_iso_${aidx + 1}`];
-                    if (arenaImg) {
-                        this.ctx.drawImage(arenaImg, sx, sy, ISO_W, ISO_H);
+                    const desImg = this.images[`desierto_iso_${aidx + 1}`];
+                    if (desImg) {
+                        this.ctx.drawImage(desImg, sx, sy, ISO_W, ISO_H);
                     } else {
                         this.drawDiamond(sx, sy, '#f9ca24', '#a07a10');
                     }
@@ -166,12 +166,22 @@ export class Renderer {
                     leftColor  = '#5a9e42';
                     rightColor = '#4a8a35';
                     edgeColor  = '#3e7a2c';
-                    topColor   = '#7cc654'; // fallback
-                } else { // SAND
+                    topColor   = '#7cc654';
+                } else if (cell.biome === BIOMES.DESERT) {
                     leftColor  = '#d4a820';
                     rightColor = '#b8901a';
                     edgeColor  = '#a07a10';
-                    topColor   = '#f9ca24'; // fallback
+                    topColor   = '#f9ca24';
+                } else if (cell.biome === BIOMES.WATER_BIOME) {
+                    leftColor  = '#1565a0';
+                    rightColor = '#0e4d8a';
+                    edgeColor  = '#0a3d6b';
+                    topColor   = '#1c82d2';
+                } else { // SWAMP
+                    leftColor  = '#4a6741';
+                    rightColor = '#3a5433';
+                    edgeColor  = '#2d4227';
+                    topColor   = '#5c8050';
                 }
 
                 // Caras laterales (dan profundidad 3D, siempre con color)
@@ -193,44 +203,57 @@ export class Renderer {
                 this.ctx.closePath();
                 this.ctx.fill();
 
-                // Cara superior: imagen iso si está disponible, sino color sólido
-                if (cell.biome === BIOMES.GRASS && this.images) {
-                    // Variación orgánica por posición — 4 variantes de pasto
-                    const chunkX = Math.floor(x / 2);
-                    const chunkY = Math.floor(y / 2);
-                    const nx = chunkX * 0.5;
-                    const ny = chunkY * 0.5;
-                    const val = (Math.sin(nx) + Math.sin(ny) + Math.sin(nx * 0.5 + ny * 0.5)) / 3;
+                // Cara superior: imagen iso según bioma
+                if (cell.biome === BIOMES.WATER_BIOME) {
+                    // El bioma agua se renderiza sólo con la animación de agua abajo;
+                    // aquí sólo ponemos color base para que las caras laterales sean visibles
+                    // (la animación de agua cubrirá la cara superior en el siguiente bloque)
+                    this.drawDiamond(sx, sy, topColor, edgeColor);
+
+                } else if (cell.biome === BIOMES.GRASS && this.images) {
+                    // 4 variantes de pasto - variación orgánica por posición
+                    const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
                     let idx = Math.floor((val + 1) * 2);
                     if (idx < 0) idx = 0;
                     if (idx > 3) idx = 3;
                     const isoImg = this.images[`pasto_iso_${idx + 1}`];
-
                     if (isoImg) {
                         this.ctx.drawImage(isoImg, sx, sy, ISO_W, ISO_H);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
-                } else if (cell.biome === BIOMES.SAND && this.images) {
-                    // Variación orgánica por posición — 3 variantes de arena
-                    const ax = x * 0.37;
-                    const ay = y * 0.41;
-                    const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
-                    let aidx = Math.floor((aval + 1) * 1.5); // 0, 1, 2
-                    if (aidx < 0) aidx = 0;
-                    if (aidx > 2) aidx = 2;
-                    const arenaImg = this.images[`arena_iso_${aidx + 1}`];
 
-                    if (arenaImg) {
-                        this.ctx.drawImage(arenaImg, sx, sy, ISO_W, ISO_H);
+                } else if (cell.biome === BIOMES.DESERT && this.images) {
+                    // 3 variantes de desierto
+                    const val = (Math.sin(x * 0.37) + Math.sin(y * 0.41) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
+                    let idx = Math.floor((val + 1) * 1.5);
+                    if (idx < 0) idx = 0;
+                    if (idx > 2) idx = 2;
+                    const desImg = this.images[`desierto_iso_${idx + 1}`];
+                    if (desImg) {
+                        this.ctx.drawImage(desImg, sx, sy, ISO_W, ISO_H);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
+
+                } else if (cell.biome === BIOMES.SWAMP && this.images) {
+                    // 3 variantes de pantano
+                    const val = (Math.sin(x * 0.29) + Math.sin(y * 0.33) + Math.sin((x - y) * 0.2)) / 3;
+                    let idx = Math.floor((val + 1) * 1.5);
+                    if (idx < 0) idx = 0;
+                    if (idx > 2) idx = 2;
+                    const swampImg = this.images[`pantano_iso_${idx + 1}`];
+                    if (swampImg) {
+                        this.ctx.drawImage(swampImg, sx, sy, ISO_W, ISO_H);
+                    } else {
+                        this.drawDiamond(sx, sy, topColor, edgeColor);
+                    }
+
                 } else {
                     this.drawDiamond(sx, sy, topColor, edgeColor);
                 }
 
-                // ── AGUA ──────────────────────────────────────────────────────────
+                // ── AGUA (animación) ────────────────────────────────────────────
                 if (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE) {
                     const wave = Math.sin(timestamp * 0.002 + x * 0.6 + y * 0.6) * 0.06;
 
@@ -254,9 +277,17 @@ export class Renderer {
                     this.ctx.closePath();
                     this.ctx.fill();
 
-                    // Cara superior del agua (rombo animado)
-                    const alpha = (0.88 + wave).toFixed(2);
-                    this.drawDiamond(sx, sy, `rgba(28, 130, 210, ${alpha})`, '#1060a8');
+                    // Cara superior: imagen de agua bioma si está disponible
+                    const waterIdx = ((x * 3 + y * 7) % 2) + 1;
+                    const waterImg = this.images?.[`agua_bioma_iso_${waterIdx}`];
+                    if (waterImg) {
+                        this.ctx.globalAlpha = 0.88 + wave;
+                        this.ctx.drawImage(waterImg, sx, sy, ISO_W, ISO_H);
+                        this.ctx.globalAlpha = 1.0;
+                    } else {
+                        const alpha = (0.88 + wave).toFixed(2);
+                        this.drawDiamond(sx, sy, `rgba(28, 130, 210, ${alpha})`, '#1060a8');
+                    }
 
                     // Destello
                     const shimX = sx + hw * 0.7 + Math.sin(timestamp * 0.004 + x + y) * 2;
@@ -367,7 +398,7 @@ export class Renderer {
         let img = null;
         let isStump = false;
         
-        if (biome === BIOMES.SAND) {
+        if (biome === BIOMES.DESERT) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
             isStump = !isAlive;
         } else {
@@ -383,11 +414,11 @@ export class Renderer {
         }
 
         if (img) {
-            let w = isStump && biome !== BIOMES.SAND ? 28 : 38;
-            let h = isStump && biome !== BIOMES.SAND ? 20 : 60;
+            let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
+            let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
             
             if (img.width && img.height) {
-                if (isStump && biome !== BIOMES.SAND) {
+                if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
                     h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
@@ -424,7 +455,7 @@ export class Renderer {
         let img = null;
         let isStump = false;
 
-        if (biome === BIOMES.SAND) {
+        if (biome === BIOMES.DESERT) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
             isStump = !isAlive;
         } else {
@@ -440,11 +471,11 @@ export class Renderer {
         }
 
         if (img) {
-            let w = isStump && biome !== BIOMES.SAND ? 28 : 38;
-            let h = isStump && biome !== BIOMES.SAND ? 20 : 60;
+            let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
+            let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
             
             if (img.width && img.height) {
-                if (isStump && biome !== BIOMES.SAND) {
+                if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
                     h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
