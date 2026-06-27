@@ -22,6 +22,7 @@ const imageUrls = {
     pasto_iso_2: 'Biomas/PASTO/iso/pasto_iso_flores_preview.png',
     pasto_iso_3: 'Biomas/PASTO/iso/pasto_iso_rocas_preview.png',
     pasto_iso_4: 'Biomas/PASTO/iso/pasto_iso_tierra_preview.png',
+    pasto_iso_agua: 'Biomas/PASTO/iso/pasto_iso_agua_preview.png',  // tile transición pasto→agua
     // ── Tiles de bioma: DESIERTO (3 variantes) ────────────────────────
     desierto_iso_1: 'Biomas/PASTO/iso/pasto_iso_desierto_preview.png',
     desierto_iso_2: 'Biomas/PASTO/iso/pasto_iso_desierto2_preview.png',

@@ -214,15 +214,46 @@ export class Renderer {
                     this.drawDiamond(sx, sy, topColor, edgeColor);
 
                 } else if (cell.biome === BIOMES.GRASS && this.images) {
-                    const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
-                    let idx = Math.floor((val + 1) * 2);
-                    if (idx < 0) idx = 0;
-                    if (idx > 3) idx = 3;
-                    const isoImg = this.images[`pasto_iso_${idx + 1}`];
-                    if (isoImg) {
-                        this.ctx.drawImage(isoImg, sx - OV, sy - OV, ISO_W + OV * 2, ISO_H + OV * 2);
+                    // Detectar si algún vecino es WATER_BIOME → tile de transición
+                    const isWater = (nx, ny) => {
+                        const nc = world.getCell(nx, ny);
+                        return nc && nc.biome === BIOMES.WATER_BIOME;
+                    };
+                    const wSE = isWater(x + 1, y + 1); // abajo-derecha
+                    const wSW = isWater(x - 1, y + 1); // abajo-izquierda
+                    const wNW = isWater(x - 1, y - 1); // arriba-izquierda
+                    const wNE = isWater(x + 1, y - 1); // arriba-derecha
+                    const transImg = this.images['pasto_iso_agua'];
+
+                    if (transImg && (wSE || wSW || wNW || wNE)) {
+                        // El tile original tiene pasto arriba-izq y agua abajo-der (SE)
+                        // Rotamos 0°=SE, 90°=SW, 180°=NW, 270°=NE
+                        let angle = 0;
+                        if      (wSW) angle = Math.PI / 2;
+                        else if (wNW) angle = Math.PI;
+                        else if (wNE) angle = -Math.PI / 2;
+                        // (wSE → 0, ya es la orientación nativa)
+
+                        const cx = sx + ISO_W / 2;
+                        const cy = sy + ISO_H / 2;
+                        this.ctx.save();
+                        this.ctx.translate(cx, cy);
+                        this.ctx.rotate(angle);
+                        this.ctx.drawImage(transImg,
+                            -ISO_W / 2 - OV, -ISO_H / 2 - OV,
+                            ISO_W + OV * 2,  ISO_H + OV * 2);
+                        this.ctx.restore();
                     } else {
-                        this.drawDiamond(sx, sy, topColor, edgeColor);
+                        const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
+                        let idx = Math.floor((val + 1) * 2);
+                        if (idx < 0) idx = 0;
+                        if (idx > 3) idx = 3;
+                        const isoImg = this.images[`pasto_iso_${idx + 1}`];
+                        if (isoImg) {
+                            this.ctx.drawImage(isoImg, sx - OV, sy - OV, ISO_W + OV * 2, ISO_H + OV * 2);
+                        } else {
+                            this.drawDiamond(sx, sy, topColor, edgeColor);
+                        }
                     }
 
                 } else if (cell.biome === BIOMES.DESERT && this.images) {
