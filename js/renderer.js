@@ -204,47 +204,47 @@ export class Renderer {
                 this.ctx.fill();
 
                 // Cara superior: imagen iso según bioma
+                // Tiles ligeramente sobredimensionados (OV) para cubrir las juntas negras
+                const OV = 3; // píxeles de overlap
+                this.ctx.imageSmoothingEnabled = true;
+                this.ctx.imageSmoothingQuality = 'medium';
+
                 if (cell.biome === BIOMES.WATER_BIOME) {
-                    // El bioma agua se renderiza sólo con la animación de agua abajo;
-                    // aquí sólo ponemos color base para que las caras laterales sean visibles
-                    // (la animación de agua cubrirá la cara superior en el siguiente bloque)
+                    // El bioma agua se cubre con la animación de agua (bloque siguiente)
                     this.drawDiamond(sx, sy, topColor, edgeColor);
 
                 } else if (cell.biome === BIOMES.GRASS && this.images) {
-                    // 4 variantes de pasto - variación orgánica por posición
                     const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
                     let idx = Math.floor((val + 1) * 2);
                     if (idx < 0) idx = 0;
                     if (idx > 3) idx = 3;
                     const isoImg = this.images[`pasto_iso_${idx + 1}`];
                     if (isoImg) {
-                        this.ctx.drawImage(isoImg, sx, sy, ISO_W, ISO_H);
+                        this.ctx.drawImage(isoImg, sx - OV, sy - OV, ISO_W + OV * 2, ISO_H + OV * 2);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
 
                 } else if (cell.biome === BIOMES.DESERT && this.images) {
-                    // 3 variantes de desierto
                     const val = (Math.sin(x * 0.37) + Math.sin(y * 0.41) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
                     let idx = Math.floor((val + 1) * 1.5);
                     if (idx < 0) idx = 0;
                     if (idx > 2) idx = 2;
                     const desImg = this.images[`desierto_iso_${idx + 1}`];
                     if (desImg) {
-                        this.ctx.drawImage(desImg, sx, sy, ISO_W, ISO_H);
+                        this.ctx.drawImage(desImg, sx - OV, sy - OV, ISO_W + OV * 2, ISO_H + OV * 2);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
 
                 } else if (cell.biome === BIOMES.SWAMP && this.images) {
-                    // 3 variantes de pantano
                     const val = (Math.sin(x * 0.29) + Math.sin(y * 0.33) + Math.sin((x - y) * 0.2)) / 3;
                     let idx = Math.floor((val + 1) * 1.5);
                     if (idx < 0) idx = 0;
                     if (idx > 2) idx = 2;
                     const swampImg = this.images[`pantano_iso_${idx + 1}`];
                     if (swampImg) {
-                        this.ctx.drawImage(swampImg, sx, sy, ISO_W, ISO_H);
+                        this.ctx.drawImage(swampImg, sx - OV, sy - OV, ISO_W + OV * 2, ISO_H + OV * 2);
                     } else {
                         this.drawDiamond(sx, sy, topColor, edgeColor);
                     }
@@ -252,6 +252,8 @@ export class Renderer {
                 } else {
                     this.drawDiamond(sx, sy, topColor, edgeColor);
                 }
+
+                this.ctx.imageSmoothingEnabled = false;
 
                 // ── AGUA (animación) ────────────────────────────────────────────
                 if (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE) {
@@ -277,17 +279,19 @@ export class Renderer {
                     this.ctx.closePath();
                     this.ctx.fill();
 
-                    // Cara superior: imagen de agua bioma si está disponible
+                    // Cara superior: imagen de agua con suavizado
                     const waterIdx = ((x * 3 + y * 7) % 2) + 1;
                     const waterImg = this.images?.[`agua_bioma_iso_${waterIdx}`];
+                    this.ctx.imageSmoothingEnabled = true;
                     if (waterImg) {
                         this.ctx.globalAlpha = 0.88 + wave;
-                        this.ctx.drawImage(waterImg, sx, sy, ISO_W, ISO_H);
+                        this.ctx.drawImage(waterImg, sx - 2, sy - 2, ISO_W + 4, ISO_H + 4);
                         this.ctx.globalAlpha = 1.0;
                     } else {
                         const alpha = (0.88 + wave).toFixed(2);
                         this.drawDiamond(sx, sy, `rgba(28, 130, 210, ${alpha})`, '#1060a8');
                     }
+                    this.ctx.imageSmoothingEnabled = false;
 
                     // Destello
                     const shimX = sx + hw * 0.7 + Math.sin(timestamp * 0.004 + x + y) * 2;
@@ -859,87 +863,15 @@ export class Renderer {
         this.ctx.strokeRect(-barWidth / 2, -18, barWidth, 3);
     }
 
-    // ─── Iluminación global (día / noche / eclipse) ──────────────────────────────
+    // ─── Iluminación global — siempre de día (noche desactivada) ────────────────
     drawGlobalLighting(timeOfDay, renderQueue, agent, particles, timestamp, isEclipse) {
+        // Eclipse: overlay oscuro especial
+        if (!isEclipse) return;
+
         this.ctx.save();
-
-        let overlayColor = 'rgba(0,0,0,0)';
-        let opacity = 0;
-
-        if (isEclipse) {
-            overlayColor = 'rgba(2, 6, 23, 0.85)';
-            opacity = 0.85;
-        } else {
-            if (timeOfDay > 1800 || timeOfDay < 500) {
-                opacity = 0.65;
-                overlayColor = `rgba(12, 18, 55, ${opacity})`;
-            } else if (timeOfDay >= 500 && timeOfDay <= 700) {
-                opacity = 0.35;
-                overlayColor = `rgba(234, 100, 20, ${opacity})`;
-            } else if (timeOfDay >= 1700 && timeOfDay <= 1800) {
-                opacity = 0.35;
-                overlayColor = `rgba(190, 40, 80, ${opacity})`;
-            }
-        }
-
-        if (opacity > 0) {
-            this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.fillStyle = overlayColor;
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-            this.ctx.globalCompositeOperation = 'lighter';
-
-            // Convierte posición de grilla a posición en pantalla (con cámara iso)
-            const isoToScreen = (worldX, worldY) => {
-                const { sx, sy } = this.isoProject(worldX, worldY);
-                return {
-                    px: (sx + ISO_W / 2 - this.cameraX) * ZOOM,
-                    py: (sy + ISO_H / 2 - this.cameraY) * ZOOM
-                };
-            };
-
-            const drawLight = (worldX, worldY, radius, intensity = 0.4, color = '255, 255, 200') => {
-                const { px, py } = isoToScreen(worldX, worldY);
-                const grad = this.ctx.createRadialGradient(px, py, 2, px, py, radius);
-                grad.addColorStop(0, `rgba(${color}, ${intensity})`);
-                grad.addColorStop(1, `rgba(${color}, 0)`);
-                this.ctx.fillStyle = grad;
-                this.ctx.beginPath();
-                this.ctx.arc(px, py, radius, 0, Math.PI * 2);
-                this.ctx.fill();
-            };
-
-            if (agent) {
-                const pulse = Math.sin((timestamp || 0) * 0.002) * 5;
-                drawLight(agent.x, agent.y, 90 + pulse, 0.35, '255, 240, 200');
-            }
-
-            for (const item of renderQueue) {
-                if (item.type === 'bighouse') {
-                    drawLight(item.x + 0.5, item.y + 0.5, 140, 0.4, '250, 180, 80');
-                }
-            }
-
-            if (particles) {
-                for (const p of particles.particles) {
-                    if (p.type === 'FIREFLY') {
-                        // p.x / p.y están en píxeles de mundo → convertir a grilla iso
-                        const gx = p.x / CELL_SIZE;
-                        const gy = p.y / CELL_SIZE;
-                        const { px, py } = isoToScreen(gx, gy);
-                        const grad = this.ctx.createRadialGradient(px, py, 0.5, px, py, 25);
-                        grad.addColorStop(0, 'rgba(200, 255, 150, 0.6)');
-                        grad.addColorStop(1, 'rgba(200, 255, 150, 0)');
-                        this.ctx.fillStyle = grad;
-                        this.ctx.beginPath();
-                        this.ctx.arc(px, py, 25, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                }
-            }
-        }
-
         this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
     }
 }
