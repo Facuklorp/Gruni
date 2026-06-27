@@ -311,8 +311,7 @@ export class Renderer {
                     this.ctx.fill();
 
                     // Cara superior: imagen de agua con suavizado
-                    const waterIdx = ((x * 3 + y * 7) % 2) + 1;
-                    const waterImg = this.images?.[`agua_bioma_iso_${waterIdx}`];
+                    const waterImg = this.images?.['agua_bioma_iso_1'];
                     this.ctx.imageSmoothingEnabled = true;
                     if (waterImg) {
                         this.ctx.globalAlpha = 0.88 + wave;
