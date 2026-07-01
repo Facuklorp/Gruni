@@ -45,6 +45,21 @@ export class Renderer {
         }
     }
 
+    // Aplica un clip path en forma de rombo isométrico.
+    // Llamar DENTRO de un ctx.save() / ctx.restore().
+    // Las imágenes pueden ser cuadradas: el clip las recorta automáticamente.
+    clipToDiamond(drawX, drawY, drawW, drawH) {
+        const hw = drawW / 2;
+        const hh = drawH / 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(drawX + hw, drawY);           // arriba
+        this.ctx.lineTo(drawX + drawW, drawY + hh);   // derecha
+        this.ctx.lineTo(drawX + hw, drawY + drawH);   // abajo
+        this.ctx.lineTo(drawX, drawY + hh);            // izquierda
+        this.ctx.closePath();
+        this.ctx.clip();
+    }
+
     // Helper: todas las coords útiles de un tile de la grilla
     getIsoBase(x, y) {
         const { sx, sy } = this.isoProject(x, y);
@@ -88,9 +103,6 @@ export class Renderer {
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
         // ── FONDO: rellenar con color arena para eliminar el vacío negro ────────
-        // Extendemos tiles de arena MAS ALLÁ de los límites del mundo real
-        // para que jamas aparezca el fondo negro en los extremos.
-        // Calculamos cuántos tiles extra necesitamos basados en el viewport.
         const EXTRA = Math.ceil(Math.max(this.canvas.width, this.canvas.height) / (ISO_W * ZOOM)) + 4;
         const sumMin = -(EXTRA * 2);
         const sumMax = WORLD_WIDTH + WORLD_HEIGHT - 1 + EXTRA * 2;
@@ -99,9 +111,7 @@ export class Renderer {
             const xMax = Math.min(WORLD_WIDTH - 1 + EXTRA, sum + EXTRA);
             for (let x = xMin; x <= xMax; x++) {
                 const y = sum - x;
-                // Solo dibujar si está FUERA del mundo real (dentro se dibuja en el loop principal)
                 if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) continue;
-                // 2x2 test: solo dibujar terreno en coordenadas pares
                 if (x % 2 !== 0 || y % 2 !== 0) continue;
 
                 const { sx, sy } = this.isoProject(x, y);
@@ -132,7 +142,7 @@ export class Renderer {
                 this.ctx.closePath();
                 this.ctx.fill();
 
-                // Cara superior — tile de desierto en el borde exterior
+                // Cara superior — tile de desierto en el borde exterior (con clip)
                 if (this.images) {
                     const ax = x * 0.37;
                     const ay = y * 0.41;
@@ -142,15 +152,18 @@ export class Renderer {
                     if (aidx > 2) aidx = 2;
                     const desImg = this.images[`desierto_iso_${aidx + 1}`];
                     if (desImg) {
+                        this.ctx.save();
+                        this.clipToDiamond(drawX, drawY, drawW, drawH);
                         this.ctx.imageSmoothingEnabled = true;
                         this.ctx.imageSmoothingQuality = 'medium';
                         this.ctx.drawImage(desImg, drawX - 3, drawY - 3, drawW + 6, drawH + 6);
                         this.ctx.imageSmoothingEnabled = false;
+                        this.ctx.restore();
                     } else {
-                        this.drawDiamond(drawX, drawY, '#f9ca24', '#a07a10', drawW, drawH);
+                        this.drawDiamond(drawX, drawY, '#f9ca24', null, drawW, drawH);
                     }
                 } else {
-                    this.drawDiamond(drawX, drawY, '#f9ca24', '#a07a10', drawW, drawH);
+                    this.drawDiamond(drawX, drawY, '#f9ca24', null, drawW, drawH);
                 }
             }
         }
@@ -223,14 +236,14 @@ export class Renderer {
                     this.ctx.fill();
 
                     // Cara superior: imagen iso según bioma
-                    // Tiles ligeramente sobredimensionados (OV) para cubrir las juntas negras
-                    const OV = 4; // píxeles de overlap aumentados para 2x
+                    // Las imágenes pueden ser CUADRADAS — clipToDiamond() las recorta al rombo.
+                    const OV = 4; // píxeles de overlap para cubrir juntas
                     this.ctx.imageSmoothingEnabled = true;
                     this.ctx.imageSmoothingQuality = 'medium';
 
                     if (cell.biome === BIOMES.WATER_BIOME) {
                         // El bioma agua se cubre con la animación de agua (bloque siguiente)
-                        this.drawDiamond(drawX, drawY, topColor, edgeColor, drawW, drawH);
+                        this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
 
                     } else if (cell.biome === BIOMES.GRASS && this.images) {
                         // Detectar si algún vecino es WATER_BIOME → tile de transición
@@ -255,6 +268,7 @@ export class Renderer {
                             const cx = drawX + drawW / 2;
                             const cy = drawY + drawH / 2;
                             this.ctx.save();
+                            this.clipToDiamond(drawX, drawY, drawW, drawH);
                             this.ctx.translate(cx, cy);
                             this.ctx.rotate(angle);
                             this.ctx.drawImage(transImg,
@@ -268,9 +282,12 @@ export class Renderer {
                             if (idx > 3) idx = 3;
                             const isoImg = this.images[`pasto_iso_${idx + 1}`];
                             if (isoImg) {
+                                this.ctx.save();
+                                this.clipToDiamond(drawX, drawY, drawW, drawH);
                                 this.ctx.drawImage(isoImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                                this.ctx.restore();
                             } else {
-                                this.drawDiamond(drawX, drawY, topColor, edgeColor, drawW, drawH);
+                                this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
                             }
                         }
 
@@ -281,9 +298,12 @@ export class Renderer {
                         if (idx > 2) idx = 2;
                         const desImg = this.images[`desierto_iso_${idx + 1}`];
                         if (desImg) {
+                            this.ctx.save();
+                            this.clipToDiamond(drawX, drawY, drawW, drawH);
                             this.ctx.drawImage(desImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                            this.ctx.restore();
                         } else {
-                            this.drawDiamond(drawX, drawY, topColor, edgeColor, drawW, drawH);
+                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
                         }
 
                     } else if (cell.biome === BIOMES.SWAMP && this.images) {
@@ -293,13 +313,16 @@ export class Renderer {
                         if (idx > 2) idx = 2;
                         const swampImg = this.images[`pantano_iso_${idx + 1}`];
                         if (swampImg) {
+                            this.ctx.save();
+                            this.clipToDiamond(drawX, drawY, drawW, drawH);
                             this.ctx.drawImage(swampImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                            this.ctx.restore();
                         } else {
-                            this.drawDiamond(drawX, drawY, topColor, edgeColor, drawW, drawH);
+                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
                         }
 
                     } else {
-                        this.drawDiamond(drawX, drawY, topColor, edgeColor, drawW, drawH);
+                        this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
                     }
 
                     this.ctx.imageSmoothingEnabled = false;
@@ -329,15 +352,19 @@ export class Renderer {
                         this.ctx.fill();
 
                         // Cara superior: imagen de agua con suavizado
+                        // La imagen puede ser cuadrada — clipToDiamond la recorta al rombo
                         const waterImg = this.images?.['agua_bioma_iso_1'];
                         this.ctx.imageSmoothingEnabled = true;
                         if (waterImg) {
+                            this.ctx.save();
+                            this.clipToDiamond(drawX, drawY, drawW, drawH);
                             this.ctx.globalAlpha = 0.88 + wave;
                             this.ctx.drawImage(waterImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
                             this.ctx.globalAlpha = 1.0;
+                            this.ctx.restore();
                         } else {
                             const alpha = (0.88 + wave).toFixed(2);
-                            this.drawDiamond(drawX, drawY, `rgba(28, 130, 210, ${alpha})`, '#1060a8', drawW, drawH);
+                            this.drawDiamond(drawX, drawY, `rgba(28, 130, 210, ${alpha})`, null, drawW, drawH);
                         }
                         this.ctx.imageSmoothingEnabled = false;
 
