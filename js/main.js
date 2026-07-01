@@ -27,9 +27,10 @@ const imageUrls = {
     desierto_iso_1: 'Biomas/PASTO/iso/pasto_iso_desierto_preview.png',
     desierto_iso_2: 'Biomas/PASTO/iso/pasto_iso_desierto2_preview.png',
     desierto_iso_3: 'Biomas/PASTO/iso/pasto_iso_desierto3_preview.png',
-    // ── Tiles de bioma: AGUA (2 variantes) ───────────────────────────
+    // ── Tiles de bioma: AGUA (3 frames de animación) ─────────────
     agua_bioma_iso_1: 'Biomas/PASTO/iso/agua_iso_preview.png',
-    agua_bioma_iso_2: 'Biomas/PASTO/iso/pasto_iso_agua_preview.png',
+    agua_bioma_iso_2: 'Biomas/PASTO/iso/agua_iso_preview_1.png',
+    agua_bioma_iso_3: 'Biomas/PASTO/iso/agua_iso_preview_2.png',
     // ── Tiles de bioma: PANTANO (3 variantes) ────────────────────────
     pantano_iso_1: 'Biomas/PASTO/iso/pasto_iso_pantano_preview.png',
     pantano_iso_2: 'Biomas/PASTO/iso/pasto_iso_pantano2_preview.png',

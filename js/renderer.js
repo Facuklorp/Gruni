@@ -351,9 +351,13 @@ export class Renderer {
                         this.ctx.closePath();
                         this.ctx.fill();
 
-                        // Cara superior: imagen de agua con suavizado
-                        // La imagen puede ser cuadrada — clipToDiamond la recorta al rombo
-                        const waterImg = this.images?.['agua_bioma_iso_1'];
+                        // Cara superior: animación de agua — 3 frames en loop
+                        // Secuencia: agua_bioma_iso_1 → iso_2 → iso_3 → iso_1 → ...
+                        const WATER_FRAME_MS = 400; // ms por frame
+                        const waterFrameIdx = Math.floor(timestamp / WATER_FRAME_MS) % 3;
+                        const waterKeys = ['agua_bioma_iso_1', 'agua_bioma_iso_2', 'agua_bioma_iso_3'];
+                        const waterImg = this.images?.[waterKeys[waterFrameIdx]]
+                                      ?? this.images?.['agua_bioma_iso_1'];
                         this.ctx.imageSmoothingEnabled = true;
                         if (waterImg) {
                             this.ctx.save();
