@@ -269,8 +269,8 @@ export class Renderer {
                             this.ctx.translate(cx, cy);
                             this.ctx.rotate(angle);
                             this.ctx.drawImage(transImg,
-                                -drawW / 2 - OV, -drawH / 2 - OV,
-                                drawW + OV * 2,  drawH + OV * 2);
+                                -drawW / 2 - OV, -drawH / 2 - OV / 2,
+                                drawW + OV * 2,  drawH + OV);
                             this.ctx.restore();
                         } else {
                             const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
@@ -280,7 +280,7 @@ export class Renderer {
                             const isoImg = this.images[`pasto_iso_${idx + 1}`];
                             if (isoImg) {
                                 this.ctx.save();
-                                this.ctx.drawImage(isoImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                                this.ctx.drawImage(isoImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
                                 this.ctx.restore();
                             } else {
                                 this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
@@ -295,7 +295,7 @@ export class Renderer {
                         const desImg = this.images[`desierto_iso_${idx + 1}`];
                         if (desImg) {
                             this.ctx.save();
-                            this.ctx.drawImage(desImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                            this.ctx.drawImage(desImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
                             this.ctx.restore();
                         } else {
                             this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
@@ -309,7 +309,7 @@ export class Renderer {
                         const swampImg = this.images[`pantano_iso_${idx + 1}`];
                         if (swampImg) {
                             this.ctx.save();
-                            this.ctx.drawImage(swampImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                            this.ctx.drawImage(swampImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
                             this.ctx.restore();
                         } else {
                             this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
@@ -356,7 +356,7 @@ export class Renderer {
                         if (waterImg) {
                             this.ctx.save();
                             this.ctx.globalAlpha = 0.88 + wave;
-                            this.ctx.drawImage(waterImg, drawX - OV, drawY - OV, drawW + OV * 2, drawH + OV * 2);
+                            this.ctx.drawImage(waterImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
                             this.ctx.globalAlpha = 1.0;
                             this.ctx.restore();
                         } else {
