@@ -273,7 +273,7 @@ export class Renderer {
                                 drawW + OV * 2,  drawH + OV);
                             this.ctx.restore();
                         } else {
-                            const val = (Math.sin(x * 0.5) + Math.sin(y * 0.5) + Math.sin((x + y) * 0.25)) / 3;
+                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
                             let idx = Math.floor((val + 1) * 2);
                             if (idx < 0) idx = 0;
                             if (idx > 3) idx = 3;
