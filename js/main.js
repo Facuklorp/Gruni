@@ -18,10 +18,10 @@ const imageUrls = {
     wakfu_pasto_solo_3: 'Biomas/PASTO/pasto solo 3.png',
     wakfu_pasto_solo_4: 'Biomas/PASTO/pasto solo 4.png',
     // ── Tiles de bioma: PASTO (4 variantes) ───────────────────
-    pasto_iso_1: 'Biomas/Tiles/pastoA.png',
-    pasto_iso_2: 'Biomas/Tiles/pastoA.png',
-    pasto_iso_3: 'Biomas/Tiles/pastoA.png',
-    pasto_iso_4: 'Biomas/Tiles/pastoA.png',
+    pasto_iso_1: 'Biomas/Tiles/pastoA2.png',
+    pasto_iso_2: 'Biomas/Tiles/pastoA2.png',
+    pasto_iso_3: 'Biomas/Tiles/pastoA2.png',
+    pasto_iso_4: 'Biomas/Tiles/pastoA2.png',
     pasto_iso_agua: 'Biomas/PASTO/iso/pasto_iso_agua_preview.png',  // tile transición pasto→agua
     // ── Tiles de bioma: DESIERTO (3 variantes) ────────────────────────
     desierto_iso_1: 'Biomas/Tiles/Desert1.png',
