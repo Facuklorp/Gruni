@@ -144,8 +144,8 @@ export class Renderer {
 
                 // Cara superior — tile de desierto en el borde exterior (con clip)
                 if (this.images) {
-                    const ax = x * 0.37;
-                    const ay = y * 0.41;
+                    const ax = x * 0.1;
+                    const ay = y * 0.13;
                     const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
                     let aidx = Math.floor((aval + 1) * 1.5);
                     if (aidx < 0) aidx = 0;
@@ -288,7 +288,7 @@ export class Renderer {
                         }
 
                     } else if (cell.biome === BIOMES.DESERT && this.images) {
-                        const val = (Math.sin(x * 0.37) + Math.sin(y * 0.41) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
+                        const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
                         let idx = Math.floor((val + 1) * 1.5);
                         if (idx < 0) idx = 0;
                         if (idx > 2) idx = 2;
