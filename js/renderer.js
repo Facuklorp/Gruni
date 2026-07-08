@@ -241,7 +241,7 @@ export class Renderer {
                     this.ctx.fill();
 
                     // Cara superior: imagen iso según bioma
-                    const OV = 0.5; // reducir overlap para evitar bordes gruesos
+                    const OV = 4; // píxeles de overlap para cubrir juntas
                     this.ctx.imageSmoothingEnabled = true;
                     this.ctx.imageSmoothingQuality = 'medium';
 
