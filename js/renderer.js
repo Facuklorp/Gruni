@@ -250,53 +250,23 @@ export class Renderer {
                         this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
 
                     } else if (cell.biome === BIOMES.GRASS && this.images) {
-                        // Detectar si algún vecino es WATER_BIOME → tile de transición
-                        const isWater = (nx, ny) => {
-                            const nc = world.getCell(nx, ny);
-                            return nc && nc.biome === BIOMES.WATER_BIOME;
-                        };
-                        // Chequear a distancia 2 por los bloques de 2x2
-                        const wSE = isWater(x + 2, y + 2); // abajo-derecha
-                        const wSW = isWater(x - 2, y + 2); // abajo-izquierda
-                        const wNW = isWater(x - 2, y - 2); // arriba-izquierda
-                        const wNE = isWater(x + 2, y - 2); // arriba-derecha
-                        const transImg = this.images['pasto_iso_agua'];
-
-                        if (transImg && (wSE || wSW || wNW || wNE)) {
-                            // Rotamos 0°=SE, 90°=SW, 180°=NW, 270°=NE
-                            let angle = 0;
-                            if      (wSW) angle = Math.PI / 2;
-                            else if (wNW) angle = Math.PI;
-                            else if (wNE) angle = -Math.PI / 2;
-
-                            const cx = drawX + drawW / 2;
-                            const cy = drawY + drawH / 2;
+                        const pastoFVal = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
+                        let isoImg;
+                        if (pastoFVal > 1.8) {
+                            isoImg = this.images['pasto_iso_5'];
+                        } else {
+                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
+                            let idx = Math.floor((val + 1) * 2);
+                            if (idx < 0) idx = 0;
+                            if (idx > 3) idx = 3;
+                            isoImg = this.images[`pasto_iso_${idx + 1}`];
+                        }
+                        if (isoImg) {
                             this.ctx.save();
-                            this.ctx.translate(cx, cy);
-                            this.ctx.rotate(angle);
-                            this.ctx.drawImage(transImg,
-                                -drawW / 2 - OV, -drawH / 2 - OV / 2,
-                                drawW + OV * 2,  drawH + OV);
+                            this.ctx.drawImage(isoImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
                             this.ctx.restore();
                         } else {
-                            const pastoFVal = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
-                            let isoImg;
-                            if (pastoFVal > 1.8) {
-                                isoImg = this.images['pasto_iso_5'];
-                            } else {
-                                const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
-                                let idx = Math.floor((val + 1) * 2);
-                                if (idx < 0) idx = 0;
-                                if (idx > 3) idx = 3;
-                                isoImg = this.images[`pasto_iso_${idx + 1}`];
-                            }
-                            if (isoImg) {
-                                this.ctx.save();
-                                this.ctx.drawImage(isoImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
-                                this.ctx.restore();
-                            } else {
-                                this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-                            }
+                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
                         }
 
                     } else if (cell.biome === BIOMES.DESERT && this.images) {
