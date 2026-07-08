@@ -22,11 +22,13 @@ const imageUrls = {
     pasto_iso_2: 'Biomas/Tiles/pastoA3.png',
     pasto_iso_3: 'Biomas/Tiles/pastoA2.png',
     pasto_iso_4: 'Biomas/Tiles/pastoA3.png',
+    pasto_iso_5: 'Biomas/Tiles/pastoF.png',
     pasto_iso_agua: 'Biomas/PASTO/iso/pasto_iso_agua_preview.png',  // tile transición pasto→agua
-    // ── Tiles de bioma: DESIERTO (3 variantes) ────────────────────────
+    // ── Tiles de bioma: DESIERTO (4 variantes) ────────────────────────
     desierto_iso_1: 'Biomas/Tiles/Ds1.png',
     desierto_iso_2: 'Biomas/Tiles/Ds1.png',
     desierto_iso_3: 'Biomas/Tiles/Ds1.png',
+    desierto_iso_4: 'Biomas/Tiles/Ds2.png',
     // ── Tiles de bioma: AGUA (3 frames de animación) ─────────────
     agua_bioma_iso_1: 'Biomas/PASTO/iso/agua_iso_preview.png',
     agua_bioma_iso_2: 'Biomas/PASTO/iso/agua_iso_preview_1.png',

@@ -144,13 +144,19 @@ export class Renderer {
 
                 // Cara superior — tile de desierto en el borde exterior (con clip)
                 if (this.images) {
-                    const ax = x * 0.1;
-                    const ay = y * 0.13;
-                    const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
-                    let aidx = Math.floor((aval + 1) * 1.5);
-                    if (aidx < 0) aidx = 0;
-                    if (aidx > 2) aidx = 2;
-                    const desImg = this.images[`desierto_iso_${aidx + 1}`];
+                    const ds2Val = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
+                    let desImg;
+                    if (ds2Val > 1.8) {
+                        desImg = this.images['desierto_iso_4'];
+                    } else {
+                        const ax = x * 0.1;
+                        const ay = y * 0.13;
+                        const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
+                        let aidx = Math.floor((aval + 1) * 1.5);
+                        if (aidx < 0) aidx = 0;
+                        if (aidx > 2) aidx = 2;
+                        desImg = this.images[`desierto_iso_${aidx + 1}`];
+                    }
                     if (desImg) {
                         this.ctx.save();
                         this.ctx.imageSmoothingEnabled = true;
@@ -273,11 +279,17 @@ export class Renderer {
                                 drawW + OV * 2,  drawH + OV);
                             this.ctx.restore();
                         } else {
-                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
-                            let idx = Math.floor((val + 1) * 2);
-                            if (idx < 0) idx = 0;
-                            if (idx > 3) idx = 3;
-                            const isoImg = this.images[`pasto_iso_${idx + 1}`];
+                            const pastoFVal = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
+                            let isoImg;
+                            if (pastoFVal > 1.8) {
+                                isoImg = this.images['pasto_iso_5'];
+                            } else {
+                                const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
+                                let idx = Math.floor((val + 1) * 2);
+                                if (idx < 0) idx = 0;
+                                if (idx > 3) idx = 3;
+                                isoImg = this.images[`pasto_iso_${idx + 1}`];
+                            }
                             if (isoImg) {
                                 this.ctx.save();
                                 this.ctx.drawImage(isoImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
@@ -288,11 +300,17 @@ export class Renderer {
                         }
 
                     } else if (cell.biome === BIOMES.DESERT && this.images) {
-                        const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
-                        let idx = Math.floor((val + 1) * 1.5);
-                        if (idx < 0) idx = 0;
-                        if (idx > 2) idx = 2;
-                        const desImg = this.images[`desierto_iso_${idx + 1}`];
+                        const ds2Val = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
+                        let desImg;
+                        if (ds2Val > 1.8) {
+                            desImg = this.images['desierto_iso_4'];
+                        } else {
+                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
+                            let idx = Math.floor((val + 1) * 1.5);
+                            if (idx < 0) idx = 0;
+                            if (idx > 2) idx = 2;
+                            desImg = this.images[`desierto_iso_${idx + 1}`];
+                        }
                         if (desImg) {
                             this.ctx.save();
                             this.ctx.drawImage(desImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
