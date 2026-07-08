@@ -33,9 +33,9 @@ const imageUrls = {
     agua_bioma_iso_2: 'Biomas/Tiles/agua.png',
     agua_bioma_iso_3: 'Biomas/Tiles/agua.png',
     // ── Tiles de bioma: PANTANO (3 variantes) ────────────────────────
-    pantano_iso_1: 'Biomas/PASTO/iso/pasto_iso_pantano_preview.png',
-    pantano_iso_2: 'Biomas/PASTO/iso/pasto_iso_pantano2_preview.png',
-    pantano_iso_3: 'Biomas/PASTO/iso/pasto_iso_pantano3_preview.png',
+    pantano_iso_1: 'Biomas/Tiles/pantano.png',
+    pantano_iso_2: 'Biomas/Tiles/pantano.png',
+    pantano_iso_3: 'Biomas/Tiles/pantano.png',
     sprout_grass: 'assets/sprout_grass_pastel.png',
     sprout_water: 'assets/sprout_water.png',
     agua_autotile: 'Vegetación/Agua_Autotile_pastel.png',
