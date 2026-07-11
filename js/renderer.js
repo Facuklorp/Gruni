@@ -105,13 +105,19 @@ export class Renderer {
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
         if (this.images && this.images.fondo_gruni) {
             this.ctx.save();
-            // Deshacemos el zoom temporalmente para dibujar la imagen en su resolución nativa (6720x3360)
-            // Esto evita que el navegador la achique y la vuelva a agrandar, quitando el desenfoque.
-            this.ctx.scale(1 / ZOOM, 1 / ZOOM);
+            // Reseteamos todas las transformaciones (zoom, camara) para dibujar directo en los píxeles reales de la pantalla
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // Calculamos la posición en pantalla y la REDONDEAMOS. 
+            // Los números decimales (sub-píxeles) son los que causan el desenfoque en imágenes tan grandes.
+            const screenX = Math.round((-944 - this.cameraX) * ZOOM);
+            const screenY = Math.round((0 - this.cameraY) * ZOOM);
+            const screenW = Math.round(1920 * ZOOM); // 6720
+            const screenH = Math.round(960 * ZOOM);  // 3360
+            
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            
-            this.ctx.drawImage(this.images.fondo_gruni, -944 * ZOOM, 0, 1920 * ZOOM, 960 * ZOOM);
+            this.ctx.drawImage(this.images.fondo_gruni, screenX, screenY, screenW, screenH);
             
             this.ctx.restore();
         } else {
