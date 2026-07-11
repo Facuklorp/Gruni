@@ -76,8 +76,9 @@ export class Renderer {
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
         this.ctx.imageSmoothingEnabled = false;
 
-        const viewW = this.canvas.width  / ZOOM;
-        const viewH = this.canvas.height / ZOOM;
+        const dpr = window.devicePixelRatio || 1;
+        const viewW = this.canvas.width  / (ZOOM * dpr);
+        const viewH = this.canvas.height / (ZOOM * dpr);
 
         // Cámara isométrica con lerp suave
         if (agent) {
@@ -99,25 +100,25 @@ export class Renderer {
         }
 
         this.ctx.save();
-        this.ctx.scale(ZOOM, ZOOM);
+        this.ctx.scale(ZOOM * dpr, ZOOM * dpr);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
         if (this.images && this.images.fondo_gruni) {
             this.ctx.save();
-            // Reseteamos todas las transformaciones (zoom, camara) para dibujar directo en los píxeles reales de la pantalla
+            // Reseteamos todas las transformaciones para dibujar directo en los píxeles físicos
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Calculamos la posición en pantalla y la REDONDEAMOS. 
-            // Los números decimales (sub-píxeles) son los que causan el desenfoque en imágenes tan grandes.
-            const screenX = Math.round((-944 - this.cameraX) * ZOOM);
-            const screenY = Math.round((0 - this.cameraY) * ZOOM);
-            const screenW = Math.round(1920 * ZOOM); // 6720
-            const screenH = Math.round(960 * ZOOM);  // 3360
+            // Calculamos la posición en los PÍXELES FÍSICOS de la pantalla y REDONDEAMOS.
+            // Esto elimina totalmente el desenfoque en monitores High-DPI (Retina, 125% Windows)
+            const physX = Math.round((-944 - this.cameraX) * ZOOM * dpr);
+            const physY = Math.round((0 - this.cameraY) * ZOOM * dpr);
+            const physW = Math.round(1920 * ZOOM * dpr); 
+            const physH = Math.round(960 * ZOOM * dpr);  
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            this.ctx.drawImage(this.images.fondo_gruni, screenX, screenY, screenW, screenH);
+            this.ctx.drawImage(this.images.fondo_gruni, physX, physY, physW, physH);
             
             this.ctx.restore();
         } else {
