@@ -99,7 +99,8 @@ const imageUrls = {
     rocas_2: 'Rocas/Rocas 2.png',
     bg_pasto: 'Biomas/GRANDES/Pasto.png',
     bg_agua: 'Biomas/GRANDES/Agua.png',
-    bg_arena: 'Biomas/GRANDES/Arena.png'
+    bg_arena: 'Biomas/GRANDES/Arena.png',
+    fondo_gruni: 'Fondogruni.png'
 };
 
 function loadImage(url) {
