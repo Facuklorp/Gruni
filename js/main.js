@@ -100,7 +100,7 @@ const imageUrls = {
     bg_pasto: 'Biomas/GRANDES/Pasto.png',
     bg_agua: 'Biomas/GRANDES/Agua.png',
     bg_arena: 'Biomas/GRANDES/Arena.png',
-    fondo_gruni: 'Fondogruni.png'
+    fondo_gruni: 'Fondo nuevo.png'
 };
 
 function loadImage(url) {
