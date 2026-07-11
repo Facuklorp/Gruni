@@ -176,6 +176,11 @@ export class Renderer {
             return a.x - b.x; // desempate por x
         });
 
+        // =========================================================================
+        // MODO DEBUG: OCULTAR TODO EXCEPTO EL FONDO
+        // Vaciamos la cola de renderizado para que no se dibuje absolutamente nada
+        // =========================================================================
+        renderQueue.length = 0;
 
         for (const item of renderQueue) {
             if (item.type === 'resource') {
