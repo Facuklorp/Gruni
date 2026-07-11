@@ -104,11 +104,16 @@ export class Renderer {
 
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
         if (this.images && this.images.fondo_gruni) {
+            this.ctx.save();
+            // Deshacemos el zoom temporalmente para dibujar la imagen en su resolución nativa (6720x3360)
+            // Esto evita que el navegador la achique y la vuelva a agrandar, quitando el desenfoque.
+            this.ctx.scale(1 / ZOOM, 1 / ZOOM);
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            // El mapa completo mide 1920x960 en coords pre-zoom, empezando en X: -944, Y: 0
-            this.ctx.drawImage(this.images.fondo_gruni, -944, 0, 1920, 960);
-            this.ctx.imageSmoothingEnabled = false;
+            
+            this.ctx.drawImage(this.images.fondo_gruni, -944 * ZOOM, 0, 1920 * ZOOM, 960 * ZOOM);
+            
+            this.ctx.restore();
         } else {
             // Fondo de seguridad oscuro si no carga la imagen
             this.ctx.fillStyle = '#111';
@@ -163,6 +168,12 @@ export class Renderer {
             if (da !== db) return da - db;
             return a.x - b.x; // desempate por x
         });
+
+        // =========================================================================
+        // MODO DEBUG: OCULTAR TODO EXCEPTO EL FONDO
+        // Vaciamos la cola de renderizado para que no se dibuje absolutamente nada
+        // =========================================================================
+        renderQueue.length = 0;
 
         for (const item of renderQueue) {
             if (item.type === 'resource') {
