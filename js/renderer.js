@@ -74,6 +74,11 @@ export class Renderer {
 
     // ─── Draw principal ─────────────────────────────────────────────────────────
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
+        // Limpiamos el canvas físico entero antes de dibujar el nuevo frame para evitar el "smearing" (bordes que dejan rastro)
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.fillStyle = '#020617';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
         this.ctx.imageSmoothingEnabled = false;
 
         const dpr = window.devicePixelRatio || 1;
