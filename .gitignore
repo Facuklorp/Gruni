@@ -2,4 +2,5 @@ node_modules/
 NuevosSprites/
 *.log
 .DS_Store
-local_test*.png
+*.psd  
+ 

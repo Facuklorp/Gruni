@@ -74,10 +74,16 @@ export class Renderer {
 
     // ─── Draw principal ─────────────────────────────────────────────────────────
     draw(world, agent, enemies, wolf = null, isEclipse = false, timestamp = 0, timeOfDay = 600, particles = null) {
+        // Limpiamos el canvas físico entero antes de dibujar el nuevo frame para evitar el "smearing" (bordes que dejan rastro)
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.fillStyle = '#020617';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
         this.ctx.imageSmoothingEnabled = false;
 
-        const viewW = this.canvas.width  / ZOOM;
-        const viewH = this.canvas.height / ZOOM;
+        const dpr = window.devicePixelRatio || 1;
+        const viewW = this.canvas.width  / (ZOOM * dpr);
+        const viewH = this.canvas.height / (ZOOM * dpr);
 
         // Cámara isométrica con lerp suave
         if (agent) {
@@ -99,271 +105,31 @@ export class Renderer {
         }
 
         this.ctx.save();
-        this.ctx.scale(ZOOM, ZOOM);
+        this.ctx.scale(ZOOM * dpr, ZOOM * dpr);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // ── FONDO: rellenar con color arena para eliminar el vacío negro ────────
-        const EXTRA = Math.ceil(Math.max(this.canvas.width, this.canvas.height) / (ISO_W * ZOOM)) + 4;
-        const sumMin = -(EXTRA * 2);
-        const sumMax = WORLD_WIDTH + WORLD_HEIGHT - 1 + EXTRA * 2;
-        for (let sum = sumMin; sum < sumMax; sum++) {
-            const xMin = Math.max(-EXTRA, sum - (WORLD_HEIGHT - 1 + EXTRA));
-            const xMax = Math.min(WORLD_WIDTH - 1 + EXTRA, sum + EXTRA);
-            for (let x = xMin; x <= xMax; x++) {
-                const y = sum - x;
-                if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) continue;
-                if (x % 2 !== 0 || y % 2 !== 0) continue;
-
-                const { sx, sy } = this.isoProject(x, y);
-                const drawX = sx - ISO_W / 2;
-                const drawY = sy;
-                const drawW = ISO_W * 2;
-                const drawH = ISO_H * 2;
-                const d_hw = drawW / 2;
-                const d_hh = drawH / 2;
-
-                // Cara lateral izquierda (extensión)
-                this.ctx.fillStyle = '#d4a820';
-                this.ctx.beginPath();
-                this.ctx.moveTo(drawX,          drawY + d_hh);
-                this.ctx.lineTo(drawX + d_hw,   drawY + drawH);
-                this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                this.ctx.lineTo(drawX,          drawY + d_hh + 3);
-                this.ctx.closePath();
-                this.ctx.fill();
-
-                // Cara lateral derecha (extensión)
-                this.ctx.fillStyle = '#b8901a';
-                this.ctx.beginPath();
-                this.ctx.moveTo(drawX + d_hw,   drawY + drawH);
-                this.ctx.lineTo(drawX + drawW,  drawY + d_hh);
-                this.ctx.lineTo(drawX + drawW,  drawY + d_hh + 3);
-                this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                this.ctx.closePath();
-                this.ctx.fill();
-
-                // Cara superior — tile de desierto en el borde exterior (con clip)
-                if (this.images) {
-                    const ds2Val = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
-                    let desImg;
-                    if (ds2Val > 1.8) {
-                        desImg = this.images['desierto_iso_4'];
-                    } else {
-                        const ax = x * 0.1;
-                        const ay = y * 0.13;
-                        const aval = (Math.sin(ax) + Math.sin(ay) + Math.sin(ax * 0.6 + ay * 0.8)) / 3;
-                        let aidx = Math.floor((aval + 1) * 1.5);
-                        if (aidx < 0) aidx = 0;
-                        if (aidx > 2) aidx = 2;
-                        desImg = this.images[`desierto_iso_${aidx + 1}`];
-                    }
-                    if (desImg) {
-                        this.ctx.save();
-                        this.ctx.imageSmoothingEnabled = true;
-                        this.ctx.imageSmoothingQuality = 'medium';
-                        this.ctx.drawImage(desImg, drawX - 3, drawY - 3, drawW + 6, drawH + 6);
-                        this.ctx.imageSmoothingEnabled = false;
-                        this.ctx.restore();
-                    } else {
-                        this.drawDiamond(drawX, drawY, '#f9ca24', null, drawW, drawH);
-                    }
-                } else {
-                    this.drawDiamond(drawX, drawY, '#f9ca24', null, drawW, drawH);
-                }
-            }
-        }
-
-        // ── TERRENO ─────────────────────────────────────────────────────────────
-        // Iterar en bandas diagonales (atrás → adelante) para pintor correcto
-        for (let sum = 0; sum < WORLD_WIDTH + WORLD_HEIGHT - 1; sum++) {
-            const xMin = Math.max(0, sum - WORLD_HEIGHT + 1);
-            const xMax = Math.min(WORLD_WIDTH - 1, sum);
-            for (let x = xMin; x <= xMax; x++) {
-                const y = sum - x;
-                const cell = world.getCell(x, y);
-                if (!cell) continue;
-
-                const { sx, sy } = this.isoProject(x, y);
-                const hw = ISO_W / 2;
-                const hh = ISO_H / 2;
-
-                // ── TERRENO (2x2 TEST) ───────────────────────────────────────────────────────────
-                // Solo dibujamos la base del terreno si estamos en el inicio de un bloque 2x2
-                if (x % 2 === 0 && y % 2 === 0) {
-                    const drawX = sx - ISO_W / 2;
-                    const drawY = sy;
-                    const drawW = ISO_W * 2;
-                    const drawH = ISO_H * 2;
-                    const d_hw = drawW / 2;
-                    const d_hh = drawH / 2;
-
-                    // Determinar colores de bioma
-                    let topColor, leftColor, rightColor, edgeColor;
-                    if (cell.biome === BIOMES.GRASS) {
-                        leftColor  = '#5a9e42';
-                        rightColor = '#4a8a35';
-                        edgeColor  = '#3e7a2c';
-                        topColor   = '#7cc654';
-                    } else if (cell.biome === BIOMES.DESERT) {
-                        leftColor  = '#d4a820';
-                        rightColor = '#b8901a';
-                        edgeColor  = '#a07a10';
-                        topColor   = '#f9ca24';
-                    } else if (cell.biome === BIOMES.WATER_BIOME) {
-                        leftColor  = '#1565a0';
-                        rightColor = '#0e4d8a';
-                        edgeColor  = '#0a3d6b';
-                        topColor   = '#1c82d2';
-                    } else { // SWAMP
-                        leftColor  = '#4a6741';
-                        rightColor = '#3a5433';
-                        edgeColor  = '#2d4227';
-                        topColor   = '#5c8050';
-                    }
-
-                    // Caras laterales (dan profundidad 3D, siempre con color)
-                    this.ctx.fillStyle = leftColor;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(drawX,          drawY + d_hh);
-                    this.ctx.lineTo(drawX + d_hw,   drawY + drawH);
-                    this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                    this.ctx.lineTo(drawX,          drawY + d_hh + 3);
-                    this.ctx.closePath();
-                    this.ctx.fill();
-
-                    this.ctx.fillStyle = rightColor;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(drawX + d_hw,   drawY + drawH);
-                    this.ctx.lineTo(drawX + drawW,  drawY + d_hh);
-                    this.ctx.lineTo(drawX + drawW,  drawY + d_hh + 3);
-                    this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                    this.ctx.closePath();
-                    this.ctx.fill();
-
-                    // Cara superior: imagen iso según bioma
-                    const OV = 4; // píxeles de overlap para cubrir juntas
-                    this.ctx.imageSmoothingEnabled = true;
-                    this.ctx.imageSmoothingQuality = 'medium';
-
-                    if (cell.biome === BIOMES.WATER_BIOME) {
-                        // El bioma agua se cubre con la animación de agua (bloque siguiente)
-                        this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-
-                    } else if (cell.biome === BIOMES.GRASS && this.images) {
-                        const pastoFVal = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
-                        let isoImg;
-                        if (pastoFVal > 1.8) {
-                            isoImg = this.images['pasto_iso_5'];
-                        } else {
-                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x + y) * 0.08)) / 3;
-                            let idx = Math.floor((val + 1) * 2);
-                            if (idx < 0) idx = 0;
-                            if (idx > 3) idx = 3;
-                            isoImg = this.images[`pasto_iso_${idx + 1}`];
-                        }
-                        if (isoImg) {
-                            this.ctx.save();
-                            this.ctx.drawImage(isoImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
-                            this.ctx.restore();
-                        } else {
-                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-                        }
-
-                    } else if (cell.biome === BIOMES.DESERT && this.images) {
-                        const ds2Val = Math.sin(x * 0.3) + Math.cos(y * 0.3) + Math.sin((x - y) * 0.4);
-                        let desImg;
-                        if (ds2Val > 1.8) {
-                            desImg = this.images['desierto_iso_4'];
-                        } else {
-                            const val = (Math.sin(x * 0.1) + Math.sin(y * 0.13) + Math.sin((x * 0.6 + y * 0.8) * 0.3)) / 3;
-                            let idx = Math.floor((val + 1) * 1.5);
-                            if (idx < 0) idx = 0;
-                            if (idx > 2) idx = 2;
-                            desImg = this.images[`desierto_iso_${idx + 1}`];
-                        }
-                        if (desImg) {
-                            this.ctx.save();
-                            this.ctx.drawImage(desImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
-                            this.ctx.restore();
-                        } else {
-                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-                        }
-
-                    } else if (cell.biome === BIOMES.SWAMP && this.images) {
-                        const val = (Math.sin(x * 0.29) + Math.sin(y * 0.33) + Math.sin((x - y) * 0.2)) / 3;
-                        let idx = Math.floor((val + 1) * 1.5);
-                        if (idx < 0) idx = 0;
-                        if (idx > 2) idx = 2;
-                        const swampImg = this.images[`pantano_iso_${idx + 1}`];
-                        if (swampImg) {
-                            this.ctx.save();
-                            this.ctx.drawImage(swampImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
-                            this.ctx.restore();
-                        } else {
-                            this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-                        }
-
-                    } else {
-                        this.drawDiamond(drawX, drawY, topColor, null, drawW, drawH);
-                    }
-
-                    this.ctx.imageSmoothingEnabled = false;
-
-                    // ── AGUA (animación) en 2x2 ────────────────────────────────────────────
-                    if (cell.type === RESOURCES.WATER || cell.type === RESOURCES.BRIDGE) {
-                        const wave = Math.sin(timestamp * 0.002 + x * 0.6 + y * 0.6) * 0.06;
-
-                        // Cara lateral izquierda del agua
-                        this.ctx.fillStyle = '#1565a0';
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(drawX,          drawY + d_hh);
-                        this.ctx.lineTo(drawX + d_hw,   drawY + drawH);
-                        this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                        this.ctx.lineTo(drawX,          drawY + d_hh + 3);
-                        this.ctx.closePath();
-                        this.ctx.fill();
-
-                        // Cara lateral derecha del agua
-                        this.ctx.fillStyle = '#0e4d8a';
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(drawX + d_hw,   drawY + drawH);
-                        this.ctx.lineTo(drawX + drawW,  drawY + d_hh);
-                        this.ctx.lineTo(drawX + drawW,  drawY + d_hh + 3);
-                        this.ctx.lineTo(drawX + d_hw,   drawY + drawH + 3);
-                        this.ctx.closePath();
-                        this.ctx.fill();
-
-                        // Cara superior: animación de agua — 3 frames en loop
-                        // Secuencia: agua_bioma_iso_1 → iso_2 → iso_3 → iso_1 → ...
-                        const WATER_FRAME_MS = 400; // ms por frame
-                        const waterFrameIdx = Math.floor(timestamp / WATER_FRAME_MS) % 3;
-                        const waterKeys = ['agua_bioma_iso_1', 'agua_bioma_iso_2', 'agua_bioma_iso_3'];
-                        const waterImg = this.images?.[waterKeys[waterFrameIdx]]
-                                      ?? this.images?.['agua_bioma_iso_1'];
-                        this.ctx.imageSmoothingEnabled = true;
-                        if (waterImg) {
-                            this.ctx.save();
-                            this.ctx.globalAlpha = 0.88 + wave;
-                            this.ctx.drawImage(waterImg, drawX - OV, drawY - OV / 2, drawW + OV * 2, drawH + OV);
-                            this.ctx.globalAlpha = 1.0;
-                            this.ctx.restore();
-                        } else {
-                            const alpha = (0.88 + wave).toFixed(2);
-                            this.drawDiamond(drawX, drawY, `rgba(28, 130, 210, ${alpha})`, null, drawW, drawH);
-                        }
-                        this.ctx.imageSmoothingEnabled = false;
-
-                        // Destello
-                        const shimX = drawX + d_hw * 0.7 + Math.sin(timestamp * 0.004 + x + y) * 2;
-                        const shimY = drawY + d_hh * 0.6;
-                        this.ctx.fillStyle = 'rgba(255,255,255,0.22)';
-                        this.ctx.beginPath();
-                        this.ctx.ellipse(shimX, shimY, 4, 1.6, 0.4, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                } // FIN de if 2x2
-
-            }
+        // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
+        if (this.images && this.images.fondo_gruni) {
+            this.ctx.save();
+            // Reseteamos todas las transformaciones para dibujar directo en los píxeles físicos
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // Calculamos la posición en los PÍXELES FÍSICOS de la pantalla y REDONDEAMOS.
+            // Esto elimina totalmente el desenfoque en monitores High-DPI (Retina, 125% Windows)
+            const physX = Math.round((-944 - this.cameraX) * ZOOM * dpr);
+            const physY = Math.round((0 - this.cameraY) * ZOOM * dpr);
+            const physW = Math.round(1920 * ZOOM * dpr); 
+            const physH = Math.round(960 * ZOOM * dpr);  
+            
+            this.ctx.imageSmoothingEnabled = true;
+            this.ctx.imageSmoothingQuality = 'high';
+            this.ctx.drawImage(this.images.fondo_gruni, physX, physY, physW, physH);
+            
+            this.ctx.restore();
+        } else {
+            // Fondo de seguridad oscuro si no carga la imagen
+            this.ctx.fillStyle = '#111';
+            this.ctx.fillRect(-944, 0, 1920, 960);
         }
 
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
@@ -414,6 +180,12 @@ export class Renderer {
             if (da !== db) return da - db;
             return a.x - b.x; // desempate por x
         });
+
+        // =========================================================================
+        // MODO DEBUG: OCULTAR TODO EXCEPTO EL FONDO
+        // Vaciamos la cola de renderizado para que no se dibuje absolutamente nada
+        // =========================================================================
+        renderQueue.length = 0;
 
         for (const item of renderQueue) {
             if (item.type === 'resource') {

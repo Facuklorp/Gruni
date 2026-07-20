@@ -99,7 +99,8 @@ const imageUrls = {
     rocas_2: 'Rocas/Rocas 2.png',
     bg_pasto: 'Biomas/GRANDES/Pasto.png',
     bg_agua: 'Biomas/GRANDES/Agua.png',
-    bg_arena: 'Biomas/GRANDES/Arena.png'
+    bg_arena: 'Biomas/GRANDES/Arena.png',
+    fondo_gruni: 'fondo_mapa.png'
 };
 
 function loadImage(url) {
@@ -122,8 +123,11 @@ async function loadAssets() {
 }
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
