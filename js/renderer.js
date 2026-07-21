@@ -116,8 +116,8 @@ export class Renderer {
             
             // Calculamos la posición en los PÍXELES FÍSICOS de la pantalla y REDONDEAMOS.
             // Esto elimina totalmente el desenfoque en monitores High-DPI (Retina, 125% Windows)
-            const physX = Math.round((-944 - this.cameraX) * ZOOM * dpr);
-            const physY = Math.round((0 - this.cameraY) * ZOOM * dpr);
+            const physX = Math.round((-1168 - this.cameraX) * ZOOM * dpr);
+            const physY = Math.round((304 - this.cameraY) * ZOOM * dpr);
             const physW = Math.round(1920 * ZOOM * dpr); 
             const physH = Math.round(960 * ZOOM * dpr);  
             
@@ -129,7 +129,7 @@ export class Renderer {
         } else {
             // Fondo de seguridad oscuro si no carga la imagen
             this.ctx.fillStyle = '#111';
-            this.ctx.fillRect(-944, 0, 1920, 960);
+            this.ctx.fillRect(-1168, 304, 1920, 960);
         }
 
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
@@ -316,7 +316,7 @@ export class Renderer {
                 if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
-                    h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
+                    h = w * (img.height / img.width); // Use exact proportions for alive trees
                     if (h < 50) h = 50;
                 }
             }

@@ -1,10 +1,12 @@
 // js/world.js
 export const CELL_SIZE = 16; // Base size for 16-bit tiles
 export const ZOOM = 1.8;     // Visual scale multiplier
-export const WORLD_WIDTH = 60;
-export const WORLD_HEIGHT = 60;
+export const WORLD_WIDTH = 84;
+export const WORLD_HEIGHT = 104;
 export const ISO_W = 32;     // Ancho del rombo isométrico (píxeles, pre-zoom)
 export const ISO_H = 16;     // Alto del rombo isométrico (píxeles, pre-zoom)
+
+import { MAP_DATA } from './map_data.js';
 
 export const RESOURCES = {
     EMPTY: 0,
@@ -39,57 +41,13 @@ export class World {
     }
 
     generateWorld() {
-        // ── Generación de biomas con Voronoi ────────────────────────────────
-        // Proporción de semillas: 12 pasto : 3 desierto : 3 agua : 2 pantano
-        // ≈ 60% : 15% : 15% : 10%
-        const seeds = [];
-        const addSeeds = (biome, count) => {
-            for (let i = 0; i < count; i++) {
-                seeds.push({ x: Math.random() * WORLD_WIDTH, y: Math.random() * WORLD_HEIGHT, biome });
-            }
-        };
-        addSeeds(BIOMES.GRASS,       12);
-        addSeeds(BIOMES.DESERT,       3);
-        addSeeds(BIOMES.WATER_BIOME,  3);
-        addSeeds(BIOMES.SWAMP,        2);
-
-        // Para cada celda, encontrar la semilla más cercana
-        const getBiome = (x, y) => {
-            let minDist = Infinity, result = BIOMES.GRASS;
-            for (const s of seeds) {
-                const d = (x - s.x) ** 2 + (y - s.y) ** 2;
-                if (d < minDist) { minDist = d; result = s.biome; }
-            }
-            return result;
-        };
-
-        // ── Poblar grilla ────────────────────────────────────────────────────
         for (let y = 0; y < WORLD_HEIGHT; y++) {
             let row = [];
             for (let x = 0; x < WORLD_WIDTH; x++) {
-                const biome = getBiome(x, y);
-                let type = RESOURCES.EMPTY;
-
-                if (biome === BIOMES.WATER_BIOME) {
-                    // Las celdas del bioma agua son agua navegable
-                    type = RESOURCES.WATER;
-                } else if (biome === BIOMES.GRASS) {
-                    const r = Math.random();
-                    if      (r < 0.03) type = RESOURCES.FOOD;
-                    else if (r < 0.05) type = RESOURCES.WOOD;
-                    else if (r < 0.07) type = RESOURCES.BUSH;
-                    else if (r < 0.08) type = RESOURCES.ROCK;
-                } else if (biome === BIOMES.DESERT) {
-                    const r = Math.random();
-                    if      (r < 0.01)  type = RESOURCES.FOOD;  // muy poca comida
-                    else if (r < 0.02)  type = RESOURCES.ROCK;  // algunas rocas
-                } else if (biome === BIOMES.SWAMP) {
-                    const r = Math.random();
-                    if      (r < 0.02) type = RESOURCES.FOOD;
-                    else if (r < 0.04) type = RESOURCES.WOOD;
-                    else if (r < 0.06) type = RESOURCES.BUSH;
-                }
-
+                const cellData = MAP_DATA[y][x];
+                let type = RESOURCES[cellData.t] || RESOURCES.EMPTY;
+                let biome = BIOMES[cellData.b] || BIOMES.GRASS;
+                
                 let capacity = 0;
                 if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 3) + 2;
                 else if (type === RESOURCES.FOOD)  capacity = Math.floor(Math.random() * 2) + 2;
@@ -101,27 +59,6 @@ export class World {
                 row.push({ type, capacity, terrainVariant, biome });
             }
             this.grid.push(row);
-        }
-
-        // ── Río sinuoso (cruza cualquier bioma) ─────────────────────────────
-        let rx = Math.floor(Math.random() * WORLD_WIDTH);
-        let ry = 0;
-        let dir = Math.random() < 0.5 ? 1 : -1;
-        while (ry < WORLD_HEIGHT) {
-            for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -2; dx <= 2; dx++) {
-                    let cx = rx + dx, cy = ry + dy;
-                    if (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT) {
-                        if (Math.abs(dx) + Math.abs(dy) <= 2) {
-                            const biome = this.grid[cy][cx].biome;
-                            this.grid[cy][cx] = { type: RESOURCES.WATER, capacity: 5, terrainVariant: 0, biome };
-                        }
-                    }
-                }
-            }
-            ry += 1;
-            if (Math.random() < 0.4) rx += dir;
-            if (Math.random() < 0.1) dir *= -1;
         }
     }
 
