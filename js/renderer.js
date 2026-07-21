@@ -182,10 +182,8 @@ export class Renderer {
         });
 
         // =========================================================================
-        // MODO DEBUG: OCULTAR TODO EXCEPTO EL FONDO
-        // Vaciamos la cola de renderizado para que no se dibuje absolutamente nada
+        // Ya no vaciamos la cola de renderizado, permitiendo dibujar los árboles y entidades
         // =========================================================================
-        renderQueue.length = 0;
 
         for (const item of renderQueue) {
             if (item.type === 'resource') {
