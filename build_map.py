@@ -38,13 +38,15 @@ def build_map():
             sy = (x + y) * (ISO_H / 2) + OFFSET_Y
             cx, cy = int(sx + ISO_W/2), int(sy + ISO_H/2)
             
-            # Default to grass/empty
-            cell_type = "EMPTY"
+            # Default to void (unwalkable)
+            cell_type = "VOID"
             biome = "GRASS"
             
             if 0 <= cx < width and 0 <= cy < height:
                 r, g, b, a = pixels[cx, cy]
                 if a > 50:
+                    # It's inside the map and visible
+                    cell_type = "EMPTY"
                     if r > 200 and g > 200 and b > 200:
                         cell_type = "WOOD" # Snow Tree
                     elif b > 150 and b > r and g > 100:

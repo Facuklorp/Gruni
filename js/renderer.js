@@ -257,7 +257,10 @@ export class Renderer {
                 if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
-                    h = w * (img.height / img.width) * 1.25; // Force taller proportions for alive trees
+                    // Use the image's intrinsic size scaled down, but with a reasonable minimum
+                    w = img.width * 0.25;
+                    if (w < 38) w = 38;
+                    h = w * (img.height / img.width);
                     if (h < 50) h = 50;
                 }
             }
@@ -296,8 +299,8 @@ export class Renderer {
             isStump = !isAlive;
         } else {
             if (isAlive) {
-                const idx = ((x * 5 + y * 11) % 5) + 1; // 1 to 5
-                img = this.images?.[`iso_arbol_${idx}`];
+                // Currently only Arbol 1 is provided by the user
+                img = this.images?.iso_arbol_1;
             } else {
                 const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
                 const idx = stumpIds[(x * 23 + y * 29) % 9];

@@ -23,7 +23,8 @@ export const RESOURCES = {
     WOOD_EMPTY: 11,
     FOOD_EMPTY: 12,
     BUSH_EMPTY: 13,
-    ROCK_EMPTY: 14
+    ROCK_EMPTY: 14,
+    VOID: 99
 };
 
 export const BIOMES = {

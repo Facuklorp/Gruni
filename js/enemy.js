@@ -169,7 +169,7 @@ export class Enemy {
             this.world.consumeResource(nx, ny);
             return true;
         }
-        if (cell && cell.type === RESOURCES.ROCK) return false;
+        if (cell && (cell.type === RESOURCES.ROCK || cell.type === RESOURCES.VOID)) return false;
         return true;
     }
 
