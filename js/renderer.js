@@ -249,6 +249,12 @@ export class Renderer {
             }
         }
 
+        // Pseudo-random offset para desalinear un poco los árboles
+        const offsetX = ((x * 31 + y * 17) % 20) - 10;
+        const offsetY = ((x * 13 + y * 23) % 10) - 5;
+        const drawX = cx + offsetX;
+        const drawY = sy + offsetY;
+
         if (img) {
             let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
             let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
@@ -264,15 +270,15 @@ export class Renderer {
                     if (h < 50) h = 50;
                 }
             }
-            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
+            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
         } else {
             // Tronco
             this.ctx.fillStyle = '#92400e';
-            this.ctx.fillRect(cx - 1.5, sy - 8, 3, 10);
+            this.ctx.fillRect(drawX - 1.5, drawY - 8, 3, 10);
             // Copa
             this.ctx.fillStyle = isAlive ? '#15803d' : '#7c2d12';
             this.ctx.beginPath();
-            this.ctx.arc(cx, sy - 12, 9, 0, Math.PI * 2);
+            this.ctx.arc(drawX, drawY - 12, 9, 0, Math.PI * 2);
             this.ctx.fill();
             // Frutos
             if (isAlive) {
@@ -280,7 +286,7 @@ export class Renderer {
                 for (let i = 0; i < 4; i++) {
                     const angle = (i / 4) * Math.PI * 2;
                     this.ctx.beginPath();
-                    this.ctx.arc(cx + Math.cos(angle) * 6, sy - 12 + Math.sin(angle) * 5, 1.5, 0, Math.PI * 2);
+                    this.ctx.arc(drawX + Math.cos(angle) * 6, drawY - 12 + Math.sin(angle) * 5, 1.5, 0, Math.PI * 2);
                     this.ctx.fill();
                 }
             }
@@ -309,6 +315,12 @@ export class Renderer {
             }
         }
 
+        // Pseudo-random offset para desalinear un poco los árboles
+        const offsetX = ((x * 31 + y * 17) % 20) - 10;
+        const offsetY = ((x * 13 + y * 23) % 10) - 5;
+        const drawX = cx + offsetX;
+        const drawY = sy + offsetY;
+
         if (img) {
             let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
             let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
@@ -321,13 +333,13 @@ export class Renderer {
                     if (h < 50) h = 50;
                 }
             }
-            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
+            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
         } else {
             this.ctx.fillStyle = isAlive ? '#78350f' : '#57534e';
-            this.ctx.fillRect(cx - 2, sy - 10, 4, 12);
+            this.ctx.fillRect(drawX - 2, drawY - 10, 4, 12);
             this.ctx.fillStyle = isAlive ? '#166534' : '#44403c';
             this.ctx.beginPath();
-            this.ctx.arc(cx, sy - 15, 10, 0, Math.PI * 2);
+            this.ctx.arc(drawX, drawY - 15, 10, 0, Math.PI * 2);
             this.ctx.fill();
         }
     }
