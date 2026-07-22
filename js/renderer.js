@@ -237,6 +237,26 @@ export class Renderer {
         if (biome === BIOMES.DESERT) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
             isStump = !isAlive;
+        } else if (biome === BIOMES.SNOW) {
+            if (isAlive) {
+                const idx = ((x * 11 + y * 17) % 3) + 1;
+                img = this.images?.[`nevado_${idx}`];
+            } else {
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 17 + y * 19) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
+            }
+        } else if (biome === BIOMES.PINE) {
+            if (isAlive) {
+                const idx = ((x * 11 + y * 17) % 3) + 1;
+                img = this.images?.[`pino_${idx}`];
+            } else {
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 17 + y * 19) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
+            }
         } else {
             if (isAlive) {
                 const idx = ((x * 7 + y * 13) % 6) + 1; // 1 to 6
@@ -303,6 +323,26 @@ export class Renderer {
         if (biome === BIOMES.DESERT) {
             img = isAlive ? this.images?.arbol_desierto_1 : this.images?.arbol_desierto_2;
             isStump = !isAlive;
+        } else if (biome === BIOMES.SNOW) {
+            if (isAlive) {
+                const idx = ((x * 11 + y * 17) % 3) + 1;
+                img = this.images?.[`nevado_${idx}`];
+            } else {
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 23 + y * 29) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
+            }
+        } else if (biome === BIOMES.PINE) {
+            if (isAlive) {
+                const idx = ((x * 11 + y * 17) % 3) + 1;
+                img = this.images?.[`pino_${idx}`];
+            } else {
+                const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
+                const idx = stumpIds[(x * 23 + y * 29) % 9];
+                img = this.images?.[`iso_tronco_${idx}`];
+                isStump = true;
+            }
         } else {
             if (isAlive) {
                 const idx = ((x * 11 + y * 17) % 10) + 1; // 1 to 10

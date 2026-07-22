@@ -32,7 +32,9 @@ export const BIOMES = {
     DESERT:      1,
     WATER_BIOME: 2,
     SWAMP:       3,
-    SAND:        1   // alias para retrocompatibilidad
+    SAND:        1,  // alias para retrocompatibilidad
+    SNOW:        4,
+    PINE:        5
 };
 
 export class World {
