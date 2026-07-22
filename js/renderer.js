@@ -190,9 +190,9 @@ export class Renderer {
                 const cell = item.cell;
                 switch (cell.type) {
                     case RESOURCES.FOOD:
-                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome); break;
+                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome, agent); break;
                     case RESOURCES.WOOD:
-                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome); break;
+                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome, agent); break;
                     case RESOURCES.BUSH:
                     case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
                     case RESOURCES.ROCK:
@@ -227,7 +227,7 @@ export class Renderer {
     drawShadow(cx, cy, width, height) { /* desactivada */ }
 
     // ─── Árboles ────────────────────────────────────────────────────────────────
-    drawFruitTree(x, y, type, biome) {
+    drawFruitTree(x, y, type, biome, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.FOOD;
 
@@ -290,7 +290,29 @@ export class Renderer {
                     if (h < 50) h = 50;
                 }
             }
+
+            // Check if agent is behind the tree to apply transparency
+            let alpha = 1.0;
+            if (agent && !isStump) {
+                const agentIso = this.getIsoBase(agent.x, agent.y);
+                const agentBodyY = agentIso.baseY - 6;
+                const treeLeft = drawX - w / 2;
+                const treeRight = treeLeft + w;
+                const treeTop = drawY - h + ISO_H + 2;
+                const treeBottom = treeTop + h;
+                
+                // If agent is drawn before or at same time as tree, and is inside tree rect
+                if ((agent.x + agent.y) <= (x + y + 1.5)) {
+                    if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
+                        agentBodyY >= treeTop && agentBodyY <= treeBottom) {
+                        alpha = 0.5;
+                    }
+                }
+            }
+
+            this.ctx.globalAlpha = alpha;
             this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
+            this.ctx.globalAlpha = 1.0;
         } else {
             // Tronco
             this.ctx.fillStyle = '#92400e';
@@ -313,7 +335,7 @@ export class Renderer {
         }
     }
 
-    drawTree(x, y, type, biome) {
+    drawTree(x, y, type, biome, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.WOOD;
 
@@ -373,7 +395,29 @@ export class Renderer {
                     if (h < 50) h = 50;
                 }
             }
+
+            // Check if agent is behind the tree to apply transparency
+            let alpha = 1.0;
+            if (agent && !isStump) {
+                const agentIso = this.getIsoBase(agent.x, agent.y);
+                const agentBodyY = agentIso.baseY - 6;
+                const treeLeft = drawX - w / 2;
+                const treeRight = treeLeft + w;
+                const treeTop = drawY - h + ISO_H + 2;
+                const treeBottom = treeTop + h;
+                
+                // If agent is drawn before or at same time as tree, and is inside tree rect
+                if ((agent.x + agent.y) <= (x + y + 1.5)) {
+                    if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
+                        agentBodyY >= treeTop && agentBodyY <= treeBottom) {
+                        alpha = 0.5;
+                    }
+                }
+            }
+
+            this.ctx.globalAlpha = alpha;
             this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
+            this.ctx.globalAlpha = 1.0;
         } else {
             this.ctx.fillStyle = isAlive ? '#78350f' : '#57534e';
             this.ctx.fillRect(drawX - 2, drawY - 10, 4, 12);
