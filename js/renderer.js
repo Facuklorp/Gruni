@@ -299,8 +299,8 @@ export class Renderer {
             isStump = !isAlive;
         } else {
             if (isAlive) {
-                // Currently only Arbol 1 is provided by the user
-                img = this.images?.iso_arbol_1;
+                const idx = ((x * 11 + y * 17) % 10) + 1; // 1 to 10
+                img = this.images?.[`iso_arbol_${idx}`];
             } else {
                 const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
                 const idx = stumpIds[(x * 23 + y * 29) % 9];
