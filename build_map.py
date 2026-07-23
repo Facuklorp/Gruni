@@ -57,8 +57,16 @@ def build_map():
                         cell_type = "WATER"
                         biome = "WATER_BIOME"
                     elif r > 150 and g > 50 and b < 100:
-                        cell_type = "WOOD" # Desert Tree
+                        import math
                         biome = "DESERT"
+                        # Usar ruido/senoide para crear grupos (clusters) de árboles
+                        val = math.sin(x * 0.4) + math.sin(y * 0.4) + math.sin((x + y) * 0.2)
+                        # Solo poner árbol si está en la cresta de la onda (zona de cluster)
+                        # y aplicar un poco de aleatoriedad para que no sea un bloque sólido
+                        if val > 0.8 and (x * 13 + y * 7) % 10 < 6:
+                            cell_type = "WOOD"
+                        else:
+                            cell_type = "EMPTY"
                     elif g > r and g > b:
                         cell_type = "WOOD" # Forest Tree
             
