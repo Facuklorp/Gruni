@@ -201,6 +201,8 @@ export class Renderer {
                     case RESOURCES.BOOK:       this.drawBook(item.x, item.y, timestamp, world); break;
                     case RESOURCES.TELESCOPE:  this.drawTelescope(item.x, item.y); break;
                     case RESOURCES.WALL:       this.drawWall(item.x, item.y, cell.capacity); break;
+                    case RESOURCES.MARKET:     this.drawMarket(item.x, item.y); break;
+                    case RESOURCES.MAGIC_TREE: this.drawMagicTree(item.x, item.y, cell.type, cell.biome, agent); break;
                 }
                 if (cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
                     this.drawResourceDots(item.x, item.y, cell.capacity);
@@ -227,6 +229,31 @@ export class Renderer {
     drawShadow(cx, cy, width, height) { /* desactivada */ }
 
     // ─── Árboles ────────────────────────────────────────────────────────────────
+    drawMarket(x, y) {
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        const img = this.images?.mercado;
+        if (img && img.width) {
+            const w = img.width * 0.25;
+            const h = w * (img.height / img.width);
+            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
+        } else {
+            // Placeholder si no hay imagen
+            this.ctx.fillStyle = '#1e3a8a'; // Blueish placeholder
+            this.ctx.fillRect(cx - 20, sy - 40, 40, 40);
+        }
+    }
+
+    drawMagicTree(x, y, type, biome, agent) {
+        // Placeholder for magic tree (reddish), until image is added
+        const { sx, sy, cx } = this.getIsoBase(x, y);
+        this.ctx.fillStyle = '#7f1d1d'; // Dark red trunk
+        this.ctx.fillRect(cx - 2, sy - 15, 4, 15);
+        this.ctx.fillStyle = '#ef4444'; // Red leaves
+        this.ctx.beginPath();
+        this.ctx.arc(cx, sy - 25, 12, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
     drawFruitTree(x, y, type, biome, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.FOOD;

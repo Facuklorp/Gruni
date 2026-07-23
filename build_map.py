@@ -53,6 +53,12 @@ def build_map():
                     elif r > 180 and b > 180 and g < 100:
                         cell_type = "WOOD" # Pine Tree
                         biome = "PINE"
+                    elif b > 200 and r < 50 and g < 50:
+                        cell_type = "MARKET"
+                        biome = "GRASS"
+                    elif r > 200 and g < 50 and b < 50:
+                        cell_type = "MAGIC_TREE"
+                        biome = "GRASS"
                     elif b > 150 and b > r and g > 100:
                         cell_type = "WATER"
                         biome = "WATER_BIOME"

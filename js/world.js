@@ -24,6 +24,8 @@ export const RESOURCES = {
     FOOD_EMPTY: 12,
     BUSH_EMPTY: 13,
     ROCK_EMPTY: 14,
+    MARKET: 15,
+    MAGIC_TREE: 16,
     VOID: 99
 };
 
