@@ -230,17 +230,8 @@ export class Renderer {
 
     // ─── Árboles ────────────────────────────────────────────────────────────────
     drawMarket(x, y) {
-        const { sx, sy, cx } = this.getIsoBase(x, y);
-        const img = this.images?.mercado;
-        if (img && img.width) {
-            const w = img.width * 0.25;
-            const h = w * (img.height / img.width);
-            this.ctx.drawImage(img, cx - w / 2, sy - h + ISO_H + 2, w, h);
-        } else {
-            // Placeholder si no hay imagen
-            this.ctx.fillStyle = '#1e3a8a'; // Blueish placeholder
-            this.ctx.fillRect(cx - 20, sy - 40, 40, 40);
-        }
+        // La imagen del mercado ya está incluida en el fondo (Fondo_mapa_sin_arboles_2.png)
+        // Por lo tanto, no la dibujamos para evitar superposiciones.
     }
 
     drawMagicTree(x, y, type, biome, agent) {
