@@ -616,11 +616,9 @@ canvas.addEventListener('mousemove', (e) => {
         const dx = (e.clientX - lastMouseX) * dpr;
         const dy = (e.clientY - lastMouseY) * dpr;
         
-        // ZOON se importa de world.js y está configurado en renderer.js
-        const zoom = 2.0; // Definido en world.js como ZOOM = 2.0
-        
-        renderer.cameraX -= dx / (zoom * dpr);
-        renderer.cameraY -= dy / (zoom * dpr);
+        // ZOOM se importa de world.js y está configurado en renderer.js
+        renderer.cameraX -= dx / (ZOOM * dpr);
+        renderer.cameraY -= dy / (ZOOM * dpr);
         
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
