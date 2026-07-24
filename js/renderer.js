@@ -86,7 +86,7 @@ export class Renderer {
         const viewH = this.canvas.height / (ZOOM * dpr);
 
         // Cámara isométrica con lerp suave
-        if (agent) {
+        if (agent && !this.manualCamera) {
             const { sx, sy } = this.isoProject(agent.x, agent.y);
             const agentIsoX = sx + ISO_W / 2;
             const agentIsoY = sy + ISO_H / 2;

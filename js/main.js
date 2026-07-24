@@ -1,5 +1,5 @@
 // js/main.js
-import { World, WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, RESOURCES } from './world.js';
+import { World, WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js';
 import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
 import { ParticleSystem } from './particles.js';
@@ -596,4 +596,42 @@ loadAssets().then(() => {
     timerWorker.postMessage({ action: 'start', interval: currentTickRate });
     
     requestAnimationFrame(gameLoop);
+});
+
+// Lógica para mover la cámara (panning)
+let isDraggingMap = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+canvas.addEventListener('mousedown', (e) => {
+    isDraggingMap = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    renderer.manualCamera = true;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (isDraggingMap) {
+        const dpr = window.devicePixelRatio || 1;
+        const dx = (e.clientX - lastMouseX) * dpr;
+        const dy = (e.clientY - lastMouseY) * dpr;
+        
+        // ZOON se importa de world.js y está configurado en renderer.js
+        const zoom = 2.0; // Definido en world.js como ZOOM = 2.0
+        
+        renderer.cameraX -= dx / (zoom * dpr);
+        renderer.cameraY -= dy / (zoom * dpr);
+        
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    isDraggingMap = false;
+});
+
+canvas.addEventListener('dblclick', () => {
+    // Al hacer doble clic volvemos a centrar la cámara en Gruni
+    renderer.manualCamera = false;
 });
