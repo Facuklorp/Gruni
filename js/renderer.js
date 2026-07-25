@@ -749,27 +749,60 @@ export class Renderer {
         this.ctx.fill();
 
         if (type === 'agent') {
-            // Bola amarilla (Gruni)
-            this.ctx.fillStyle = '#facc15';
-            this.ctx.beginPath();
-            this.ctx.arc(cx, bodyY, 5.5, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#ca8a04';
-            this.ctx.lineWidth = 0.7;
-            this.ctx.stroke();
+            let dir = 0; // 0=frente, 1=espalda, 2=izq, 3=der
+            if (entity.dx > 0 || entity.lastDx > 0) dir = 3;
+            else if (entity.dx < 0 || entity.lastDx < 0) dir = 2;
+            else if (entity.dy < 0 || entity.lastDy < 0) dir = 1;
+            else dir = 0; // por defecto de frente
+            
+            let moving = !!(entity.dx || entity.dy);
+            let animSpeed = 4;
+            let fCount = 4;
+            // Si no se mueve, usar frame 0.
+            let frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
+            
+            let img = null;
+            let flip = false;
+            
+            if (dir === 2 && this.images[`agent_walk_side_${frame + 1}`]) { 
+                img = this.images[`agent_walk_side_${frame + 1}`];
+                flip = true;
+            } else if (dir === 3 && this.images[`agent_walk_side_${frame + 1}`]) {
+                img = this.images[`agent_walk_side_${frame + 1}`];
+            } else if (dir === 0 && this.images[`agent_walk_front_${frame + 1}`]) {
+                img = this.images[`agent_walk_front_${frame + 1}`];
+            } else if (dir === 1 && this.images[`agent_walk_back_${frame + 1}`]) {
+                img = this.images[`agent_walk_back_${frame + 1}`];
+            }
 
-            // Ojos que siguen la dirección de movimiento
-            let eyeOffX = 0, eyeOffY = -0.5;
-            if (entity.dx > 0) eyeOffX = 1.5;
-            else if (entity.dx < 0) eyeOffX = -1.5;
-            else if (entity.dy < 0) eyeOffY = -2;
-            else if (entity.dy > 0) eyeOffY = 0.5;
+            if (img) {
+                let fW = img.width || 78;
+                let fH = img.height || 136;
+                let scale = 0.32;
+                let drawW = fW * scale;
+                let drawH = fH * scale;
 
-            this.ctx.fillStyle = '#1e293b';
-            this.ctx.beginPath();
-            this.ctx.arc(cx + eyeOffX - 1.5, bodyY + eyeOffY, 1.1, 0, Math.PI * 2);
-            this.ctx.arc(cx + eyeOffX + 1.5, bodyY + eyeOffY, 1.1, 0, Math.PI * 2);
-            this.ctx.fill();
+                let drawX = cx - drawW / 2;
+                let drawY = baseY - drawH + 4 - bob; 
+
+                this.ctx.save();
+                if (flip) {
+                    this.ctx.translate(cx, 0);
+                    this.ctx.scale(-1, 1);
+                    this.ctx.translate(-cx, 0);
+                }
+                this.ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                this.ctx.restore();
+            } else {
+                // Fallback a bola amarilla
+                this.ctx.fillStyle = '#facc15';
+                this.ctx.beginPath();
+                this.ctx.arc(cx, bodyY, 5.5, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ca8a04';
+                this.ctx.lineWidth = 0.7;
+                this.ctx.stroke();
+            }
 
         } else if (type === 'enemy') {
             // Bola roja (malo)
