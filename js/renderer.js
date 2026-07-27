@@ -104,6 +104,25 @@ export class Renderer {
             }
         }
 
+        // Clamp camera to the bounds of the pre-rendered background image
+        // Background bounds in isometric space: X: -1168 to (-1168+1920) = 752, Y: 304 to (304+960) = 1264
+        const minCameraX = -1168;
+        const maxCameraX = 752 - viewW;
+        const minCameraY = 304;
+        const maxCameraY = 1264 - viewH;
+
+        if (viewW <= 1920) {
+            this.cameraX = Math.max(minCameraX, Math.min(maxCameraX, this.cameraX));
+        } else {
+            this.cameraX = minCameraX + (1920 - viewW) / 2;
+        }
+
+        if (viewH <= 960) {
+            this.cameraY = Math.max(minCameraY, Math.min(maxCameraY, this.cameraY));
+        } else {
+            this.cameraY = minCameraY + (960 - viewH) / 2;
+        }
+
         this.ctx.save();
         this.ctx.scale(ZOOM * dpr, ZOOM * dpr);
         this.ctx.translate(-this.cameraX, -this.cameraY);
