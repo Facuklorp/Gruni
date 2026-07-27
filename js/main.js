@@ -127,7 +127,7 @@ const imageUrls = {
     bg_pasto: 'Biomas/GRANDES/Pasto.png',
     bg_agua: 'Biomas/GRANDES/Agua.png',
     bg_arena: 'Biomas/GRANDES/Arena.png',
-    fondo_gruni: 'Fondo_mapa_sin_arboles_2.png'
+    fondo_gruni: 'Fondo simil DOFUS.png'
 };
 
 function loadImage(url) {
