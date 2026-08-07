@@ -1,0 +1,68 @@
+=============================================================
+ GUÍA DE MEDIDAS (TAMAÑO DE LIENZO/CANVAS POR FRAME) EN PÍXELES
+=============================================================
+Esta guía está pensada para mantener una escala coherente en 
+un juego 2.5D / isométrico estilo DOFUS o Wakfu, tomando como
+referencia a Gruni (128x128 px) y asumiendo que quieres un 
+arte detallado y en alta resolución (HD).
+
+1. PERSONAJES (Personajes jugables, NPCs humanoides)
+-------------------------------------------------------------
+- Personaje principal (GRUNI): 128x128 px
+- NPCs estándar (Aldeanos, guardias): 128x128 px
+- NPCs robustos o muy altos (Herrero gigante, etc.): 192x192 px
+
+2. MASCOTAS Y MONTURAS
+-------------------------------------------------------------
+- Mascotas pequeñas (Gatos, pajaritos, slimes): 64x64 px
+- Mascotas medianas (Lobos, perros grandes): 96x96 px o 128x128 px
+- Monturas (Caballos, bestias de carga): 192x192 px
+
+3. CONSTRUCCIONES DE ALDEA (Edificios)
+-------------------------------------------------------------
+- Casas pequeñas / Choza: 256x256 px
+- Mercado (Puesto de madera con toldo): 256x256 px
+- Botica / Herrería (Casa mediana): 384x384 px
+- Taberna / Ayuntamiento (Casa grande): 512x512 px
+
+4. ESTRUCTURAS ÉPICAS O MONUMENTOS
+-------------------------------------------------------------
+- Templo de Magia: 512x512 px (o hasta 768x768 px si quieres que se vea colosal)
+- Murallas (Por segmento/tile): 128x256 px (altas)
+- Torres de vigilancia: 256x512 px
+
+5. NATURALEZA Y VEGETACIÓN
+-------------------------------------------------------------
+- Árboles comunes (Pinos, robles): 256x256 px o 192x256 px (más altos que anchos)
+- Árboles milenarios / Gigantes: 512x512 px
+- Arbustos y matorrales: 64x64 px
+- Flores, pastos largos, hongos: 32x32 px
+
+6. OBJETOS INTERACTIVOS (Recursos en el mapa)
+-------------------------------------------------------------
+- Menas de mineral (Piedras para picar): 64x64 px o 96x96 px
+- Troncos caídos: 128x64 px
+- Cofres del tesoro: 64x64 px
+- Telescopio (Estructura crafteable interactiva): 128x128 px
+
+7. MONSTRUOS Y ENEMIGOS
+-------------------------------------------------------------
+- Enemigos débiles (Slimes, duendes, ratas): 64x64 px
+- Enemigos estándar (Esqueletos, bandidos): 128x128 px
+- Mini-Jefes (Trols, golems): 256x256 px
+- Jefes Finales (Dragones, monstruos gigantes): 512x512 px o más.
+
+8. INTERFAZ E INVENTARIO (UI)
+-------------------------------------------------------------
+- Íconos de objetos (Pociones, recursos, madera, piedra): 64x64 px
+- Íconos de armas (Espadas, picos, escudos): 64x64 px
+- Retratos de diálogo (Caras de los personajes): 256x256 px
+
+-------------------------------------------------------------
+CONSEJO CLAVE: 
+No importa si el dibujo en sí no ocupa todo el espacio. Lo 
+importante es que el "lienzo transparente" (canvas) del frame 
+tenga ese tamaño. Así, cuando las animaciones se mueven (ej. 
+una espada que se balancea o la sombra del árbol), no se 
+cortarán los bordes de la imagen.
+=============================================================
