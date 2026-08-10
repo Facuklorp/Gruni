@@ -758,7 +758,7 @@ export class Renderer {
 
         // Animación de bobbing mientras se mueve
         const moving = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
-        const bob = moving ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
+        const bob = (moving && type !== 'agent') ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
         const bodyY = baseY - 6 - bob;
 
         // Sombra elíptica sobre el tile
