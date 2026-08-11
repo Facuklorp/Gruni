@@ -768,21 +768,14 @@ export class Renderer {
             // Detect if actually moving visually
             moving = Math.abs(entity.renderX - entity.x) > 0.05 || Math.abs(entity.renderY - entity.y) > 0.05;
             
-            // 125ms per frame * 4 frames = 500ms per full animation cycle
-            // This perfectly matches the logic tick rate (1 movement per 500ms)
+            // 125ms per frame = 500ms per cycle
             let animSpeed = 125; 
             let fCount = 4;
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
-
-            // Gruni solo avanza físicamente en el frame 0 (img 1) y frame 2 (img 3)
-            // Cuando frame es 1 o 3, se queda quieto (canMove = false)
-            let canMove = !moving || (frame % 2 === 0);
             
-            if (canMove) {
-                // Usamos un lerp mayor (0.35) para compensar que solo se mueve la mitad del tiempo
-                entity.renderX += (entity.x - entity.renderX) * (moving ? 0.35 : 0.15);
-                entity.renderY += (entity.y - entity.renderY) * (moving ? 0.35 : 0.15);
-            }
+            // Smooth continuous lerp for organic movement
+            entity.renderX += (entity.x - entity.renderX) * 0.15;
+            entity.renderY += (entity.y - entity.renderY) * 0.15;
         } else {
             // Lerp normal para enemigos y lobo
             entity.renderX += (entity.x - entity.renderX) * 0.15;
