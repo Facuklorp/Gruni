@@ -766,7 +766,7 @@ export class Renderer {
 
         if (type === 'agent') {
             moving = !!(entity.dx || entity.dy);
-            let animSpeed = 4;
+            let animSpeed = 8; // Aumentado de 4 a 8 para hacer los pasos más lentos
             let fCount = 4;
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
 
