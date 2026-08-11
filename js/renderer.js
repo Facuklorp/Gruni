@@ -87,7 +87,9 @@ export class Renderer {
 
         // Cámara isométrica con lerp suave
         if (agent && !this.manualCamera) {
-            const { sx, sy } = this.isoProject(agent.x, agent.y);
+            const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
+            const ay = agent.renderY !== undefined ? agent.renderY : agent.y;
+            const { sx, sy } = this.isoProject(ax, ay);
             const agentIsoX = sx + ISO_W / 2;
             const agentIsoY = sy + ISO_H / 2;
             const desiredX = agentIsoX - viewW / 2;
@@ -753,7 +755,15 @@ export class Renderer {
     drawEntity(entity, type, timestamp = 0) {
         if (type !== 'agent' && entity.hp <= 0) return;
 
-        const { cx, sy, baseY } = this.getIsoBase(entity.x, entity.y);
+        if (entity.renderX === undefined) {
+            entity.renderX = entity.x;
+            entity.renderY = entity.y;
+        }
+        // Lerp factor (higher is faster). 0.15 gives a nice fluid movement without lagging too much behind.
+        entity.renderX += (entity.x - entity.renderX) * 0.15;
+        entity.renderY += (entity.y - entity.renderY) * 0.15;
+
+        const { cx, sy, baseY } = this.getIsoBase(entity.renderX, entity.renderY);
         const t = timestamp || 0;
 
         // Animación de bobbing mientras se mueve
