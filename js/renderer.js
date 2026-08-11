@@ -759,16 +759,37 @@ export class Renderer {
             entity.renderX = entity.x;
             entity.renderY = entity.y;
         }
-        // Lerp factor (higher is faster). 0.15 gives a nice fluid movement without lagging too much behind.
-        entity.renderX += (entity.x - entity.renderX) * 0.15;
-        entity.renderY += (entity.y - entity.renderY) * 0.15;
+
+        const t = timestamp || 0;
+        let frame = 0;
+        let moving = false;
+
+        if (type === 'agent') {
+            moving = !!(entity.dx || entity.dy);
+            let animSpeed = 4;
+            let fCount = 4;
+            frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
+
+            // Gruni solo avanza físicamente en el frame 0 (img 1) y frame 2 (img 3)
+            // Cuando frame es 1 o 3, se queda quieto (canMove = false)
+            let canMove = !moving || (frame % 2 === 0);
+            
+            if (canMove) {
+                // Usamos un lerp mayor (0.35) para compensar que solo se mueve la mitad del tiempo
+                entity.renderX += (entity.x - entity.renderX) * (moving ? 0.35 : 0.15);
+                entity.renderY += (entity.y - entity.renderY) * (moving ? 0.35 : 0.15);
+            }
+        } else {
+            // Lerp normal para enemigos y lobo
+            entity.renderX += (entity.x - entity.renderX) * 0.15;
+            entity.renderY += (entity.y - entity.renderY) * 0.15;
+        }
 
         const { cx, sy, baseY } = this.getIsoBase(entity.renderX, entity.renderY);
-        const t = timestamp || 0;
 
         // Animación de bobbing mientras se mueve
-        const moving = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
-        const bob = (moving && type !== 'agent') ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
+        const movingAny = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
+        const bob = (movingAny && type !== 'agent') ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
         const bodyY = baseY - 6 - bob;
 
         // Sombra elíptica sobre el tile
@@ -783,12 +804,7 @@ export class Renderer {
             else if (entity.dx < 0 || entity.lastDx < 0) dir = 2;
             else if (entity.dy < 0 || entity.lastDy < 0) dir = 1;
             else dir = 0; // por defecto de frente
-            
-            let moving = !!(entity.dx || entity.dy);
-            let animSpeed = 4;
-            let fCount = 4;
-            // Si no se mueve, usar frame 0.
-            let frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
+
             
             let img = null;
             let flip = false;
