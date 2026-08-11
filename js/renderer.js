@@ -765,8 +765,12 @@ export class Renderer {
         let moving = false;
 
         if (type === 'agent') {
-            moving = !!(entity.dx || entity.dy);
-            let animSpeed = 8; // Aumentado de 4 a 8 para hacer los pasos más lentos
+            // Detect if actually moving visually
+            moving = Math.abs(entity.renderX - entity.x) > 0.05 || Math.abs(entity.renderY - entity.y) > 0.05;
+            
+            // 125ms per frame * 4 frames = 500ms per full animation cycle
+            // This perfectly matches the logic tick rate (1 movement per 500ms)
+            let animSpeed = 125; 
             let fCount = 4;
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
 
