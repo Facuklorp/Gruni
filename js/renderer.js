@@ -773,9 +773,19 @@ export class Renderer {
             let fCount = 4;
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
             
-            // Smooth continuous lerp for organic movement
-            entity.renderX += (entity.x - entity.renderX) * 0.15;
-            entity.renderY += (entity.y - entity.renderY) * 0.15;
+            // Wakfu style: Velocidad lineal constante (aprox. 1 casillero cada 500ms)
+            let diffX = entity.x - entity.renderX;
+            let diffY = entity.y - entity.renderY;
+            let dist = Math.sqrt(diffX * diffX + diffY * diffY);
+            let speed = 0.033; // 1 unit / ~30 frames (500ms at 60fps)
+
+            if (dist > speed) {
+                entity.renderX += (diffX / dist) * speed;
+                entity.renderY += (diffY / dist) * speed;
+            } else {
+                entity.renderX = entity.x;
+                entity.renderY = entity.y;
+            }
         } else {
             // Lerp normal para enemigos y lobo
             entity.renderX += (entity.x - entity.renderX) * 0.15;
@@ -786,7 +796,13 @@ export class Renderer {
 
         // Animación de bobbing mientras se mueve
         const movingAny = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
-        const bob = (movingAny && type !== 'agent') ? Math.abs(Math.sin(t * 0.014)) * 3.5 : 0;
+        let bob = 0;
+        if (type === 'agent' && moving) {
+            // Wakfu-style bob: rebote sincrónico con la pisada (cada 2 frames de animación = 250ms)
+            bob = Math.abs(Math.sin((t % 250) / 250 * Math.PI)) * 4;
+        } else if (movingAny && type !== 'agent') {
+            bob = Math.abs(Math.sin(t * 0.014)) * 3.5;
+        }
         const bodyY = baseY - 6 - bob;
 
         // Sombra elíptica sobre el tile
