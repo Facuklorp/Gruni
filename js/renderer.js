@@ -420,7 +420,7 @@ export class Renderer {
             }
         } else {
             if (isAlive) {
-                const idx = ((x * 11 + y * 17) % 10) + 1; // 1 to 10
+                const idx = ((x * 11 + y * 17) % 12) + 1; // 1 to 12
                 img = this.images?.[`iso_arbol_${idx}`];
             } else {
                 const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];

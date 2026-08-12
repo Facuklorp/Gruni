@@ -88,6 +88,8 @@ const imageUrls = {
     iso_arbol_8: 'Vegetación/Arbol 8.png',
     iso_arbol_9: 'Vegetación/Arbol 9.png',
     iso_arbol_10: 'Vegetación/Arbol 10.png',
+    iso_arbol_11: 'Vegetación/Arbol A.png',
+    iso_arbol_12: 'Vegetación/Arbol B.png',
     iso_frutal_1: 'Vegetación/iso_frutal_1.png',
     iso_frutal_2: 'Vegetación/iso_frutal_2.png',
     iso_frutal_3: 'Vegetación/iso_frutal_3.png',
