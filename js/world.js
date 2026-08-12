@@ -111,6 +111,9 @@ export class World {
         if (direction === 'south') agent.y = 0;
         if (direction === 'north') agent.y = this.height - 1;
         
+        agent.renderX = agent.x;
+        agent.renderY = agent.y;
+        
         if (window.game && window.game.setEnemies) window.game.setEnemies([]);
         if (window.game && window.game.getWolf) {
             let w = window.game.getWolf();

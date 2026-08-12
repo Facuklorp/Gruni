@@ -21,13 +21,13 @@ export const STATES = {
 export class Agent {
     constructor(world) {
         this.world = world;
-        this.x = Math.floor(world.width / 2);
-        this.y = Math.floor(world.height / 2);
+        this.x = Math.floor(this.world.width / 2);
+        this.y = Math.floor(this.world.height / 2);
         // Find safe spawn
         while (this.world.grid[this.y] && this.world.grid[this.y][this.x] && (this.world.grid[this.y][this.x].type === RESOURCES.WATER || this.world.grid[this.y][this.x].type === RESOURCES.ROCK)) {
             this.x++;
-            if (this.x >= world.width) { this.x = 0; this.y++; }
-            if (this.y >= world.height) { this.x = 0; this.y = 0; break; }
+            if (this.x >= this.world.width) { this.x = 0; this.y++; }
+            if (this.y >= this.world.height) { this.x = 0; this.y = 0; break; }
         }
         
         this.hunger = 0;
@@ -224,8 +224,8 @@ export class Agent {
             if (!Array.isArray(types)) types = [types];
             let nearest = null;
             let minDist = Infinity;
-            for (let ty = 0; ty < world.height; ty++) {
-                for (let tx = 0; tx < world.width; tx++) {
+            for (let ty = 0; ty < this.world.height; ty++) {
+                for (let tx = 0; tx < this.world.width; tx++) {
                     if (tx === ignX && ty === ignY) continue;
                     if (this.inaccessibleTargets.some(t => t.x === tx && t.y === ty)) continue;
                     if (types.includes(this.world.grid[ty][tx].type)) {
@@ -756,9 +756,9 @@ export class Agent {
     tryStep(nx, ny) {
         if (!this.isValidCoord(nx, ny)) {
             if (nx < 0 && this.world.currentZone && this.world.currentZone.connections.west) return true;
-            if (nx >= this.world.width && this.world.currentZone && this.world.currentZone.connections.east) return true;
+            if (nx >= this.this.world.width && this.world.currentZone && this.world.currentZone.connections.east) return true;
             if (ny < 0 && this.world.currentZone && this.world.currentZone.connections.north) return true;
-            if (ny >= this.world.height && this.world.currentZone && this.world.currentZone.connections.south) return true;
+            if (ny >= this.this.world.height && this.world.currentZone && this.world.currentZone.connections.south) return true;
             return false;
         }
         let cell = this.world.getCell(nx, ny);
@@ -780,7 +780,7 @@ export class Agent {
     }
 
     isValidCoord(x, y) {
-        return (x >= 0 && x < world.width && y >= 0 && y < world.height);
+        return (x >= 0 && x < this.world.width && y >= 0 && y < this.world.height);
     }
 
     wander() {

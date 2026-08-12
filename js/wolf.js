@@ -81,7 +81,7 @@ export class Wolf {
     }
 
     tryStep(nx, ny) {
-        if (nx < 0 || nx >= world.width || ny < 0 || ny >= world.height) return false;
+        if (nx < 0 || nx >= this.world.width || ny < 0 || ny >= this.world.height) return false;
         let cell = this.world.getCell(nx, ny);
         if (cell && cell.type === RESOURCES.WATER) {
             this.world.consumeResource(nx, ny);
