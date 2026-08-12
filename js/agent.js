@@ -1,5 +1,5 @@
 // js/agent.js
-import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
+import { RESOURCES } from './world.js';
 
 export const STATES = {
     WANDERING: 'Deambulando',
@@ -21,13 +21,13 @@ export const STATES = {
 export class Agent {
     constructor(world) {
         this.world = world;
-        this.x = Math.floor(WORLD_WIDTH / 2);
-        this.y = Math.floor(WORLD_HEIGHT / 2);
+        this.x = Math.floor(world.width / 2);
+        this.y = Math.floor(world.height / 2);
         // Find safe spawn
         while (this.world.grid[this.y] && this.world.grid[this.y][this.x] && (this.world.grid[this.y][this.x].type === RESOURCES.WATER || this.world.grid[this.y][this.x].type === RESOURCES.ROCK)) {
             this.x++;
-            if (this.x >= WORLD_WIDTH) { this.x = 0; this.y++; }
-            if (this.y >= WORLD_HEIGHT) { this.x = 0; this.y = 0; break; }
+            if (this.x >= world.width) { this.x = 0; this.y++; }
+            if (this.y >= world.height) { this.x = 0; this.y = 0; break; }
         }
         
         this.hunger = 0;
@@ -224,8 +224,8 @@ export class Agent {
             if (!Array.isArray(types)) types = [types];
             let nearest = null;
             let minDist = Infinity;
-            for (let ty = 0; ty < WORLD_HEIGHT; ty++) {
-                for (let tx = 0; tx < WORLD_WIDTH; tx++) {
+            for (let ty = 0; ty < world.height; ty++) {
+                for (let tx = 0; tx < world.width; tx++) {
                     if (tx === ignX && ty === ignY) continue;
                     if (this.inaccessibleTargets.some(t => t.x === tx && t.y === ty)) continue;
                     if (types.includes(this.world.grid[ty][tx].type)) {
@@ -678,10 +678,10 @@ export class Agent {
         let oldX = this.x;
         let oldY = this.y;
 
-        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.dy = 0; this.stepOnCell(this.x, this.y); }
-        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.dy = 0; this.stepOnCell(this.x, this.y); }
-        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.dx = 0; this.dy = 1; this.stepOnCell(this.x, this.y); }
-        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.dx = 0; this.dy = -1; this.stepOnCell(this.x, this.y); }
+        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.dy = 0; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
+        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.dy = 0; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
+        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.dx = 0; this.dy = 1; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
+        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.dx = 0; this.dy = -1; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
 
         if (this.x === oldX && this.y === oldY) {
             this.stuckTimer++;
@@ -754,7 +754,13 @@ export class Agent {
     }
 
     tryStep(nx, ny) {
-        if (!this.isValidCoord(nx, ny)) return false;
+        if (!this.isValidCoord(nx, ny)) {
+            if (nx < 0 && this.world.currentZone && this.world.currentZone.connections.west) return true;
+            if (nx >= this.world.width && this.world.currentZone && this.world.currentZone.connections.east) return true;
+            if (ny < 0 && this.world.currentZone && this.world.currentZone.connections.north) return true;
+            if (ny >= this.world.height && this.world.currentZone && this.world.currentZone.connections.south) return true;
+            return false;
+        }
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
         if (cell.type === RESOURCES.ROCK) return false;
@@ -774,7 +780,7 @@ export class Agent {
     }
 
     isValidCoord(x, y) {
-        return (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT);
+        return (x >= 0 && x < world.width && y >= 0 && y < world.height);
     }
 
     wander() {
@@ -795,6 +801,7 @@ export class Agent {
                 this.x = nx;
                 this.y = ny;
                 this.stepOnCell(nx, ny);
+                this.checkZoneTransition();
                 break;
             }
         }

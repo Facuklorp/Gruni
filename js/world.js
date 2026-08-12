@@ -1,12 +1,12 @@
 // js/world.js
 export const CELL_SIZE = 16; // Base size for 16-bit tiles
 export const ZOOM = 3.0;     // Visual scale multiplier (Ajustado a 3.0 para la imagen de 5760px)
-export const WORLD_WIDTH = 84;
-export const WORLD_HEIGHT = 104;
+
 export const ISO_W = 32;     // Ancho del rombo isométrico (píxeles, pre-zoom)
 export const ISO_H = 16;     // Alto del rombo isométrico (píxeles, pre-zoom)
 
 import { MAP_DATA } from './map_data.js';
+import { ZONES } from './zones.js';
 
 export const RESOURCES = {
     EMPTY: 0,
@@ -40,18 +40,48 @@ export const BIOMES = {
 };
 
 export class World {
-    constructor() {
+    constructor(initialZoneId = 'pradera') {
+        this.grids = {};
         this.grid = [];
-        this.generateWorld();
+        this.currentZoneId = null;
+        this.currentZone = null;
+        this.loadZone(initialZoneId);
+    }
+    
+    loadZone(zoneId) {
+        if (!ZONES[zoneId]) return false;
+        this.currentZoneId = zoneId;
+        this.currentZone = ZONES[zoneId];
+        this.width = this.currentZone.width;
+        this.height = this.currentZone.height;
+        if (!this.grids[zoneId]) this.generateWorld(zoneId);
+        this.grid = this.grids[zoneId];
+        return true;
     }
 
-    generateWorld() {
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
+    generateWorld(zoneId) {
+        let zone = ZONES[zoneId];
+        let newGrid = [];
+        for (let y = 0; y < this.height; y++) {
             let row = [];
-            for (let x = 0; x < WORLD_WIDTH; x++) {
-                const cellData = MAP_DATA[y][x];
-                let type = RESOURCES[cellData.t] || RESOURCES.EMPTY;
-                let biome = BIOMES[cellData.b] || BIOMES.GRASS;
+            for (let x = 0; x < this.width; x++) {
+                let cellData = null;
+                if (zone.mapData && zone.mapData[y] && zone.mapData[y][x]) {
+                    cellData = zone.mapData[y][x];
+                }
+                
+                let type = RESOURCES.EMPTY;
+                let biome = BIOMES[zone.defaultBiome];
+                
+                if (cellData) {
+                    type = RESOURCES[cellData.t] || RESOURCES.EMPTY;
+                    biome = BIOMES[cellData.b] !== undefined ? BIOMES[cellData.b] : biome;
+                } else {
+                    if (Math.random() < 0.05) type = RESOURCES.WOOD;
+                    else if (Math.random() < 0.02) type = RESOURCES.ROCK;
+                    else if (Math.random() < 0.02) type = RESOURCES.FOOD;
+                }
+                
                 
                 let capacity = 0;
                 if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 3) + 2;
@@ -63,19 +93,44 @@ export class World {
                 const terrainVariant = Math.floor(Math.random() * 4);
                 row.push({ type, capacity, terrainVariant, biome });
             }
-            this.grid.push(row);
+            newGrid.push(row);
         }
+        this.grids[zoneId] = newGrid;
+    }
+
+
+    transitionZone(agent, direction) {
+        if (!this.currentZone || !this.currentZone.connections) return false;
+        const nextZoneId = this.currentZone.connections[direction];
+        if (!nextZoneId || !ZONES[nextZoneId]) return false;
+        
+        this.loadZone(nextZoneId);
+        
+        if (direction === 'east') agent.x = 0;
+        if (direction === 'west') agent.x = this.width - 1;
+        if (direction === 'south') agent.y = 0;
+        if (direction === 'north') agent.y = this.height - 1;
+        
+        if (window.game && window.game.setEnemies) window.game.setEnemies([]);
+        if (window.game && window.game.getWolf) {
+            let w = window.game.getWolf();
+            if (w) { w.x = agent.x; w.y = agent.y; }
+        }
+        
+        agent.path = [];
+        agent.target = null;
+        return true;
     }
 
     getCell(x, y) {
-        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             return this.grid[y][x];
         }
         return null;
     }
 
     setCell(x, y, type, capacity = null) {
-        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             let cap = capacity;
             if (cap === null) {
                 if (type === RESOURCES.HOUSE) {
@@ -100,7 +155,7 @@ export class World {
     }
 
     consumeResource(x, y) {
-        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             let cell = this.grid[y][x];
             if (cell.type !== RESOURCES.EMPTY && cell.type !== RESOURCES.BRIDGE) {
                 cell.capacity--;
@@ -122,8 +177,9 @@ export class World {
         let nearest = null;
         let minDistance = Infinity;
 
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
-            for (let x = 0; x < WORLD_WIDTH; x++) {
+        let newGrid = [];
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
                 if (x === ignoreX && y === ignoreY) continue;
                 if (resourceTypes.includes(this.grid[y][x].type)) {
                     let dist = Math.abs(x - startX) + Math.abs(y - startY);
@@ -150,8 +206,8 @@ export class World {
         };
 
         // Intento 1: área 2x2 completamente vacía y sin agua
-        for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
-            for (let x = 0; x < WORLD_WIDTH - 1; x++) {
+        for (let y = 0; y < this.height - 1; y++) {
+            for (let x = 0; x < this.width - 1; x++) {
                 if (this.grid[y][x].type   === RESOURCES.EMPTY &&
                     this.grid[y][x+1].type === RESOURCES.EMPTY &&
                     this.grid[y+1][x].type === RESOURCES.EMPTY &&
@@ -166,8 +222,8 @@ export class World {
         if (nearest) return nearest;
 
         // Intento 2: área 2x2 sin agua ni roca (puede tener recursos)
-        for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
-            for (let x = 0; x < WORLD_WIDTH - 1; x++) {
+        for (let y = 0; y < this.height - 1; y++) {
+            for (let x = 0; x < this.width - 1; x++) {
                 let valid = true;
                 for (let dy = 0; dy < 2; dy++) {
                     for (let dx = 0; dx < 2; dx++) {
@@ -185,8 +241,8 @@ export class World {
         if (nearest) return nearest;
 
         // Intento 3 (extremo): cualquier 2x2 seco — NUNCA sobre agua
-        for (let y = 0; y < WORLD_HEIGHT - 1; y++) {
-            for (let x = 0; x < WORLD_WIDTH - 1; x++) {
+        for (let y = 0; y < this.height - 1; y++) {
+            for (let x = 0; x < this.width - 1; x++) {
                 if (!noWater(x, y)) continue; // siempre excluir agua
                 let dist = Math.abs(x - startX) + Math.abs(y - startY);
                 if (dist < minDistance) { minDistance = dist; nearest = {x, y}; }
@@ -199,8 +255,8 @@ export class World {
     regenLoop(agent) {
         // Solo 1 intento por tick, con 5% de probabilidad → mucho más lento
         if (Math.random() < 0.05) {
-            let x = Math.floor(Math.random() * WORLD_WIDTH);
-            let y = Math.floor(Math.random() * WORLD_HEIGHT);
+            let x = Math.floor(Math.random() * this.width);
+            let y = Math.floor(Math.random() * this.height);
             
             // Evitar spawnear recursos muy cerca de la casa para dejar espacio a las murallas
             if (agent && agent.home) {

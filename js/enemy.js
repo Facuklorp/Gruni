@@ -1,5 +1,5 @@
 // js/enemy.js
-import { WORLD_WIDTH, WORLD_HEIGHT, RESOURCES } from './world.js';
+import { RESOURCES } from './world.js';
 
 export class Enemy {
     constructor(world, x, y) {
@@ -163,7 +163,7 @@ export class Enemy {
     }
 
     tryStep(nx, ny) {
-        if (nx < 0 || nx >= WORLD_WIDTH || ny < 0 || ny >= WORLD_HEIGHT) return false;
+        if (nx < 0 || nx >= world.width || ny < 0 || ny >= world.height) return false;
         let cell = this.world.getCell(nx, ny);
         if (cell && cell.type === RESOURCES.WATER) {
             this.world.consumeResource(nx, ny);

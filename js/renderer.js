@@ -1,5 +1,5 @@
 // js/renderer.js — Vista Isométrica
-import { WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
+import { CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -130,34 +130,42 @@ export class Renderer {
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
-        if (this.images && this.images.fondo_gruni) {
+        let bgKey = world.currentZone ? world.currentZone.background : 'fondo_gruni';
+        let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['fondo_gruni'] : null);
+        
+        if (bgImg) {
             this.ctx.save();
-            // Reseteamos todas las transformaciones para dibujar directo en los píxeles físicos
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Calculamos la posición en los PÍXELES FÍSICOS de la pantalla y REDONDEAMOS.
-            // Esto elimina totalmente el desenfoque en monitores High-DPI (Retina, 125% Windows)
-            const physX = Math.round((-1168 - this.cameraX) * ZOOM * dpr);
-            const physY = Math.round((304 - this.cameraY) * ZOOM * dpr);
-            const physW = Math.round(1920 * ZOOM * dpr); 
-            const physH = Math.round(960 * ZOOM * dpr);  
+            let bgX, bgY, bgW, bgH;
+            if (world.currentZoneId === 'pradera') {
+                bgX = -1168; bgY = 304; bgW = 1920; bgH = 960;
+            } else {
+                let gridTotalW = (world.width + world.height) * ISO_W;
+                let gridTotalH = (world.width + world.height) * ISO_H;
+                bgX = -(world.height * ISO_W); bgY = 0; bgW = gridTotalW; bgH = gridTotalH;
+            }
+            
+            const physX = Math.round((bgX - this.cameraX) * ZOOM * dpr);
+            const physY = Math.round((bgY - this.cameraY) * ZOOM * dpr);
+            const physW = Math.round(bgW * ZOOM * dpr); 
+            const physH = Math.round(bgH * ZOOM * dpr);  
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            this.ctx.drawImage(this.images.fondo_gruni, physX, physY, physW, physH);
+            this.ctx.drawImage(bgImg, physX, physY, physW, physH);
             
             this.ctx.restore();
         } else {
-            // Fondo de seguridad oscuro si no carga la imagen
             this.ctx.fillStyle = '#111';
-            this.ctx.fillRect(-1168, 304, 1920, 960);
+            this.ctx.fillRect(-(world.height * ISO_W), 0, (world.width + world.height) * ISO_W, (world.width + world.height) * ISO_H);
         }
 
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
         const renderQueue = [];
 
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
-            for (let x = 0; x < WORLD_WIDTH; x++) {
+        for (let y = 0; y < world.height; y++) {
+            for (let x = 0; x < world.width; x++) {
                 const cell = world.getCell(x, y);
                 if (!cell) continue;
 
@@ -813,10 +821,24 @@ export class Renderer {
 
         if (type === 'agent') {
             let dir = 0; // 0=frente, 1=espalda, 2=izq, 3=der
-            if (entity.dx > 0 || entity.lastDx > 0) dir = 3;
-            else if (entity.dx < 0 || entity.lastDx < 0) dir = 2;
-            else if (entity.dy < 0 || entity.lastDy < 0) dir = 1;
-            else dir = 0; // por defecto de frente
+            
+            // Calculate direction based on visual delta (diffX / diffY are computed above)
+            if (typeof entity.renderDir === 'undefined') entity.renderDir = 3; // Default right
+            
+            if (moving) {
+                // We use diffX and diffY which were calculated earlier:
+                // let diffX = entity.x - entity.renderX;
+                // let diffY = entity.y - entity.renderY;
+                let dx = entity.x - entity.renderX;
+                let dy = entity.y - entity.renderY;
+                
+                if (dx > 0.05) entity.renderDir = 3;
+                else if (dx < -0.05) entity.renderDir = 2;
+                else if (dy < -0.05) entity.renderDir = 1;
+                else if (dy > 0.05) entity.renderDir = 0;
+            }
+            
+            dir = entity.renderDir;
 
             
             let img = null;

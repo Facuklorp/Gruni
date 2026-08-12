@@ -98,8 +98,19 @@
                 <span id="gruni-dialogue-text"></span>
             </div>
         </main>
-
     </div>
+
+    <!-- MENÚ DE DEBUG PARA VIAJAR ENTRE ZONAS RÁPIDAMENTE -->
+    <div id="debug-menu" style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; color: white; font-family: monospace; text-align: center;">
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid white; padding-bottom: 5px;">🔧 Zonas (Prueba)</h3>
+        <button onclick="window.game.world.transitionZone(window.game.agent, 'north')" style="margin-bottom: 5px;">⬆️ Norte</button><br>
+        <button onclick="window.game.world.transitionZone(window.game.agent, 'west')" style="margin-right: 5px;">⬅️ Oeste</button>
+        <button onclick="window.game.world.transitionZone(window.game.agent, 'east')">Este ➡️</button><br>
+        <button onclick="window.game.world.transitionZone(window.game.agent, 'south')" style="margin-top: 5px;">⬇️ Sur</button>
+        <p style="font-size: 10px; margin-top: 10px; color: #ccc;">Teletransporta a Gruni para<br>forzar el cambio de mapa</p>
+    </div>
+
+    <!-- Cargar todos los scripts modulares -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

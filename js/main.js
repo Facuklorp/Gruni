@@ -1,5 +1,5 @@
 // js/main.js
-import { World, WORLD_WIDTH, WORLD_HEIGHT, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js';
+import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js';
 import { Agent, STATES } from './agent.js';
 import { Renderer } from './renderer.js';
 import { ParticleSystem } from './particles.js';
@@ -336,8 +336,8 @@ function updateUI() {
     invTelescope.innerText = agent.hasTelescope ? 'Sí' : 'No';
     
     let wallsCount = 0;
-    for (let y = 0; y < WORLD_HEIGHT; y++) {
-        for (let x = 0; x < WORLD_WIDTH; x++) {
+    for (let y = 0; y < world.height; y++) {
+        for (let x = 0; x < world.width; x++) {
             if (world.grid[y][x].type === RESOURCES.WALL) wallsCount++;
         }
     }
@@ -457,12 +457,12 @@ function runTick() {
             isEclipse = true;
             
             // Spawn inmediato de 2 enemigos al comenzar el eclipse
-            let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-            let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
+            let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
+            let edgeY = Math.floor(Math.random() * world.height);
             enemies.push(new Enemy(world, edgeX, edgeY));
             
-            let edgeX2 = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-            let edgeY2 = Math.floor(Math.random() * WORLD_HEIGHT);
+            let edgeX2 = Math.random() > 0.5 ? 0 : world.width - 1;
+            let edgeY2 = Math.floor(Math.random() * world.height);
             enemies.push(new Enemy(world, edgeX2, edgeY2));
 
             if (!agent.branches.includes('ASTRONOMY')) {
@@ -481,8 +481,8 @@ function runTick() {
         let spawnRate = isEclipse ? 40 : 120; // Normal: 1 cada 60s | Eclipse: 1 cada 20s
         if (spawnTimer >= spawnRate && enemies.length < MAX_ENEMIES) {
             spawnTimer = 0;
-            let edgeX = Math.random() > 0.5 ? 0 : WORLD_WIDTH - 1;
-            let edgeY = Math.floor(Math.random() * WORLD_HEIGHT);
+            let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
+            let edgeY = Math.floor(Math.random() * world.height);
             enemies.push(new Enemy(world, edgeX, edgeY));
             firstEnemySpawned = true;
         } else if (spawnTimer >= spawnRate) {
@@ -495,8 +495,8 @@ function runTick() {
         if (agent.homeStage === 3 && !bookSpawned) {
             if (bookCooldownTimer > 0) bookCooldownTimer--;
             if (bookCooldownTimer === 0) {
-                let emptyX = Math.floor(Math.random() * WORLD_WIDTH);
-                let emptyY = Math.floor(Math.random() * WORLD_HEIGHT);
+                let emptyX = Math.floor(Math.random() * world.width);
+                let emptyY = Math.floor(Math.random() * world.height);
                 if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
                     const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
                     if (availableBranches.length > 0) {
@@ -530,8 +530,8 @@ function gameLoop(timestamp) {
 
         // Ambient Spawns
         if (Math.random() < 0.05) { // 5% chance por frame de spawnear hoja
-            let rx = Math.floor(Math.random() * WORLD_WIDTH);
-            let ry = Math.floor(Math.random() * WORLD_HEIGHT);
+            let rx = Math.floor(Math.random() * world.width);
+            let ry = Math.floor(Math.random() * world.height);
             let cell = world.getCell(rx, ry);
             if (cell && cell.type === RESOURCES.WOOD) {
                 particles.spawnLeaf(rx * CELL_SIZE + CELL_SIZE/2, ry * CELL_SIZE + CELL_SIZE/2 - 20);
@@ -539,8 +539,8 @@ function gameLoop(timestamp) {
         }
 
         if (Math.random() < 0.02) { // 2% chance de luciérnaga
-            let rx = Math.floor(Math.random() * WORLD_WIDTH);
-            let ry = Math.floor(Math.random() * WORLD_HEIGHT);
+            let rx = Math.floor(Math.random() * world.width);
+            let ry = Math.floor(Math.random() * world.height);
             let cell = world.getCell(rx, ry);
             if (cell && cell.type === RESOURCES.WATER) {
                 particles.spawnFirefly(rx * CELL_SIZE + Math.random()*CELL_SIZE, ry * CELL_SIZE + Math.random()*CELL_SIZE);
@@ -589,7 +589,7 @@ timerWorker.onmessage = function(e) {
 // Iniciar el bucle
 loadAssets().then(() => {
     renderer.initImages(IMAGES);
-    window.game = { world, agent, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, setWolf: (val) => wolf = val, Enemy, Wolf, RESOURCES, STATES };
+    window.game = { world, agent, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, setWolf: (val) => wolf = val, Enemy, Wolf, RESOURCES, STATES };
     
     // Actualizar UI inicialmente
     updateUI();
