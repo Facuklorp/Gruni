@@ -828,9 +828,6 @@ export class Renderer {
             if (typeof entity.renderDir === 'undefined') entity.renderDir = 3; // Default right
             
             if (moving) {
-                // We use diffX and diffY which were calculated earlier:
-                // let diffX = entity.x - entity.renderX;
-                // let diffY = entity.y - entity.renderY;
                 let dx = entity.x - entity.renderX;
                 let dy = entity.y - entity.renderY;
                 
@@ -841,6 +838,11 @@ export class Renderer {
             }
             
             dir = entity.renderDir;
+            
+            // Adjust frames for dir === 0 (front walk fluid)
+            let fCount = dir === 0 ? 35 : 4;
+            let animSpeed = dir === 0 ? 28 : 125;
+            frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
 
             
             let img = null;
