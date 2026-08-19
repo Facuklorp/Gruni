@@ -836,9 +836,18 @@ export class Renderer {
             
             dir = entity.renderDir;
             
-            // Adjust frames for dir === 0 (front walk fluid)
-            let fCount = dir === 0 ? 35 : 4;
-            let animSpeed = dir === 0 ? 28 : 125;
+            // Adjust frames for fluid walks
+            let fCount = 4;
+            let animSpeed = 125;
+            
+            if (dir === 0) {
+                fCount = 35;
+                animSpeed = 28;
+            } else if (dir === 1) {
+                fCount = 29;
+                animSpeed = 34;
+            }
+            
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
 
             
