@@ -846,6 +846,9 @@ export class Renderer {
             } else if (dir === 1) {
                 fCount = 29;
                 animSpeed = 34;
+            } else if (dir === 2 || dir === 3) {
+                fCount = 32;
+                animSpeed = 31;
             }
             
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
