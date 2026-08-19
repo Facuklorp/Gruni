@@ -807,10 +807,7 @@ export class Renderer {
         // Animación de bobbing mientras se mueve
         const movingAny = !!(entity.dx || entity.dy || entity.lastDx || entity.lastDy);
         let bob = 0;
-        if (type === 'agent' && moving) {
-            // Wakfu-style bob: rebote sincrónico con la pisada (cada 2 frames de animación = 250ms)
-            bob = Math.abs(Math.sin((t % 250) / 250 * Math.PI)) * 4;
-        } else if (movingAny && type !== 'agent') {
+        if (movingAny && type !== 'agent') {
             bob = Math.abs(Math.sin(t * 0.014)) * 3.5;
         }
         const bodyY = baseY - 6 - bob;
