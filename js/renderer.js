@@ -846,7 +846,10 @@ export class Renderer {
             } else if (dir === 1) {
                 fCount = 29;
                 animSpeed = 34;
-            } else if (dir === 2 || dir === 3) {
+            } else if (dir === 2) {
+                fCount = 31;
+                animSpeed = 32;
+            } else if (dir === 3) {
                 fCount = 32;
                 animSpeed = 31;
             }
@@ -857,9 +860,8 @@ export class Renderer {
             let img = null;
             let flip = false;
             
-            if (dir === 2 && this.images[`agent_walk_side_${frame + 1}`]) { 
-                img = this.images[`agent_walk_side_${frame + 1}`];
-                flip = true;
+            if (dir === 2 && this.images[`agent_walk_left_${frame + 1}`]) { 
+                img = this.images[`agent_walk_left_${frame + 1}`];
             } else if (dir === 3 && this.images[`agent_walk_side_${frame + 1}`]) {
                 img = this.images[`agent_walk_side_${frame + 1}`];
             } else if (dir === 0 && this.images[`agent_walk_front_${frame + 1}`]) {
