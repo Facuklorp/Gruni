@@ -106,23 +106,37 @@ export class Renderer {
             }
         }
 
-        // Clamp camera to the bounds of the pre-rendered background image
-        // Background bounds in isometric space: X: -1168 to (-1168+1920) = 752, Y: 304 to (304+960) = 1264
-        const minCameraX = -1168;
-        const maxCameraX = 752 - viewW;
-        const minCameraY = 304;
-        const maxCameraY = 1264 - viewH;
-
-        if (viewW <= 1920) {
-            this.cameraX = Math.max(minCameraX, Math.min(maxCameraX, this.cameraX));
+        // ── FONDO Y LÍMITES DE CÁMARA DINÁMICOS ─────────────────────────────────
+        let bgKey = world.currentZone ? world.currentZone.background : 'fondo_gruni';
+        let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['fondo_gruni'] : null);
+        
+        let bgX, bgY, bgW, bgH;
+        if (world.currentZoneId === 'pradera') {
+            bgX = -1168; bgY = 304; bgW = 1920; bgH = 960;
         } else {
-            this.cameraX = minCameraX + (1920 - viewW) / 2;
+            // Límites exactos del rombo isométrico para otras zonas
+            bgW = (world.width + world.height) * (ISO_W / 2) + ISO_W;
+            bgH = (world.width + world.height) * (ISO_H / 2) + ISO_H;
+            bgX = -(world.height * (ISO_W / 2));
+            bgY = 0;
         }
 
-        if (viewH <= 960) {
+        // Clamp camera to the bounds of the current background
+        const minCameraX = bgX;
+        const maxCameraX = bgX + bgW - viewW;
+        const minCameraY = bgY;
+        const maxCameraY = bgY + bgH - viewH;
+
+        if (viewW <= bgW) {
+            this.cameraX = Math.max(minCameraX, Math.min(maxCameraX, this.cameraX));
+        } else {
+            this.cameraX = minCameraX + (bgW - viewW) / 2;
+        }
+
+        if (viewH <= bgH) {
             this.cameraY = Math.max(minCameraY, Math.min(maxCameraY, this.cameraY));
         } else {
-            this.cameraY = minCameraY + (960 - viewH) / 2;
+            this.cameraY = minCameraY + (bgH - viewH) / 2;
         }
 
         this.ctx.save();
@@ -130,21 +144,9 @@ export class Renderer {
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
-        let bgKey = world.currentZone ? world.currentZone.background : 'fondo_gruni';
-        let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['fondo_gruni'] : null);
-        
         if (bgImg) {
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-            
-            let bgX, bgY, bgW, bgH;
-            if (world.currentZoneId === 'pradera') {
-                bgX = -1168; bgY = 304; bgW = 1920; bgH = 960;
-            } else {
-                let gridTotalW = (world.width + world.height) * ISO_W;
-                let gridTotalH = (world.width + world.height) * ISO_H;
-                bgX = -(world.height * ISO_W); bgY = 0; bgW = gridTotalW; bgH = gridTotalH;
-            }
             
             const physX = Math.round((bgX - this.cameraX) * ZOOM * dpr);
             const physY = Math.round((bgY - this.cameraY) * ZOOM * dpr);
@@ -158,7 +160,7 @@ export class Renderer {
             this.ctx.restore();
         } else {
             this.ctx.fillStyle = '#111';
-            this.ctx.fillRect(-(world.height * ISO_W), 0, (world.width + world.height) * ISO_W, (world.width + world.height) * ISO_H);
+            this.ctx.fillRect(bgX, bgY, bgW, bgH);
         }
 
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────

@@ -1,0 +1,46 @@
+Lista de Zonas del Simulador de Dios (Gruni)
+
+1. Pradera
+   - Tamaño: 84x104 casillas
+   - Bioma: Pasto
+   - Conexiones: Montañas Nevadas (Norte), Desierto (Sur), Bosque y Río (Este), Aldea y Campo (Oeste).
+
+2. Desierto
+   - Tamaño: 60x60 casillas
+   - Bioma: Desierto
+   - Conexiones: Pradera (Norte).
+
+3. Bosque y Río
+   - Tamaño: 70x70 casillas
+   - Bioma: Pasto
+   - Conexiones: Bosque Mágico (Norte), Pradera (Oeste).
+
+4. Montañas Nevadas
+   - Tamaño: 60x60 casillas
+   - Bioma: Nieve
+   - Conexiones: Zonas de Hielo (Norte), Pradera (Sur).
+
+5. Zonas de Hielo
+   - Tamaño: 50x50 casillas
+   - Bioma: Nieve
+   - Conexiones: Montañas Nevadas (Sur).
+
+6. Bosque Mágico
+   - Tamaño: 60x60 casillas
+   - Bioma: Pino
+   - Conexiones: Cementerio de Animales (Este), Bosque y Río (Sur).
+
+7. Aldea y Campo
+   - Tamaño: 80x80 casillas
+   - Bioma: Pasto
+   - Conexiones: Playa (Sur), Pradera (Este).
+
+8. Playa
+   - Tamaño: 90x50 casillas
+   - Bioma: Agua
+   - Conexiones: Aldea y Campo (Norte).
+
+9. Cementerio de Animales
+   - Tamaño: 50x50 casillas
+   - Bioma: Desierto
+   - Conexiones: Bosque Mágico (Oeste).
