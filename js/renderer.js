@@ -172,27 +172,24 @@ export class Renderer {
         // ── HUELLAS (FOOTPRINTS) EN EL DESIERTO / NIEVE ────────────────────────
         if (agent) {
             const currentCell = world.getCell(Math.floor(agent.x), Math.floor(agent.y));
-            // Dejar huellas en desierto, playa o nieve
             if (currentCell && (currentCell.biome === BIOMES.DESERT || currentCell.biome === BIOMES.SNOW || currentCell.biome === BIOMES.WATER_BIOME || currentCell.biome === BIOMES.SAND)) {
                 const dist = Math.hypot(agent.x - this.lastFootprintX, agent.y - this.lastFootprintY);
-                if (dist > 0.4) { // Cada 0.4 casillas
+                if (dist > 0.15) { // Reducido: Dejar huellas más seguido
                     const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
                     const ay = agent.renderY !== undefined ? agent.renderY : agent.y;
                     const { cx, baseY } = this.getIsoBase(ax, ay);
                     
-                    // Alternar pie izquierdo/derecho
                     const isRight = this.footprintStep % 2 === 0;
                     
-                    // Dependiendo de la dirección de movimiento, el offset lateral cambia
-                    // Para simplificar, desplazamos ligeramente en X isométrica
-                    const offsetX = isRight ? 2 : -2;
-                    const offsetY = isRight ? 1 : -1;
+                    // Mayor separación lateral para que se noten los dos pies
+                    const offsetX = isRight ? 4 : -4;
+                    const offsetY = isRight ? 2 : -2;
                     
                     this.footprints.push({
                         x: cx + offsetX,
                         y: baseY - 1 + offsetY,
                         createdAt: timestamp,
-                        lifeTime: 8000 // 8 segundos
+                        lifeTime: 8000
                     });
                     
                     this.lastFootprintX = agent.x;
@@ -217,7 +214,7 @@ export class Renderer {
             this.ctx.fillStyle = `rgba(100, 50, 20, ${alpha * 0.4})`;
             
             this.ctx.beginPath();
-            this.ctx.ellipse(fp.x, fp.y, 2.5, 1.2, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(fp.x, fp.y, 3, 1.5, 0, 0, Math.PI * 2);
             this.ctx.fill();
         }
         this.ctx.restore();
