@@ -232,7 +232,8 @@ const imageUrls = {
     bg_pasto: 'Biomas/GRANDES/Pasto.png',
     bg_agua: 'Biomas/GRANDES/Agua.png',
     bg_arena: 'Biomas/GRANDES/Arena.png',
-    fondo_gruni: 'Fondo_GRUNI.png'
+    fondo_gruni: 'Fondo_GRUNI.png',
+    fondo_desierto: 'fondo_desierto.jpg'
 };
 
 function loadImage(url) {

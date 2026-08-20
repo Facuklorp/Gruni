@@ -56,6 +56,12 @@ export class World {
         this.height = this.currentZone.height;
         if (!this.grids[zoneId]) this.generateWorld(zoneId);
         this.grid = this.grids[zoneId];
+        
+        let display = document.getElementById('current-zone-display');
+        if (display) {
+            display.innerText = 'Zona: ' + this.currentZone.name;
+        }
+        
         return true;
     }
 
