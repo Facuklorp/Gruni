@@ -1,0 +1,47 @@
+=============================================================
+ PROMPTS DE GENERACIÓN DE IMÁGENES PARA LAS ZONAS DE GRUNI
+=============================================================
+Estilo base: 2.5D / Isométrico, estilo DOFUS / Wakfu, sin personajes.
+Se recomienda copiar y pegar el prompt en inglés en la IA (Firefly, Midjourney, etc.) para mejores resultados.
+
+1. Pradera (Bioma: Pasto)
+-------------------------
+Prompt: An isometric 2.5D video game background of a vast green meadow. Lush grass, small rocks, wild flowers, and patches of dirt. In the style of tactical RPG games like DOFUS and Wakfu. Colorful, vibrant, cartoonish HD digital art, bright daylight. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+2. Desierto (Bioma: Desierto)
+-----------------------------
+Prompt: An isometric 2.5D video game background of a hot desert. Dry sand dunes, scattered cacti, cracked earth, and small sandstone rocks. In the style of tactical RPG games like DOFUS and Wakfu. Warm color palette, vibrant, cartoonish HD digital art, bright harsh sunlight. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+3. Bosque y Río (Bioma: Pasto)
+------------------------------
+Prompt: An isometric 2.5D video game background of a green forest intersected by a flowing river. Lush grass, oak trees, and a clear blue stream of water over pebbles. In the style of tactical RPG games like DOFUS and Wakfu. Colorful, vibrant, cartoonish HD digital art, bright daylight. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+4. Montañas Nevadas (Bioma: Nieve)
+----------------------------------
+Prompt: An isometric 2.5D video game background of high snowy mountains. Ground covered in thick white snow, rocky elevations, and scattered frozen pine trees. In the style of tactical RPG games like DOFUS and Wakfu. Cold blue and white color palette, vibrant, cartoonish HD digital art. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+5. Zonas de Hielo (Bioma: Nieve)
+--------------------------------
+Prompt: An isometric 2.5D video game background of a frozen ice tundra. Slippery ice patches, deep snow, frozen crystals, and frost-covered rocks. In the style of tactical RPG games like DOFUS and Wakfu. Cold cyan and white color palette, vibrant, cartoonish HD digital art, crisp lighting. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+6. Bosque Mágico (Bioma: Pino)
+------------------------------
+Prompt: An isometric 2.5D video game background of a magical pine forest. Lush dark green grass, tall pine trees with subtle glowing magical elements and mushrooms. In the style of tactical RPG games like DOFUS and Wakfu. Vibrant colors, cartoonish HD digital art, soft mystical night lighting. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+7. Aldea y Campo (Bioma: Pasto)
+-------------------------------
+Prompt: An isometric 2.5D video game background of a peaceful rural village field. Lush green grass, dirt paths, clearings for buildings, small bushes. In the style of tactical RPG games like DOFUS and Wakfu. Colorful, vibrant, cartoonish HD digital art, bright daylight. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+8. Playa (Bioma: Agua)
+----------------------
+Prompt: An isometric 2.5D video game background of a sunny beach coast. Soft golden sand meeting clear blue ocean water, small seashells, and a few palm trees. In the style of tactical RPG games like DOFUS and Wakfu. Warm and tropical color palette, vibrant, cartoonish HD digital art. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+9. Cementerio de Animales (Bioma: Desierto)
+-------------------------------------------
+Prompt: An isometric 2.5D video game background of an animal graveyard in a desert biome. Dry sand, ancient giant animal bones half-buried, small dry rocks and withered shrubs. In the style of tactical RPG games like DOFUS and Wakfu. Warm, desolate atmosphere, vibrant cartoonish HD digital art. Clear isometric perspective, empty environment, strictly no characters, no UI.
+
+=============================================================
+ CONSEJO: Si usas Adobe Firefly, utiliza una de tus imágenes
+ previas ("Fondo simil DOFUS.png") como "Reference Image" 
+ para mantener exactamente la misma estética en todos los mapas.
+=============================================================
