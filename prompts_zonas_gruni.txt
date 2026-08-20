@@ -3,7 +3,7 @@
 =============================================================
 Estilo base: 2.5D / Isométrico, estilo DOFUS / Wakfu.
 IMPORTANTE: Estos prompts están diseñados para generar terrenos 100% LIMPIOS (sin árboles, rocas ni estructuras) para que el motor del juego pueda colocarlos procedimentalmente sin que choquen con el dibujo.
-Recomendación: Generar en 4K o usar Upscaler. NO usar imágenes de referencia (o usarlas solo para copiar la paleta de colores).
+Recomendación: ¡USA tu imagen 'Fondo_GRUNI.png' como Imagen Base / Referencia (Image-to-Image)! Descubrimos que si no lo haces, la IA dibujará cielo y horizonte. Usa estos prompts limpios + tu imagen base para forzar la perspectiva correcta sin que aparezcan ruinas ni árboles.
 
 1. Pradera (Bioma: Pasto)
 -------------------------
