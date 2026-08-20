@@ -1,46 +1,47 @@
 Lista de Zonas del Simulador de Dios (Gruni)
+[FORMATO 3x3]
 
-1. Pradera
+1. Pradera (Centro)
    - Tamaño: 84x104 casillas
    - Bioma: Pasto
    - Conexiones: Montañas Nevadas (Norte), Desierto (Sur), Bosque y Río (Este), Aldea y Campo (Oeste).
 
-2. Desierto
+2. Desierto (Centro Sur)
    - Tamaño: 60x60 casillas
    - Bioma: Desierto
-   - Conexiones: Pradera (Norte).
+   - Conexiones: Pradera (Norte), Cementerio de Animales (Este), Playa (Oeste).
 
-3. Bosque y Río
+3. Bosque y Río (Centro Este)
    - Tamaño: 70x70 casillas
    - Bioma: Pasto
-   - Conexiones: Bosque Mágico (Norte), Pradera (Oeste).
+   - Conexiones: Bosque Mágico (Norte), Pradera (Oeste), Cementerio de Animales (Sur).
 
-4. Montañas Nevadas
+4. Montañas Nevadas (Centro Norte)
    - Tamaño: 60x60 casillas
    - Bioma: Nieve
-   - Conexiones: Zonas de Hielo (Norte), Pradera (Sur).
+   - Conexiones: Pradera (Sur), Bosque Mágico (Este), Zonas de Hielo (Oeste).
 
-5. Zonas de Hielo
+5. Zonas de Hielo (Noroeste)
    - Tamaño: 50x50 casillas
    - Bioma: Nieve
-   - Conexiones: Montañas Nevadas (Sur).
+   - Conexiones: Montañas Nevadas (Este), Aldea y Campo (Sur).
 
-6. Bosque Mágico
+6. Bosque Mágico (Noreste)
    - Tamaño: 60x60 casillas
    - Bioma: Pino
-   - Conexiones: Cementerio de Animales (Este), Bosque y Río (Sur).
+   - Conexiones: Bosque y Río (Sur), Montañas Nevadas (Oeste).
 
-7. Aldea y Campo
+7. Aldea y Campo (Centro Oeste)
    - Tamaño: 80x80 casillas
    - Bioma: Pasto
-   - Conexiones: Playa (Sur), Pradera (Este).
+   - Conexiones: Pradera (Este), Playa (Sur), Zonas de Hielo (Norte).
 
-8. Playa
+8. Playa (Suroeste)
    - Tamaño: 90x50 casillas
    - Bioma: Agua
-   - Conexiones: Aldea y Campo (Norte).
+   - Conexiones: Aldea y Campo (Norte), Desierto (Este).
 
-9. Cementerio de Animales
+9. Cementerio de Animales (Sureste)
    - Tamaño: 50x50 casillas
    - Bioma: Desierto
-   - Conexiones: Bosque Mágico (Oeste).
+   - Conexiones: Bosque y Río (Norte), Desierto (Oeste).
