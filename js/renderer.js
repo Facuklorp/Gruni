@@ -9,6 +9,12 @@ export class Renderer {
         this.cameraY = 0;
         this.cameraInitialized = false;
         this.images = null;
+        
+        // Sistema de huellas (footprints)
+        this.footprints = [];
+        this.lastFootprintX = 0;
+        this.lastFootprintY = 0;
+        this.footprintStep = 0; // Alternar pie izquierdo/derecho
 
         this.ctx.imageSmoothingEnabled = false;
     }
@@ -162,6 +168,59 @@ export class Renderer {
             this.ctx.fillStyle = '#111';
             this.ctx.fillRect(bgX, bgY, bgW, bgH);
         }
+
+        // ── HUELLAS (FOOTPRINTS) EN EL DESIERTO / NIEVE ────────────────────────
+        if (agent) {
+            const currentCell = world.getCell(Math.floor(agent.x), Math.floor(agent.y));
+            // Dejar huellas en desierto, playa o nieve
+            if (currentCell && (currentCell.biome === BIOMES.DESERT || currentCell.biome === BIOMES.SNOW || currentCell.biome === BIOMES.WATER_BIOME || currentCell.biome === BIOMES.SAND)) {
+                const dist = Math.hypot(agent.x - this.lastFootprintX, agent.y - this.lastFootprintY);
+                if (dist > 0.4) { // Cada 0.4 casillas
+                    const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
+                    const ay = agent.renderY !== undefined ? agent.renderY : agent.y;
+                    const { cx, baseY } = this.getIsoBase(ax, ay);
+                    
+                    // Alternar pie izquierdo/derecho
+                    const isRight = this.footprintStep % 2 === 0;
+                    
+                    // Dependiendo de la dirección de movimiento, el offset lateral cambia
+                    // Para simplificar, desplazamos ligeramente en X isométrica
+                    const offsetX = isRight ? 2 : -2;
+                    const offsetY = isRight ? 1 : -1;
+                    
+                    this.footprints.push({
+                        x: cx + offsetX,
+                        y: baseY - 1 + offsetY,
+                        createdAt: timestamp,
+                        lifeTime: 8000 // 8 segundos
+                    });
+                    
+                    this.lastFootprintX = agent.x;
+                    this.lastFootprintY = agent.y;
+                    this.footprintStep++;
+                }
+            }
+        }
+
+        // Dibujar huellas
+        this.ctx.save();
+        for (let i = this.footprints.length - 1; i >= 0; i--) {
+            const fp = this.footprints[i];
+            const age = timestamp - fp.createdAt;
+            if (age >= fp.lifeTime) {
+                this.footprints.splice(i, 1);
+                continue;
+            }
+            
+            const alpha = 1 - (age / fp.lifeTime);
+            // Color de huella (marrón oscuro transparente)
+            this.ctx.fillStyle = `rgba(100, 50, 20, ${alpha * 0.4})`;
+            
+            this.ctx.beginPath();
+            this.ctx.ellipse(fp.x, fp.y, 2.5, 1.2, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        this.ctx.restore();
 
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
         const renderQueue = [];
