@@ -233,7 +233,16 @@ const imageUrls = {
     bg_agua: 'Biomas/GRANDES/Agua.png',
     bg_arena: 'Biomas/GRANDES/Arena.png',
     fondo_gruni: 'Fondo_GRUNI.png',
-    fondo_desierto: 'fondodesierto.png'
+    fondo_desierto: 'fondodesierto.png',
+    bg_aldea_campo: 'Zonas/Aldea y campo.jpg',
+    bg_bosque_magico: 'Zonas/Bosque mágico.jpg',
+    bg_bosque_rio: 'Zonas/Bosque y río.jpg',
+    bg_cementerio_animales: 'Zonas/Cementerio de animales.jpg',
+    bg_desierto: 'Zonas/Desierto.jpg',
+    bg_montanas_nevadas: 'Zonas/Montañas nevadas.jpg',
+    bg_playa: 'Zonas/Playa.jpg',
+    bg_pradera: 'Zonas/Pradera.jpg',
+    bg_zonas_hielo: 'Zonas/Zonas de hielo.jpg'
 };
 
 function loadImage(url) {

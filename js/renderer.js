@@ -113,8 +113,8 @@ export class Renderer {
         }
 
         // ── FONDO Y LÍMITES DE CÁMARA DINÁMICOS ─────────────────────────────────
-        let bgKey = world.currentZone ? world.currentZone.background : 'fondo_gruni';
-        let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['fondo_gruni'] : null);
+        let bgKey = world.currentZone ? world.currentZone.background : 'bg_pradera';
+        let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['bg_pradera'] : null);
         
         let bgX, bgY, bgW, bgH;
         if (world.currentZoneId === 'pradera') {
