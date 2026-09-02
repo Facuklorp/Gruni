@@ -159,8 +159,8 @@ export class Renderer {
             const physW = Math.round(bgW * ZOOM * dpr); 
             const physH = Math.round(bgH * ZOOM * dpr);  
             
-            this.ctx.imageSmoothingEnabled = true;
-            this.ctx.imageSmoothingQuality = 'high';
+            this.ctx.imageSmoothingEnabled = false;
+            // this.ctx.imageSmoothingQuality = 'high'; // Eliminamos la calidad alta que difumina
             this.ctx.drawImage(bgImg, physX, physY, physW, physH);
             
             this.ctx.restore();
