@@ -149,35 +149,33 @@ export class Renderer {
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
         if (bgImg) {
             this.ctx.save();
+            // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Draw with proper aspect ratio (object-fit: cover) so it doesn't squish
+            // "cada imagen en 4K debe ocupar la pantalla del monitor"
+            // Calculamos para que cubra toda la pantalla sin perder su proporción (object-fit: cover)
             let imgRatio = bgImg.width / bgImg.height;
-            let targetRatio = bgW / bgH;
+            let screenRatio = this.canvas.width / this.canvas.height;
             
-            let drawW = bgW;
-            let drawH = bgH;
-            let drawX = bgX;
-            let drawY = bgY;
+            let drawW = this.canvas.width;
+            let drawH = this.canvas.height;
+            let drawX = 0;
+            let drawY = 0;
 
-            if (imgRatio < targetRatio) {
-                // Image is too tall, fit width
-                drawH = bgW / imgRatio;
-                drawY = bgY - (drawH - bgH) / 2;
+            if (imgRatio < screenRatio) {
+                // La imagen es muy alta, ajustamos al ancho de la pantalla
+                drawH = this.canvas.width / imgRatio;
+                drawY = -(drawH - this.canvas.height) / 2;
             } else {
-                // Image is too wide, fit height
-                drawW = bgH * imgRatio;
-                drawX = bgX - (drawW - bgW) / 2;
+                // La imagen es muy ancha, ajustamos al alto de la pantalla
+                drawW = this.canvas.height * imgRatio;
+                drawX = -(drawW - this.canvas.width) / 2;
             }
-
-            const physX = Math.round((drawX - this.cameraX) * ZOOM * dpr);
-            const physY = Math.round((drawY - this.cameraY) * ZOOM * dpr);
-            const physW = Math.round(drawW * ZOOM * dpr); 
-            const physH = Math.round(drawH * ZOOM * dpr);  
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            this.ctx.drawImage(bgImg, physX, physY, physW, physH);
+            // Dibujamos estático en la pantalla
+            this.ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
             
             this.ctx.restore();
         } else {
