@@ -117,15 +117,12 @@ export class Renderer {
         let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['bg_pradera'] : null);
         
         let bgX, bgY, bgW, bgH;
-        if (world.currentZoneId === 'pradera') {
-            bgX = -1168; bgY = 304; bgW = 1920; bgH = 960;
-        } else {
-            // Límites exactos del rombo isométrico para otras zonas
-            bgW = (world.width + world.height) * (ISO_W / 2) + ISO_W;
-            bgH = (world.width + world.height) * (ISO_H / 2) + ISO_H;
-            bgX = -(world.height * (ISO_W / 2));
-            bgY = 0;
-        }
+        
+        // Límites exactos del rombo isométrico para TODAS las zonas
+        bgW = (world.width + world.height) * (ISO_W / 2) + ISO_W;
+        bgH = (world.width + world.height) * (ISO_H / 2) + ISO_H;
+        bgX = -(world.height * (ISO_W / 2));
+        bgY = 0;
 
         // Clamp camera to the bounds of the current background
         const minCameraX = bgX;
@@ -154,10 +151,29 @@ export class Renderer {
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            const physX = Math.round((bgX - this.cameraX) * ZOOM * dpr);
-            const physY = Math.round((bgY - this.cameraY) * ZOOM * dpr);
-            const physW = Math.round(bgW * ZOOM * dpr); 
-            const physH = Math.round(bgH * ZOOM * dpr);  
+            // Draw with proper aspect ratio (object-fit: cover) so it doesn't squish
+            let imgRatio = bgImg.width / bgImg.height;
+            let targetRatio = bgW / bgH;
+            
+            let drawW = bgW;
+            let drawH = bgH;
+            let drawX = bgX;
+            let drawY = bgY;
+
+            if (imgRatio < targetRatio) {
+                // Image is too tall, fit width
+                drawH = bgW / imgRatio;
+                drawY = bgY - (drawH - bgH) / 2;
+            } else {
+                // Image is too wide, fit height
+                drawW = bgH * imgRatio;
+                drawX = bgX - (drawW - bgW) / 2;
+            }
+
+            const physX = Math.round((drawX - this.cameraX) * ZOOM * dpr);
+            const physY = Math.round((drawY - this.cameraY) * ZOOM * dpr);
+            const physW = Math.round(drawW * ZOOM * dpr); 
+            const physH = Math.round(drawH * ZOOM * dpr);  
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
