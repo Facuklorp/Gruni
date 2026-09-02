@@ -4,7 +4,7 @@ Este archivo (`AGENTS.md`) provee contexto automático a cualquier agente de IA 
 
 ## Sobre el Juego
 - **Género**: Simulador de Dios / Supervivencia en 2.5D Isométrico.
-- **Estilo Visual**: Retro / Pixel Art (estilo DOFUS o RPG antiguo). Los fondos y sprites se dibujan con `imageSmoothingEnabled = false` para mantener los píxeles nítidos y cuadrados.
+- **Estilo Visual**: 2.5D Isométrico. Los fondos son pinturas/ilustraciones en alta resolución, y los personajes son dibujados. NO es un juego Pixel Art.
 - **Perspectiva**: Vista isométrica con cámara libre.
 - **Tecnología**: HTML5 Canvas, JavaScript puro (sin frameworks de juego).
 
@@ -27,6 +27,5 @@ Este archivo (`AGENTS.md`) provee contexto automático a cualquier agente de IA 
 - **Enemigos**: Lobos y otras criaturas hostiles de las cuales Gruni debe defenderse.
 
 ## Reglas de Desarrollo
-1. Mantener siempre el estilo isométrico y Pixel Art en el renderizado del canvas.
-2. Evitar usar `imageSmoothingEnabled = true` salvo que sea en offscreen-canvas para downsampling.
-3. El código del juego se organiza en módulos dentro de la carpeta `js/` (`main.js`, `renderer.js`, `agent.js`, `world.js`, `zones.js`, etc.).
+1. Mantener siempre el estilo isométrico en el renderizado del canvas.
+2. El código del juego se organiza en módulos dentro de la carpeta `js/` (`main.js`, `renderer.js`, `agent.js`, `world.js`, `zones.js`, etc.).
