@@ -117,15 +117,12 @@ export class Renderer {
         let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['bg_pradera'] : null);
         
         let bgX, bgY, bgW, bgH;
-        if (world.currentZoneId === 'pradera') {
-            bgX = -1168; bgY = 304; bgW = 1920; bgH = 960;
-        } else {
-            // Límites exactos del rombo isométrico para otras zonas
-            bgW = (world.width + world.height) * (ISO_W / 2) + ISO_W;
-            bgH = (world.width + world.height) * (ISO_H / 2) + ISO_H;
-            bgX = -(world.height * (ISO_W / 2));
-            bgY = 0;
-        }
+        
+        // Límites exactos del rombo isométrico para TODAS las zonas
+        bgW = (world.width + world.height) * (ISO_W / 2) + ISO_W;
+        bgH = (world.width + world.height) * (ISO_H / 2) + ISO_H;
+        bgX = -(world.height * (ISO_W / 2));
+        bgY = 0;
 
         // Clamp camera to the bounds of the current background
         const minCameraX = bgX;
@@ -151,6 +148,21 @@ export class Renderer {
 
         // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
         if (bgImg) {
+            // Pixelación automática: Reducir la imagen a su tamaño lógico y guardar en caché
+            if (!bgImg.isPixelated && bgImg.width > bgW) {
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = bgW;
+                offCanvas.height = bgH;
+                const offCtx = offCanvas.getContext('2d');
+                offCtx.imageSmoothingEnabled = true;
+                offCtx.imageSmoothingQuality = 'high';
+                offCtx.drawImage(bgImg, 0, 0, bgW, bgH);
+                
+                offCanvas.isPixelated = true;
+                this.images[bgKey] = offCanvas;
+                bgImg = offCanvas;
+            }
+
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
@@ -160,7 +172,6 @@ export class Renderer {
             const physH = Math.round(bgH * ZOOM * dpr);  
             
             this.ctx.imageSmoothingEnabled = false;
-            // this.ctx.imageSmoothingQuality = 'high'; // Eliminamos la calidad alta que difumina
             this.ctx.drawImage(bgImg, physX, physY, physW, physH);
             
             this.ctx.restore();
