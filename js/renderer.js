@@ -109,6 +109,9 @@ export class Renderer {
                 const LERP = 0.1;
                 this.cameraX += (desiredX - this.cameraX) * LERP;
                 this.cameraY += (desiredY - this.cameraY) * LERP;
+            }
+        }
+
         // ── FONDO Y LÍMITES DE CÁMARA DINÁMICOS ─────────────────────────────────
         let bgKey = world.currentZone ? world.currentZone.background : 'bg_pradera';
         let bgImg = (this.images && this.images[bgKey]) ? this.images[bgKey] : (this.images ? this.images['bg_pradera'] : null);
@@ -121,6 +124,19 @@ export class Renderer {
         bgX = -(world.height * (ISO_W / 2));
         bgY = 0;
 
+        // Clamp camera to the bounds of the current background
+        const minCameraX = bgX;
+        const maxCameraX = bgX + bgW - viewW;
+        const minCameraY = bgY;
+        const maxCameraY = bgY + bgH - viewH;
+
+        if (viewW <= bgW) {
+            this.cameraX = Math.max(minCameraX, Math.min(maxCameraX, this.cameraX));
+        } else {
+            this.cameraX = minCameraX + (bgW - viewW) / 2;
+        }
+
+        if (viewH <= bgH) {
             this.cameraY = Math.max(minCameraY, Math.min(maxCameraY, this.cameraY));
         } else {
             this.cameraY = minCameraY + (bgH - viewH) / 2;
