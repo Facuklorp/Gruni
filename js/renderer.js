@@ -152,9 +152,9 @@ export class Renderer {
             // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // El usuario solicitó probar las zonas al 50% de zoom.
-            let baseScale = 0.5;
-            // Aseguramos que, incluso al 50%, no quede más chico que la pantalla para evitar bordes negros.
+            // El usuario solicitó probar las zonas al 20% de zoom.
+            let baseScale = 0.2;
+            // Aseguramos que, incluso al 20%, no quede más chico que la pantalla para evitar bordes negros.
             let scaleFactor = Math.max(baseScale, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
             
             let drawW = Math.round(bgImg.width * scaleFactor);
