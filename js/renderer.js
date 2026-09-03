@@ -146,35 +146,51 @@ export class Renderer {
         this.ctx.scale(ZOOM * dpr, ZOOM * dpr);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // ── FONDO PRE-RENDERIZADO GIGANTE ──────────────────────────────────────
+        // ── FONDO PRE-RENDERIZADO CON PARALLAX ──────────────────────────────────────
         if (bgImg) {
             this.ctx.save();
             // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // "cada imagen en 4K debe ocupar la pantalla del monitor"
-            // Calculamos para que cubra toda la pantalla sin perder su proporción (object-fit: cover)
+            // Queremos que el fondo cubra la pantalla, pero le damos un "margen" extra
+            // para que tenga espacio para moverse (efecto parallax).
+            const PARALLAX_MARGIN = 1.15; // 15% más grande que la pantalla
+            
             let imgRatio = bgImg.width / bgImg.height;
             let screenRatio = this.canvas.width / this.canvas.height;
             
-            let drawW = this.canvas.width;
-            let drawH = this.canvas.height;
-            let drawX = 0;
-            let drawY = 0;
+            let drawW = this.canvas.width * PARALLAX_MARGIN;
+            let drawH = this.canvas.height * PARALLAX_MARGIN;
 
             if (imgRatio < screenRatio) {
-                // La imagen es muy alta, ajustamos al ancho de la pantalla
-                drawH = this.canvas.width / imgRatio;
-                drawY = -(drawH - this.canvas.height) / 2;
+                // La imagen es más alta que ancha respecto a la pantalla
+                drawH = drawW / imgRatio;
             } else {
-                // La imagen es muy ancha, ajustamos al alto de la pantalla
-                drawW = this.canvas.height * imgRatio;
-                drawX = -(drawW - this.canvas.width) / 2;
+                // La imagen es más ancha que alta respecto a la pantalla
+                drawW = drawH * imgRatio;
             }
+            
+            // Calcular qué porcentaje del mapa hemos recorrido con la cámara (de 0 a 1)
+            let percentX = 0.5;
+            if (maxCameraX > minCameraX) {
+                percentX = (this.cameraX - minCameraX) / (maxCameraX - minCameraX);
+                percentX = Math.max(0, Math.min(1, percentX)); // Clamp
+            }
+            
+            let percentY = 0.5;
+            if (maxCameraY > minCameraY) {
+                percentY = (this.cameraY - minCameraY) / (maxCameraY - minCameraY);
+                percentY = Math.max(0, Math.min(1, percentY)); // Clamp
+            }
+
+            // Mover el fondo según el porcentaje de la cámara.
+            // Si percentX es 0 (cámara a la izquierda), drawX es 0 (borde izquierdo del fondo).
+            // Si percentX es 1 (cámara a la derecha), drawX es el margen negativo (borde derecho del fondo).
+            let drawX = -(drawW - this.canvas.width) * percentX;
+            let drawY = -(drawH - this.canvas.height) * percentY;
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
-            // Dibujamos estático en la pantalla
             this.ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
             
             this.ctx.restore();
