@@ -152,10 +152,10 @@ export class Renderer {
             // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Usamos el tamaño original de la imagen (que ya es gigante) 
-            // Esto permite que el fondo se deslice mucho más por la pantalla (mayor parallax).
-            // Solo lo agrandamos si la pantalla llegase a ser más grande que la imagen.
-            let scaleFactor = Math.max(1, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
+            // El usuario solicitó probar las zonas al 50% de zoom.
+            let baseScale = 0.5;
+            // Aseguramos que, incluso al 50%, no quede más chico que la pantalla para evitar bordes negros.
+            let scaleFactor = Math.max(baseScale, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
             
             let drawW = Math.round(bgImg.width * scaleFactor);
             let drawH = Math.round(bgImg.height * scaleFactor);
