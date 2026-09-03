@@ -152,23 +152,13 @@ export class Renderer {
             // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Queremos que el fondo cubra la pantalla, pero le damos un "margen" extra
-            // para que tenga espacio para moverse (efecto parallax).
-            const PARALLAX_MARGIN = 1.15; // 15% más grande que la pantalla
+            // Usamos el tamaño original de la imagen (que ya es gigante) 
+            // Esto permite que el fondo se deslice mucho más por la pantalla (mayor parallax).
+            // Solo lo agrandamos si la pantalla llegase a ser más grande que la imagen.
+            let scaleFactor = Math.max(1, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
             
-            let imgRatio = bgImg.width / bgImg.height;
-            let screenRatio = this.canvas.width / this.canvas.height;
-            
-            let drawW = this.canvas.width * PARALLAX_MARGIN;
-            let drawH = this.canvas.height * PARALLAX_MARGIN;
-
-            if (imgRatio < screenRatio) {
-                // La imagen es más alta que ancha respecto a la pantalla
-                drawH = drawW / imgRatio;
-            } else {
-                // La imagen es más ancha que alta respecto a la pantalla
-                drawW = drawH * imgRatio;
-            }
+            let drawW = bgImg.width * scaleFactor;
+            let drawH = bgImg.height * scaleFactor;
             
             // Calcular qué porcentaje del mapa hemos recorrido con la cámara (de 0 a 1)
             let percentX = 0.5;
