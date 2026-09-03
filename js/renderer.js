@@ -157,8 +157,8 @@ export class Renderer {
             // Solo lo agrandamos si la pantalla llegase a ser más grande que la imagen.
             let scaleFactor = Math.max(1, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
             
-            let drawW = bgImg.width * scaleFactor;
-            let drawH = bgImg.height * scaleFactor;
+            let drawW = Math.round(bgImg.width * scaleFactor);
+            let drawH = Math.round(bgImg.height * scaleFactor);
             
             // Calcular qué porcentaje del mapa hemos recorrido con la cámara (de 0 a 1)
             let percentX = 0.5;
@@ -176,8 +176,8 @@ export class Renderer {
             // Mover el fondo según el porcentaje de la cámara.
             // Si percentX es 0 (cámara a la izquierda), drawX es 0 (borde izquierdo del fondo).
             // Si percentX es 1 (cámara a la derecha), drawX es el margen negativo (borde derecho del fondo).
-            let drawX = -(drawW - this.canvas.width) * percentX;
-            let drawY = -(drawH - this.canvas.height) * percentY;
+            let drawX = Math.round(-(drawW - this.canvas.width) * percentX);
+            let drawY = Math.round(-(drawH - this.canvas.height) * percentY);
             
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
