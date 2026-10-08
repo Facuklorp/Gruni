@@ -163,12 +163,23 @@ export class Renderer {
         // deformarse (mantiene su proporción) y queda centrada; lo que sobra se recorta.
         if (bgImg) {
             this.ctx.save();
+            // Reseteamos la escala para no perder calidad. Si lo dibujamos achicado
+            // y el canvas luego le aplica el ZOOMx3, se ve borroso.
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
-            const drawW = bgImg.width  * coverScale;
-            const drawH = bgImg.height * coverScale;
-            const drawX = bgX + (bgW - drawW) / 2;
-            const drawY = bgY + (bgH - drawH) / 2;
+            
+            // Calculamos el tamaño y posición en píxeles reales de la pantalla
+            const drawW = bgImg.width  * coverScale * ZOOM * dpr;
+            const drawH = bgImg.height * coverScale * ZOOM * dpr;
+            
+            // Posición base del fondo en el mundo, ajustada por la cámara, y convertida a pantalla
+            const screenX = (bgX - this.cameraX) * ZOOM * dpr;
+            const screenY = (bgY - this.cameraY) * ZOOM * dpr;
+            
+            // Centrar la imagen (cover) dentro de esos límites en pantalla
+            const drawX = screenX + (bgW * ZOOM * dpr - drawW) / 2;
+            const drawY = screenY + (bgH * ZOOM * dpr - drawH) / 2;
 
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
