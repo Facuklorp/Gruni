@@ -1,6 +1,15 @@
 // js/renderer.js — Vista Isométrica
 import { CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
 
+// Árboles ocultos temporalmente mientras se ajusta el fondo anclado al mundo.
+// Poner en true para volver a dibujarlos.
+const SHOW_TREES = false;
+const TREE_TYPES = [
+    RESOURCES.WOOD, RESOURCES.WOOD_EMPTY,
+    RESOURCES.FOOD, RESOURCES.FOOD_EMPTY,
+    RESOURCES.MAGIC_TREE
+];
+
 export class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
@@ -146,43 +155,25 @@ export class Renderer {
         this.ctx.scale(ZOOM * dpr, ZOOM * dpr);
         this.ctx.translate(-this.cameraX, -this.cameraY);
 
-        // ── FONDO PRE-RENDERIZADO CON PARALLAX ──────────────────────────────────────
+        // ── FONDO ANCLADO AL MUNDO ──────────────────────────────────────────────────
+        // El fondo se dibuja en coordenadas del mundo (mismo sistema que árboles,
+        // Gruni y enemigos), así el suelo se desplaza exactamente igual que todo
+        // lo demás cuando la cámara sigue a Gruni.
+        // Escalado tipo "cover": la imagen cubre todo el rombo de la zona sin
+        // deformarse (mantiene su proporción) y queda centrada; lo que sobra se recorta.
         if (bgImg) {
             this.ctx.save();
-            // Reseteamos la transformación para dibujar directo en los píxeles de la pantalla
-            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-            
-            // El usuario solicitó probar las zonas al 20% de zoom.
-            let baseScale = 0.2;
-            // Aseguramos que, incluso al 20%, no quede más chico que la pantalla para evitar bordes negros.
-            let scaleFactor = Math.max(baseScale, this.canvas.width / bgImg.width, this.canvas.height / bgImg.height);
-            
-            let drawW = Math.round(bgImg.width * scaleFactor);
-            let drawH = Math.round(bgImg.height * scaleFactor);
-            
-            // Calcular qué porcentaje del mapa hemos recorrido con la cámara (de 0 a 1)
-            let percentX = 0.5;
-            if (maxCameraX > minCameraX) {
-                percentX = (this.cameraX - minCameraX) / (maxCameraX - minCameraX);
-                percentX = Math.max(0, Math.min(1, percentX)); // Clamp
-            }
-            
-            let percentY = 0.5;
-            if (maxCameraY > minCameraY) {
-                percentY = (this.cameraY - minCameraY) / (maxCameraY - minCameraY);
-                percentY = Math.max(0, Math.min(1, percentY)); // Clamp
-            }
 
-            // Mover el fondo según el porcentaje de la cámara.
-            // Si percentX es 0 (cámara a la izquierda), drawX es 0 (borde izquierdo del fondo).
-            // Si percentX es 1 (cámara a la derecha), drawX es el margen negativo (borde derecho del fondo).
-            let drawX = Math.round(-(drawW - this.canvas.width) * percentX);
-            let drawY = Math.round(-(drawH - this.canvas.height) * percentY);
-            
+            const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
+            const drawW = bgImg.width  * coverScale;
+            const drawH = bgImg.height * coverScale;
+            const drawX = bgX + (bgW - drawW) / 2;
+            const drawY = bgY + (bgH - drawH) / 2;
+
             this.ctx.imageSmoothingEnabled = true;
             this.ctx.imageSmoothingQuality = 'high';
             this.ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
-            
+
             this.ctx.restore();
         } else {
             this.ctx.fillStyle = '#111';
@@ -258,7 +249,9 @@ export class Renderer {
                 if (cell.type !== RESOURCES.EMPTY &&
                     cell.type !== RESOURCES.WATER &&
                     cell.type !== RESOURCES.BRIDGE) {
-                    if (cell.type === RESOURCES.HOUSE && isAgentHome) {
+                    if (!SHOW_TREES && TREE_TYPES.includes(cell.type)) {
+                        // Árboles ocultos temporalmente (ver SHOW_TREES)
+                    } else if (cell.type === RESOURCES.HOUSE && isAgentHome) {
                         // Se dibuja como bighouse
                     } else {
                         renderQueue.push({ type: 'resource', x, y, cell });
