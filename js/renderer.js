@@ -3,7 +3,7 @@ import { CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
 
 // Árboles ocultos temporalmente mientras se ajusta el fondo anclado al mundo.
 // Poner en true para volver a dibujarlos.
-const SHOW_TREES = false;
+const SHOW_TREES = true;
 const TREE_TYPES = [
     RESOURCES.WOOD, RESOURCES.WOOD_EMPTY,
     RESOURCES.FOOD, RESOURCES.FOOD_EMPTY,
