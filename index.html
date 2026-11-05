@@ -13,81 +13,79 @@
         <p>Por favor, gira tu dispositivo horizontalmente para jugar.</p>
     </div>
     <div class="app-container">
-        <!-- Panel Izquierdo: Estadísticas del Agente -->
+        <!-- Barra Inferior Horizontal Sutil: Estadísticas del Agente -->
         <aside class="glass-panel agent-panel">
-            <h2>El Agente</h2>
-            <div class="stat-group" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid #a855f7;">
-                <div style="font-size: 0.8rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Tiempo en Gruni</div>
-                <div id="gruni-time" style="font-weight: 600; font-size: 1.1rem; color: #d8b4fe;">Año 0 - Día 1 - Hora 0</div>
+            <!-- Tiempo y Especialización -->
+            <div class="hud-section hud-meta">
+                <div id="gruni-time" class="hud-time">Año 0 · Día 1 · 00:00</div>
+                <div class="hud-branch-row">
+                    <span class="hud-mini-label">Rama:</span>
+                    <div id="agent-branch" class="badge">Ninguna</div>
+                </div>
             </div>
-            <div class="stat-group">
-                <label>Hambre</label>
-                <div class="progress-bar"><div id="bar-hunger" class="progress-fill warning"></div></div>
-            </div>
-            <div class="stat-group">
-                <label>Sed</label>
-                <div class="progress-bar"><div id="bar-thirst" class="progress-fill danger"></div></div>
-            </div>
-            <div class="stat-group">
-                <label>Vida</label>
-                <div class="progress-bar"><div id="bar-hp" style="background: #22c55e; height: 100%; border-radius: 6px; width: 100%;"></div></div>
-            </div>
-            <div class="stat-group">
-                <label>Especialización</label>
-                <div id="agent-branch" class="badge" style="background: #8b5cf6;">Ninguna</div>
-            </div>
-            <div class="stat-group inventory">
-                <h3>Inventario</h3>
-                <ul id="agent-inventory">
-                    <li>Madera: <span id="inv-wood">0</span></li>
-                    <li>Roca: <span id="inv-rock">0</span></li>
-                    <li>Picos: <span id="inv-pickaxes">0</span></li>
-                    <li>Espadas: <span id="inv-sword">0</span></li>
-                    <li>Casa: <span id="inv-house">No</span></li>
-                    <li>Telescopio: <span id="inv-telescope">No</span></li>
-                    <li>Muralla: <span id="inv-wall">0</span></li>
-                </ul>
 
-                <h3 style="margin-top: 15px; font-size: 0.9rem; color: var(--text-muted);">Progreso de Crafteo</h3>
-                <div class="stat-group" style="margin-top: 10px;">
-                    <div class="stat" style="margin-top: 10px;">
-                        <div class="stat-label">Pico <span style="font-size: 0.75rem">(M: <span id="craft-pick-w">0</span>/2 | R: <span id="craft-pick-r">0</span>/2)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-pickaxe" style="background: #78716c; width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div class="stat" style="margin-top: 10px;">
-                        <div class="stat-label">Espada <span style="font-size: 0.75rem">(M: <span id="craft-sword-w">0</span>/2 | R: <span id="craft-sword-r">0</span>/2)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-sword" style="background: #eab308; width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div class="stat" style="margin-top: 10px;">
-                        <div class="stat-label">Casa <span style="font-size: 0.75rem">(M: <span id="craft-house-w">0</span>/3 | R: <span id="craft-house-r">0</span>/3)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-house" style="background: #f43f5e; width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div class="stat" style="margin-top: 10px;" id="stat-telescope">
-                        <div class="stat-label">Telescopio <span style="font-size: 0.75rem">(M: <span id="craft-tele-w">0</span>/2 | R: <span id="craft-tele-r">0</span>/2)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-tele" style="background: #3b82f6; width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div class="stat" style="margin-top: 10px;" id="stat-wall">
-                        <div class="stat-label">Muralla <span style="font-size: 0.75rem">(Madera: <span id="craft-wall-w">0</span>/1)</span></div>
-                        <div class="bar-container">
-                            <div class="bar" id="bar-craft-wall" style="background: #64748b; width: 0%;"></div>
-                        </div>
-                    </div>
+            <div class="hud-divider"></div>
+
+            <!-- Barras Vitales (Vida, Hambre, Sed) -->
+            <div class="hud-section hud-vitals">
+                <div class="stat-group compact-stat">
+                    <label>❤️ Vida</label>
+                    <div class="progress-bar"><div id="bar-hp" class="progress-fill health"></div></div>
+                </div>
+                <div class="stat-group compact-stat">
+                    <label>🍖 Hambre</label>
+                    <div class="progress-bar"><div id="bar-hunger" class="progress-fill warning"></div></div>
+                </div>
+                <div class="stat-group compact-stat">
+                    <label>💧 Sed</label>
+                    <div class="progress-bar"><div id="bar-thirst" class="progress-fill danger"></div></div>
+                </div>
+            </div>
+
+            <div class="hud-divider"></div>
+
+            <!-- Inventario Compacto -->
+            <div class="hud-section inventory">
+                <ul id="agent-inventory">
+                    <li title="Madera">🪵 <span id="inv-wood">0</span></li>
+                    <li title="Roca">🪨 <span id="inv-rock">0</span></li>
+                    <li title="Picos">⛏️ <span id="inv-pickaxes">0</span></li>
+                    <li title="Espadas">⚔️ <span id="inv-sword">No</span></li>
+                    <li title="Casa">🏠 <span id="inv-house">No</span></li>
+                    <li title="Telescopio">🔭 <span id="inv-telescope">No</span></li>
+                    <li title="Muralla">🧱 <span id="inv-wall">0</span></li>
+                </ul>
+            </div>
+
+            <div class="hud-divider"></div>
+
+            <!-- Progreso de Crafteo Compacto -->
+            <div class="hud-section hud-crafting">
+                <div class="craft-pill" title="Pico">
+                    <div class="stat-label">⛏️ <span class="craft-sub"><span id="craft-pick-w">0</span>/2·<span id="craft-pick-r">0</span>/2</span></div>
+                    <div class="bar-container"><div class="bar" id="bar-craft-pickaxe" style="background: #78716c; width: 0%;"></div></div>
+                </div>
+                <div class="craft-pill" title="Espada">
+                    <div class="stat-label">⚔️ <span class="craft-sub"><span id="craft-sword-w">0</span>/2·<span id="craft-sword-r">0</span>/2</span></div>
+                    <div class="bar-container"><div class="bar" id="bar-craft-sword" style="background: #eab308; width: 0%;"></div></div>
+                </div>
+                <div class="craft-pill" title="Casa">
+                    <div class="stat-label">🏠 <span class="craft-sub"><span id="craft-house-w">0</span>/3·<span id="craft-house-r">0</span>/3</span></div>
+                    <div class="bar-container"><div class="bar" id="bar-craft-house" style="background: #f43f5e; width: 0%;"></div></div>
+                </div>
+                <div class="craft-pill" id="stat-telescope" title="Telescopio">
+                    <div class="stat-label">🔭 <span class="craft-sub"><span id="craft-tele-w">0</span>/2·<span id="craft-tele-r">0</span>/2</span></div>
+                    <div class="bar-container"><div class="bar" id="bar-craft-tele" style="background: #3b82f6; width: 0%;"></div></div>
+                </div>
+                <div class="craft-pill" id="stat-wall" title="Muralla">
+                    <div class="stat-label">🧱 <span class="craft-sub"><span id="craft-wall-w">0</span>/1</span></div>
+                    <div class="bar-container"><div class="bar" id="bar-craft-wall" style="background: #64748b; width: 0%;"></div></div>
                 </div>
             </div>
 
             <!-- Knowledge Log -->
-            <div id="knowledge-log" style="width: 100%; margin-top: 20px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 15px; font-size: 0.95rem; display: none; box-sizing: border-box; border-left: 4px solid #a855f7;">
-                <h4 style="margin: 0 0 10px 0; color: #c084fc; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">Conocimiento Obtenido</h4>
-                <ul id="knowledge-list" style="margin: 0; padding-left: 20px; color: #e2e8f0; line-height: 1.5; font-size: 0.9rem;">
-                </ul>
+            <div id="knowledge-log" style="display: none;">
+                <ul id="knowledge-list"></ul>
             </div>
         </aside>
 

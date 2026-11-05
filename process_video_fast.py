@@ -2,62 +2,62 @@ import cv2
 import numpy as np
 import os
 
-video_path = r'Gruni Sprites\Caminata hacia adelante gruni.mov'
-output_dir = r'Gruni Sprites\Caminata_Adelante_Fluida_Rapida'
+JOBS = [
+    (r'Gruni Sprites\Caminata hacia adelante gruni.mov', r'Gruni Sprites\Caminata_Adelante_Fluida_Rapida', 'Gruni_caminando_fluido'),
+    (r'Gruni Sprites\Caminata hacia atras gruni.mov', r'Gruni Sprites\Caminata_Atras_Fluida_Rapida', 'Gruni_caminando_atras_fluido'),
+    (r'Gruni Sprites\Caminata hacia derecha gruni.mov', r'Gruni Sprites\Caminata_Derecha_Fluida_Rapida', 'Gruni_caminando_derecha_fluido'),
+    (r'Gruni Sprites\Caminata hacia izquierda gruni.mov', r'Gruni Sprites\Caminata_Izquierda_Fluida_Rapida', 'Gruni_caminando_izquierda_fluido'),
+]
 
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+TARGET_SIZE = 512
 
-cap = cv2.VideoCapture(video_path)
-frame_idx = 0
+for video_path, output_dir, prefix in JOBS:
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    
-    # We know the background is perfectly [0,0,0]
-    # Let's create an alpha channel based on that.
-    # frame is BGR (1280, 720, 3)
-    
-    alpha = np.ones(frame.shape[:2], dtype=np.uint8) * 255
-    # Find all exact [0,0,0] pixels
-    bg_mask = (frame[:, :, 0] == 0) & (frame[:, :, 1] == 0) & (frame[:, :, 2] == 0)
-    
-    # We could floodfill from (0,0) to be safer if there are black pixels inside Gruni
-    mask = np.zeros((frame.shape[0]+2, frame.shape[1]+2), np.uint8)
-    cv2.floodFill(frame, mask, (0,0), (0,0,0), (0,0,0), (0,0,0), flags=cv2.FLOODFILL_MASK_ONLY | (255 << 8))
-    
-    # The mask contains 255 for the filled background
-    bg_mask_filled = mask[1:-1, 1:-1] == 255
-    alpha[bg_mask_filled] = 0
-    
-    # Also, some pixels might be very close to 0,0,0 (antialiasing)
-    # We can try to make them semi-transparent
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    # Add alpha channel
-    rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-    rgba[:, :, 3] = alpha
-    
-    # Pad to 1280x1280
-    h, w = frame.shape[:2]
-    pad_left = max((h - w) // 2, 0)
-    pad_right = max(h - w - pad_left, 0)
-    pad_top = max((w - h) // 2, 0)
-    pad_bottom = max(w - h - pad_top, 0)
-    
-    padded = cv2.copyMakeBorder(rgba, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT, value=[0,0,0,0])
-    
-    # Resize to 128x128
-    resized = cv2.resize(padded, (128, 128), interpolation=cv2.INTER_AREA)
-    
-    out_path = os.path.join(output_dir, f'Gruni_caminando_fluido_{frame_idx+1:02d}.png')
-    cv2.imwrite(out_path, resized)
-    
-    frame_idx += 1
-    if frame_idx % 5 == 0:
-        print(f"Processed {frame_idx} frames...")
+    cap = cv2.VideoCapture(video_path)
+    frame_idx = 0
 
-cap.release()
-print(f"Done! Saved {frame_idx} frames to {output_dir}")
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        h, w = frame.shape[:2]
+        mask = np.zeros((h + 2, w + 2), np.uint8)
+        tol = (10, 10, 10)
+        for seed in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]:
+            cv2.floodFill(frame, mask, seed, (0, 0, 0), tol, tol, flags=4 | cv2.FLOODFILL_MASK_ONLY | (255 << 8))
+
+        bg_mask = mask[1:-1, 1:-1].copy()
+        # Also remove enclosed pure-black holes (e.g., between headband ribbon and backpack)
+        pure_black = (frame[:, :, 0] <= 6) & (frame[:, :, 1] <= 6) & (frame[:, :, 2] <= 6)
+        bg_mask[pure_black] = 255
+
+        fg_mask = 255 - bg_mask
+
+        # Smooth alpha edge slightly at 1280p before downsampling to 512p for crisp anti-aliased borders
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        fg_eroded = cv2.erode(fg_mask, kernel, iterations=1)
+        alpha = cv2.GaussianBlur(fg_eroded, (3, 3), 0)
+
+        rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+        rgba[:, :, 3] = alpha
+
+        # Pad to square (1280x1280)
+        pad_left = max((h - w) // 2, 0)
+        pad_right = max(h - w - pad_left, 0)
+        pad_top = max((w - h) // 2, 0)
+        pad_bottom = max(w - h - pad_top, 0)
+
+        padded = cv2.copyMakeBorder(rgba, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT, value=[0, 0, 0, 0])
+
+        # Resize to 512x512 HD sprite
+        resized = cv2.resize(padded, (TARGET_SIZE, TARGET_SIZE), interpolation=cv2.INTER_AREA)
+
+        out_path = os.path.join(output_dir, f'{prefix}_{frame_idx+1:02d}.png')
+        cv2.imwrite(out_path, resized)
+        frame_idx += 1
+
+    cap.release()
+    print(f"Done {prefix}: {frame_idx} frames at {TARGET_SIZE}x{TARGET_SIZE}")

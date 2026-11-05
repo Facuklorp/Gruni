@@ -25,7 +25,8 @@ export class Renderer {
         this.lastFootprintY = 0;
         this.footprintStep = 0; // Alternar pie izquierdo/derecho
 
-        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
     }
 
     initImages(images) {
@@ -94,7 +95,8 @@ export class Renderer {
         this.ctx.fillStyle = '#020617';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
 
         const dpr = window.devicePixelRatio || 1;
         const viewW = this.canvas.width  / (ZOOM * dpr);
@@ -952,11 +954,10 @@ export class Renderer {
             }
 
             if (img) {
-                let fW = img.width || 78;
-                let fH = img.height || 136;
-                let scale = 0.32;
-                let drawW = fW * scale;
-                let drawH = fH * scale;
+                let fW = img.width || 512;
+                let fH = img.height || 512;
+                let drawH = 42;
+                let drawW = drawH * (fW / fH);
 
                 let drawX = cx - drawW / 2;
                 let drawY = baseY - drawH + 4 - bob; 
