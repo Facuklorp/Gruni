@@ -193,6 +193,9 @@ export class Renderer {
             this.ctx.fillRect(bgX, bgY, bgW, bgH);
         }
 
+        // ── DETALLES DEL TERRENO 2.5D (MICRO-VEGETACIÓN, FLORES Y SENDEROS) ─────
+        this.drawTerrainDetails(world, agent, timestamp, viewW, viewH);
+
         // ── HUELLAS (FOOTPRINTS) EN EL DESIERTO / NIEVE ────────────────────────
         if (agent) {
             const currentCell = world.getCell(Math.floor(agent.x), Math.floor(agent.y));
@@ -448,6 +451,12 @@ export class Renderer {
                 }
             }
 
+            // Sombra suave de contacto en el suelo bajo el árbol
+            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(drawX, drawY + ISO_H * 0.55, isStump ? 8 : 13, isStump ? 4 : 6.5, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+
             this.ctx.globalAlpha = alpha;
             this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
             this.ctx.globalAlpha = 1.0;
@@ -560,6 +569,12 @@ export class Renderer {
                 }
             }
 
+            // Sombra suave de contacto en el suelo bajo el árbol
+            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(drawX, drawY + ISO_H * 0.55, isStump ? 8 : 13, isStump ? 4 : 6.5, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+
             this.ctx.globalAlpha = alpha;
             this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
             this.ctx.globalAlpha = 1.0;
@@ -578,9 +593,14 @@ export class Renderer {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.BUSH;
 
+        this.ctx.fillStyle = 'rgba(15, 35, 10, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, sy + 6, 9, 4.5, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
         let img = isAlive ? this.images?.arbusto_1 : this.images?.arbusto_2;
         if (img) {
-            const w = 26, h = 26;
+            const w = 28, h = 28;
             this.ctx.drawImage(img, cx - w / 2, sy - h / 2 + 2, w, h);
         } else {
             this.ctx.fillStyle = isAlive ? '#22c55e' : '#854d0e';
@@ -595,9 +615,15 @@ export class Renderer {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isEmpty = type === RESOURCES.ROCK_EMPTY;
 
+        // Sombra suave de contacto bajo las rocas
+        this.ctx.fillStyle = 'rgba(15, 25, 10, 0.24)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, sy + 5, 11, 5.5, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
         if (isEmpty) {
             if (this.images?.rocas_2) {
-                this.ctx.drawImage(this.images.rocas_2, cx - 12, sy - 10, 24, 22);
+                this.ctx.drawImage(this.images.rocas_2, cx - 15, sy - 13, 30, 28);
             } else {
                 this.ctx.fillStyle = '#94a3b8';
                 this.ctx.beginPath();
@@ -606,7 +632,7 @@ export class Renderer {
             }
         } else {
             if (this.images?.rocas_1) {
-                this.ctx.drawImage(this.images.rocas_1, cx - 12, sy - 14, 24, 24);
+                this.ctx.drawImage(this.images.rocas_1, cx - 16, sy - 16, 32, 32);
             } else {
                 // Roca isométrica procedural
                 this.ctx.fillStyle = '#64748b';
@@ -831,14 +857,210 @@ export class Renderer {
         }
     }
 
-    // ─── Puntos de capacidad ────────────────────────────────────────────────────
+    // ─── Detalles 2.5D del terreno (micro-vegetación, flores, piedras y senderos) ─
+    drawTerrainDetails(world, agent, timestamp, viewW, viewH) {
+        const ctx = this.ctx;
+        ctx.save();
+
+        const minScreenX = this.cameraX - 48;
+        const maxScreenX = this.cameraX + viewW + 48;
+        const minScreenY = this.cameraY - 48;
+        const maxScreenY = this.cameraY + viewH + 48;
+
+        const centerX = Math.floor(world.width / 2);
+        const centerY = Math.floor(world.height / 2);
+        const hubX = (agent && agent.home) ? agent.home.x + 0.5 : centerX;
+        const hubY = (agent && agent.home) ? agent.home.y + 0.5 : centerY;
+        const connections = (world.currentZone && world.currentZone.connections) ? world.currentZone.connections : {};
+        const windTime = (timestamp || 0) * 0.0022;
+
+        for (let y = 0; y < world.height; y++) {
+            for (let x = 0; x < world.width; x++) {
+                const { cx, cy } = this.getIsoBase(x, y);
+                if (cx < minScreenX || cx > maxScreenX || cy < minScreenY || cy > maxScreenY) continue;
+
+                const cell = world.getCell(x, y);
+                if (!cell || cell.type === RESOURCES.WATER || cell.type === RESOURCES.VOID) continue;
+
+                // Hash determinístico por celda (x, y)
+                const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
+                const ox = ((h & 0xff) / 255 - 0.5) * 12;
+                const oy = (((h >> 8) & 0xff) / 255 - 0.5) * 6;
+                const px = cx + ox;
+                const py = cy + oy;
+
+                // 1. Senderos orgánicos hacia salidas de zona y alrededor de la casa de Gruni
+                let isTrail = false;
+                if (agent && agent.home) {
+                    const distHome = Math.hypot(x - hubX, y - hubY);
+                    if (distHome > 1.2 && distHome < 3.6 && ((h % 10) < 7)) {
+                        isTrail = true;
+                    }
+                }
+                const wobble = Math.sin(x * 0.35 + y * 0.35) * 1.1;
+                if (!isTrail) {
+                    if (connections.north && y <= hubY && Math.abs(x - (centerX + wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
+                    else if (connections.south && y >= hubY && Math.abs(x - (centerX - wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
+                    else if (connections.west && x <= hubX && Math.abs(y - (centerY + wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
+                    else if (connections.east && x >= hubX && Math.abs(y - (centerY - wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
+                }
+
+                if (isTrail && cell.type === RESOURCES.EMPTY) {
+                    ctx.fillStyle = cell.biome === BIOMES.SNOW ? 'rgba(148, 163, 184, 0.22)' : 'rgba(166, 124, 72, 0.22)';
+                    ctx.beginPath();
+                    ctx.ellipse(px, py, 7.5 + (h % 3), 3.8 + (h % 2), 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if ((h % 3) === 0) {
+                        ctx.fillStyle = 'rgba(120, 90, 55, 0.28)';
+                        ctx.beginPath();
+                        ctx.ellipse(px + 3, py + 1, 2.2, 1.1, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    continue;
+                }
+
+                // 2. Micro-detalles según el bioma
+                if (cell.biome === BIOMES.GRASS) {
+                    // Variación suave de volumen/relieve en el pasto
+                    if ((h % 7) === 0) {
+                        ctx.fillStyle = (h & 1) ? 'rgba(30, 75, 16, 0.07)' : 'rgba(163, 230, 53, 0.08)';
+                        ctx.beginPath();
+                        ctx.ellipse(px, py, 10, 5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Matas de pasto 2.5D ilustradas con movimiento de brisa
+                    if ((h % 100) < 42) {
+                        const sway = Math.sin(windTime + x * 0.45 + y * 0.35) * 1.1;
+                        const bladeCount = 2 + (h % 3);
+                        // Pequeña sombra en la raíz
+                        ctx.fillStyle = 'rgba(20, 52, 10, 0.24)';
+                        ctx.beginPath();
+                        ctx.ellipse(px, py + 0.8, 3.2, 1.3, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        for (let b = 0; b < bladeCount; b++) {
+                            const spread = (b - (bladeCount - 1) / 2) * 2.1;
+                            const bh = 3.8 + ((h >> (b + 2)) % 3) * 1.1;
+                            ctx.strokeStyle = (b % 2 === 0) ? '#3f7d18' : '#65a30d';
+                            ctx.lineWidth = 1.05;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(px + spread * 0.45, py);
+                            ctx.quadraticCurveTo(
+                                px + spread * 0.8 + sway * 0.5,
+                                py - bh * 0.55,
+                                px + spread * 1.15 + sway,
+                                py - bh
+                            );
+                            ctx.stroke();
+
+                            // Punta iluminada por el sol
+                            ctx.strokeStyle = '#a3e635';
+                            ctx.lineWidth = 0.7;
+                            ctx.beginPath();
+                            ctx.moveTo(px + spread * 0.9 + sway * 0.6, py - bh * 0.65);
+                            ctx.lineTo(px + spread * 1.15 + sway, py - bh);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Florcitas silvestres (margaritas blancas, nomeolvides celestes, tréboles lilas y botones dorados)
+                    const flowerRoll = (h >> 12) % 100;
+                    if (flowerRoll < 13 && cell.type === RESOURCES.EMPTY) {
+                        const flowerColors = ['#fefce8', '#38bdf8', '#e879f9', '#facc15'];
+                        const petalColor = flowerColors[h % flowerColors.length];
+                        const clusterCount = 1 + (h % 2);
+                        for (let f = 0; f < clusterCount; f++) {
+                            const fx = px + (f * 3.8) - 1.5;
+                            const fy = py - 1.8 - (f * 1.2);
+                            // Tallo
+                            ctx.strokeStyle = '#2d6a18';
+                            ctx.lineWidth = 0.7;
+                            ctx.beginPath();
+                            ctx.moveTo(fx, fy + 2.2);
+                            ctx.lineTo(fx, fy);
+                            ctx.stroke();
+                            // Pétalos
+                            ctx.fillStyle = petalColor;
+                            for (let p = 0; p < 4; p++) {
+                                const ang = (p * Math.PI) / 2 + 0.4;
+                                ctx.beginPath();
+                                ctx.arc(fx + Math.cos(ang) * 1.05, fy + Math.sin(ang) * 0.85, 0.85, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            // Centro de la flor
+                            ctx.fillStyle = petalColor === '#facc15' ? '#b45309' : '#facc15';
+                            ctx.beginPath();
+                            ctx.arc(fx, fy, 0.65, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    } else if (flowerRoll >= 13 && flowerRoll < 19 && cell.type === RESOURCES.EMPTY) {
+                        // Piedritas 2.5D con sombra y brillo superior
+                        ctx.fillStyle = 'rgba(20, 40, 10, 0.25)';
+                        ctx.beginPath();
+                        ctx.ellipse(px, py + 0.7, 2.5, 1.2, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#78716c';
+                        ctx.beginPath();
+                        ctx.ellipse(px, py, 2.1, 1.3, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.beginPath();
+                        ctx.ellipse(px - 0.4, py - 0.35, 1.1, 0.6, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (cell.biome === BIOMES.DESERT || cell.biome === BIOMES.SAND) {
+                    if ((h % 100) < 18 && cell.type === RESOURCES.EMPTY) {
+                        // Ondas suaves en la arena y piedritas cálidas
+                        ctx.strokeStyle = 'rgba(180, 120, 50, 0.22)';
+                        ctx.lineWidth = 0.8;
+                        ctx.beginPath();
+                        ctx.arc(px, py + 3, 5, -Math.PI * 0.75, -Math.PI * 0.25);
+                        ctx.stroke();
+                    }
+                } else if (cell.biome === BIOMES.SNOW) {
+                    if ((h % 100) < 20 && cell.type === RESOURCES.EMPTY) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                        ctx.beginPath();
+                        ctx.ellipse(px, py, 4, 1.8, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (cell.biome === BIOMES.PINE) {
+                    // Bosque mágico: esporas luminosas y helechos oscuros
+                    if ((h % 100) < 22 && cell.type === RESOURCES.EMPTY) {
+                        const glow = 0.45 + 0.35 * Math.sin(windTime * 1.5 + x + y);
+                        ctx.fillStyle = (h & 1) ? 
+gba(56, 189, 248, ) : 
+gba(192, 132, 252, );
+                        ctx.beginPath();
+                        ctx.arc(px, py - 1.5, 1.1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    // ─── Puntos de capacidad (sutiles en la base del recurso) ───────────────────
     drawResourceDots(x, y, capacity) {
         const { cx, sy } = this.getIsoBase(x, y);
-        const startX = cx - (capacity * 5) / 2 + 2.5;
+        const startX = cx - (capacity * 4) / 2 + 2;
+        const dotY = sy + ISO_H - 1;
         for (let i = 0; i < capacity; i++) {
-            this.ctx.fillStyle = '#f8fafc';
+            this.ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
             this.ctx.beginPath();
-            this.ctx.arc(startX + i * 5, sy - 2, 1.5, 0, Math.PI * 2);
+            this.ctx.arc(startX + i * 4, dotY, 1.4, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            this.ctx.fillStyle = '#fde68a';
+            this.ctx.beginPath();
+            this.ctx.arc(startX + i * 4, dotY, 0.95, 0, Math.PI * 2);
             this.ctx.fill();
         }
     }
