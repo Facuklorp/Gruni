@@ -188,6 +188,9 @@ export class Renderer {
             this.ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
 
             this.ctx.restore();
+
+            // Sincronizar píxeles del fondo con la grilla del mundo (agua, caminos de tierra, pasto real)
+            this.syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH);
         } else {
             this.ctx.fillStyle = '#111';
             this.ctx.fillRect(bgX, bgY, bgW, bgH);
@@ -368,7 +371,7 @@ export class Renderer {
         let img = null;
         let isStump = false;
         
-        if (biome === BIOMES.DESERT) {
+        if (biome === BIOMES.DESERT || biome === BIOMES.WATER_BIOME || biome === BIOMES.SAND) {
             if (isAlive) {
                 const idx = ((x * 11 + y * 17) % 3) + 1;
                 img = this.images?.[`arbol_desierto_${idx}`];
@@ -424,9 +427,7 @@ export class Renderer {
                 if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
-                    // Use the image's intrinsic size scaled down, but with a reasonable minimum
-                    w = img.width * 0.25;
-                    if (w < 38) w = 38;
+                    w = 46;
                     h = w * (img.height / img.width);
                     if (h < 50) h = 50;
                 }
@@ -489,7 +490,7 @@ export class Renderer {
         let img = null;
         let isStump = false;
 
-        if (biome === BIOMES.DESERT) {
+        if (biome === BIOMES.DESERT || biome === BIOMES.WATER_BIOME || biome === BIOMES.SAND) {
             if (isAlive) {
                 const idx = ((x * 11 + y * 17) % 3) + 1;
                 img = this.images?.[`arbol_desierto_${idx}`];
@@ -709,14 +710,17 @@ export class Renderer {
     drawBigHouse(x, y, homeStage) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
 
-        if (homeStage === 1 && this.images?.casa_1) {
-            this.ctx.drawImage(this.images.casa_1, cx - 44, sy - 52, 88, 68);
-            return;
-        } else if (homeStage === 2 && this.images?.casa_2) {
-            this.ctx.drawImage(this.images.casa_2, cx - 44, sy - 52, 88, 68);
-            return;
-        } else if (homeStage === 3 && this.images?.casa_3) {
-            this.ctx.drawImage(this.images.casa_3, cx - 44, sy - 52, 88, 68);
+        const stage = Math.max(1, Math.min(3, homeStage || 1));
+        const img = stage === 1 ? this.images?.casa_1 : (stage === 2 ? this.images?.casa_2 : this.images?.casa_3);
+        if (img && img.width && img.height) {
+            const w = 88;
+            const h = w * (img.height / img.width);
+            const bottomY = sy + ISO_H * 1.65;
+            this.ctx.fillStyle = 'rgba(15, 30, 10, 0.26)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(cx, bottomY - 6, 38, 18, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
             return;
         }
 
@@ -857,6 +861,93 @@ export class Renderer {
         }
     }
 
+    // ─── Sincronización inteligente entre los píxeles del fondo y la grilla ─────
+    syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH) {
+        if (!world || !world.grid || !bgImg || !bgImg.width) return;
+        const syncKey = `${world.currentZoneId}_${bgImg.src}`;
+        if (world._bgSyncedKey === syncKey) return;
+
+        try {
+            const sampleW = 384;
+            const sampleH = 216;
+            if (!this._bgSampleCanvas) {
+                this._bgSampleCanvas = document.createElement('canvas');
+                this._bgSampleCanvas.width = sampleW;
+                this._bgSampleCanvas.height = sampleH;
+                this._bgSampleCtx = this._bgSampleCanvas.getContext('2d', { willReadFrequently: true });
+            }
+            const sctx = this._bgSampleCtx;
+            sctx.clearRect(0, 0, sampleW, sampleH);
+            sctx.drawImage(bgImg, 0, 0, sampleW, sampleH);
+            const imgData = sctx.getImageData(0, 0, sampleW, sampleH).data;
+
+            const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
+            const worldDrawW = bgImg.width * coverScale;
+            const worldDrawH = bgImg.height * coverScale;
+            const worldDrawX = bgX + (bgW - worldDrawW) / 2;
+            const worldDrawY = bgY + (bgH - worldDrawH) / 2;
+
+            const zoneId = world.currentZoneId || 'pradera';
+            const hasRealWater = (zoneId === 'bosque_rio' || zoneId === 'playa');
+
+            for (let y = 0; y < world.height; y++) {
+                for (let x = 0; x < world.width; x++) {
+                    const cell = world.getCell(x, y);
+                    if (!cell) continue;
+
+                    const { cx, cy } = this.getIsoBase(x, y);
+                    const u = Math.max(0, Math.min(0.999, (cx - worldDrawX) / worldDrawW));
+                    const v = Math.max(0, Math.min(0.999, (cy - worldDrawY) / worldDrawH));
+                    const px = Math.floor(u * sampleW);
+                    const py = Math.floor(v * sampleH);
+                    const idx = (py * sampleW + px) * 4;
+                    const r = imgData[idx];
+                    const g = imgData[idx + 1];
+                    const b = imgData[idx + 2];
+
+                    cell.groundColor = [r, g, b];
+
+                    const isWaterPixel = hasRealWater && (
+                        (b > r + 15 && b > g - 20 && b > 75 && r < 145) ||
+                        (b > 125 && g > 105 && r < 115)
+                    );
+                    const isGreenGrass = !isWaterPixel && (g > r + 6 && g > b + 16 && g > 45);
+                    const isDirtRoad = !isWaterPixel && !isGreenGrass && (r > g + 8 && r > b + 18 && r > 75);
+
+                    if (isWaterPixel) {
+                        cell.groundType = 'WATER';
+                        // Quitar árboles, rocas o arbustos generados encima de ríos o mar
+                        if (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.WOOD_EMPTY ||
+                            cell.type === RESOURCES.FOOD || cell.type === RESOURCES.FOOD_EMPTY ||
+                            cell.type === RESOURCES.BUSH || cell.type === RESOURCES.BUSH_EMPTY ||
+                            cell.type === RESOURCES.ROCK || cell.type === RESOURCES.ROCK_EMPTY ||
+                            cell.type === RESOURCES.EMPTY) {
+                            cell.type = RESOURCES.WATER;
+                            cell.capacity = 5;
+                        }
+                    } else if (isGreenGrass) {
+                        cell.groundType = 'GRASS';
+                    } else if (isDirtRoad) {
+                        cell.groundType = 'DIRT';
+                        // En Aldea y Campo o Bosque y Río, despejar árboles que bloqueen el centro de caminos de tierra
+                        if ((zoneId === 'aldea_campo' || zoneId === 'bosque_rio') && (r > g + 16 && r > b + 28)) {
+                            if (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.FOOD || cell.type === RESOURCES.BUSH) {
+                                cell.type = RESOURCES.EMPTY;
+                                cell.capacity = 0;
+                            }
+                        }
+                    } else {
+                        cell.groundType = 'OTHER';
+                    }
+                }
+            }
+            world._bgSyncedKey = syncKey;
+        } catch (err) {
+            console.warn('No se pudo muestrear el fondo de la zona:', err);
+            world._bgSyncedKey = syncKey;
+        }
+    }
+
     // ─── Detalles 2.5D del terreno (micro-vegetación, flores, piedras y senderos) ─
     drawTerrainDetails(world, agent, timestamp, viewW, viewH) {
         const ctx = this.ctx;
@@ -867,12 +958,7 @@ export class Renderer {
         const minScreenY = this.cameraY - 48;
         const maxScreenY = this.cameraY + viewH + 48;
 
-        const centerX = Math.floor(world.width / 2);
-        const centerY = Math.floor(world.height / 2);
-        const hubX = (agent && agent.home) ? agent.home.x + 0.5 : centerX;
-        const hubY = (agent && agent.home) ? agent.home.y + 0.5 : centerY;
-        const connections = (world.currentZone && world.currentZone.connections) ? world.currentZone.connections : {};
-        const windTime = (timestamp || 0) * 0.0022;
+        const windTime = (timestamp || 0) * 0.002;
 
         for (let y = 0; y < world.height; y++) {
             for (let x = 0; x < world.width; x++) {
@@ -881,163 +967,146 @@ export class Renderer {
 
                 const cell = world.getCell(x, y);
                 if (!cell || cell.type === RESOURCES.WATER || cell.type === RESOURCES.VOID) continue;
+                if (cell.groundType === 'WATER') continue;
 
                 // Hash determinístico por celda (x, y)
                 const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
-                const ox = ((h & 0xff) / 255 - 0.5) * 12;
-                const oy = (((h >> 8) & 0xff) / 255 - 0.5) * 6;
+                const ox = ((h & 0xff) / 255 - 0.5) * 14;
+                const oy = (((h >> 8) & 0xff) / 255 - 0.5) * 7;
                 const px = cx + ox;
                 const py = cy + oy;
 
-                // 1. Senderos orgánicos hacia salidas de zona y alrededor de la casa de Gruni
-                let isTrail = false;
-                if (agent && agent.home) {
-                    const distHome = Math.hypot(x - hubX, y - hubY);
-                    if (distHome > 1.2 && distHome < 3.6 && ((h % 10) < 7)) {
-                        isTrail = true;
-                    }
-                }
-                const wobble = Math.sin(x * 0.35 + y * 0.35) * 1.1;
-                if (!isTrail) {
-                    if (connections.north && y <= hubY && Math.abs(x - (centerX + wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
-                    else if (connections.south && y >= hubY && Math.abs(x - (centerX - wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
-                    else if (connections.west && x <= hubX && Math.abs(y - (centerY + wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
-                    else if (connections.east && x >= hubX && Math.abs(y - (centerY - wobble)) < 1.15 && (h % 10) < 6) isTrail = true;
-                }
-
-                if (isTrail && cell.type === RESOURCES.EMPTY) {
-                    ctx.fillStyle = cell.biome === BIOMES.SNOW ? 'rgba(148, 163, 184, 0.22)' : 'rgba(166, 124, 72, 0.22)';
-                    ctx.beginPath();
-                    ctx.ellipse(px, py, 7.5 + (h % 3), 3.8 + (h % 2), 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    if ((h % 3) === 0) {
-                        ctx.fillStyle = 'rgba(120, 90, 55, 0.28)';
-                        ctx.beginPath();
-                        ctx.ellipse(px + 3, py + 1, 2.2, 1.1, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    continue;
-                }
-
-                // 2. Micro-detalles según el bioma
                 if (cell.biome === BIOMES.GRASS) {
-                    // Variación suave de volumen/relieve en el pasto
-                    if ((h % 7) === 0) {
-                        ctx.fillStyle = (h & 1) ? 'rgba(30, 75, 16, 0.07)' : 'rgba(163, 230, 53, 0.08)';
+                    // Solo dibujar pasto y flores si el píxel real del fondo es pasto verde (no tierra ni río)
+                    if (cell.groundType && cell.groundType !== 'GRASS') continue;
+
+                    const gc = cell.groundColor || [88, 145, 38];
+                    const darkGreen = `rgb(${Math.max(15, gc[0] - 32)}, ${Math.max(35, gc[1] - 42)}, ${Math.max(8, gc[2] - 18)})`;
+                    const midGreen  = `rgb(${Math.max(25, gc[0] - 12)}, ${Math.max(55, gc[1] - 14)}, ${Math.max(12, gc[2] - 8)})`;
+                    const lightTip  = `rgb(${Math.min(235, gc[0] + 34)}, ${Math.min(248, gc[1] + 42)}, ${Math.min(180, gc[2] + 18)})`;
+
+                    // 1. Pinceladas sutiles de textura sobre el pasto para dar nitidez en ZOOM x3
+                    if ((h % 3) !== 0) {
+                        ctx.fillStyle = (h & 1) ? 'rgba(22, 58, 12, 0.08)' : 'rgba(180, 235, 65, 0.07)';
                         ctx.beginPath();
-                        ctx.ellipse(px, py, 10, 5, 0, 0, Math.PI * 2);
+                        ctx.ellipse(px, py, 6.5 + (h % 4), 2.6 + (h % 2), 0, 0, Math.PI * 2);
                         ctx.fill();
                     }
 
-                    // Matas de pasto 2.5D ilustradas con movimiento de brisa
-                    if ((h % 100) < 42) {
-                        const sway = Math.sin(windTime + x * 0.45 + y * 0.35) * 1.1;
-                        const bladeCount = 2 + (h % 3);
-                        // Pequeña sombra en la raíz
-                        ctx.fillStyle = 'rgba(20, 52, 10, 0.24)';
+                    // 2. Matas de pasto 2.5D estilo pintura (como las raíces de los árboles)
+                    if ((h % 100) < 48) {
+                        const sway = Math.sin(windTime + x * 0.45 + y * 0.35) * 0.95;
+                        const bladeCount = 3 + (h % 3);
+
+                        // Sombra suave en la raíz de la mata
+                        ctx.fillStyle = 'rgba(18, 45, 10, 0.22)';
                         ctx.beginPath();
-                        ctx.ellipse(px, py + 0.8, 3.2, 1.3, 0, 0, Math.PI * 2);
+                        ctx.ellipse(px, py + 0.9, 3.6, 1.4, 0, 0, Math.PI * 2);
                         ctx.fill();
 
                         for (let b = 0; b < bladeCount; b++) {
-                            const spread = (b - (bladeCount - 1) / 2) * 2.1;
-                            const bh = 3.8 + ((h >> (b + 2)) % 3) * 1.1;
-                            ctx.strokeStyle = (b % 2 === 0) ? '#3f7d18' : '#65a30d';
-                            ctx.lineWidth = 1.05;
-                            ctx.lineCap = 'round';
-                            ctx.beginPath();
-                            ctx.moveTo(px + spread * 0.45, py);
-                            ctx.quadraticCurveTo(
-                                px + spread * 0.8 + sway * 0.5,
-                                py - bh * 0.55,
-                                px + spread * 1.15 + sway,
-                                py - bh
-                            );
-                            ctx.stroke();
+                            const normB = (b - (bladeCount - 1) / 2);
+                            const spread = normB * 1.85;
+                            const bh = 3.6 + ((h >> (b + 2)) % 3) * 1.15 - Math.abs(normB) * 0.45;
+                            const tipX = px + spread * 1.35 + sway;
+                            const tipY = py - bh;
 
-                            // Punta iluminada por el sol
-                            ctx.strokeStyle = '#a3e635';
-                            ctx.lineWidth = 0.7;
+                            // Hoja cónica rellena (más gruesa en la base y fina en la punta)
+                            ctx.fillStyle = (b % 2 === 0) ? darkGreen : midGreen;
                             ctx.beginPath();
-                            ctx.moveTo(px + spread * 0.9 + sway * 0.6, py - bh * 0.65);
-                            ctx.lineTo(px + spread * 1.15 + sway, py - bh);
-                            ctx.stroke();
+                            ctx.moveTo(px + spread * 0.35 - 0.85, py + 0.4);
+                            ctx.quadraticCurveTo(px + spread * 0.75 + sway * 0.4, py - bh * 0.55, tipX, tipY);
+                            ctx.quadraticCurveTo(px + spread * 0.95 + sway * 0.4, py - bh * 0.45, px + spread * 0.35 + 0.85, py + 0.4);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            // Brillo superior iluminado en las hojas centrales
+                            if (b === 1 || b === bladeCount - 2) {
+                                ctx.strokeStyle = lightTip;
+                                ctx.lineWidth = 0.65;
+                                ctx.lineCap = 'round';
+                                ctx.beginPath();
+                                ctx.moveTo(px + spread * 0.75 + sway * 0.5, py - bh * 0.5);
+                                ctx.lineTo(tipX, tipY);
+                                ctx.stroke();
+                            }
                         }
                     }
 
-                    // Florcitas silvestres (margaritas blancas, nomeolvides celestes, tréboles lilas y botones dorados)
+                    // 3. Agrupaciones orgánicas (clusters) de florcitas silvestres en claros naturales
+                    const meadowCluster = Math.sin(x * 0.32 + y * 0.24) * Math.cos(x * 0.21 - y * 0.29);
                     const flowerRoll = (h >> 12) % 100;
-                    if (flowerRoll < 13 && cell.type === RESOURCES.EMPTY) {
-                        const flowerColors = ['#fefce8', '#38bdf8', '#e879f9', '#facc15'];
-                        const petalColor = flowerColors[h % flowerColors.length];
-                        const clusterCount = 1 + (h % 2);
-                        for (let f = 0; f < clusterCount; f++) {
-                            const fx = px + (f * 3.8) - 1.5;
-                            const fy = py - 1.8 - (f * 1.2);
-                            // Tallo
-                            ctx.strokeStyle = '#2d6a18';
-                            ctx.lineWidth = 0.7;
+                    if (meadowCluster > 0.32 && flowerRoll < 22 && cell.type === RESOURCES.EMPTY) {
+                        // El color se define por manchón/cluster para que las flores cercanas sean de la misma especie
+                        const patchType = Math.abs(Math.floor(Math.sin(x * 0.14 + y * 0.17) * 10)) % 3;
+                        const petalColor = patchType === 0 ? '#fffbeb' : (patchType === 1 ? '#fde047' : '#bae6fd');
+                        const centerColor = patchType === 1 ? '#b45309' : '#facc15';
+                        const flowerCount = 1 + (h % 3);
+
+                        for (let f = 0; f < flowerCount; f++) {
+                            const fh = (h >> (f * 5)) & 0xff;
+                            const fx = px + ((fh & 0x0f) / 15 - 0.5) * 7.5;
+                            const fy = py + (((fh >> 4) & 0x0f) / 15 - 0.5) * 3.8 - 1.2;
+
+                            // Hojitas verdes en la base de la flor
+                            ctx.fillStyle = darkGreen;
                             ctx.beginPath();
-                            ctx.moveTo(fx, fy + 2.2);
-                            ctx.lineTo(fx, fy);
-                            ctx.stroke();
-                            // Pétalos
+                            ctx.ellipse(fx, fy + 1.1, 1.8, 0.8, 0, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Pétalos suaves
                             ctx.fillStyle = petalColor;
                             for (let p = 0; p < 4; p++) {
-                                const ang = (p * Math.PI) / 2 + 0.4;
+                                const ang = (p * Math.PI) / 2 + (fh % 3) * 0.25;
                                 ctx.beginPath();
-                                ctx.arc(fx + Math.cos(ang) * 1.05, fy + Math.sin(ang) * 0.85, 0.85, 0, Math.PI * 2);
+                                ctx.arc(fx + Math.cos(ang) * 0.95, fy + Math.sin(ang) * 0.75, 0.8, 0, Math.PI * 2);
                                 ctx.fill();
                             }
-                            // Centro de la flor
-                            ctx.fillStyle = petalColor === '#facc15' ? '#b45309' : '#facc15';
+                            // Centro
+                            ctx.fillStyle = centerColor;
                             ctx.beginPath();
-                            ctx.arc(fx, fy, 0.65, 0, Math.PI * 2);
+                            ctx.arc(fx, fy, 0.6, 0, Math.PI * 2);
                             ctx.fill();
                         }
-                    } else if (flowerRoll >= 13 && flowerRoll < 19 && cell.type === RESOURCES.EMPTY) {
-                        // Piedritas 2.5D con sombra y brillo superior
-                        ctx.fillStyle = 'rgba(20, 40, 10, 0.25)';
+                    } else if (flowerRoll === 45 && cell.type === RESOURCES.EMPTY) {
+                        // Piedrita natural ocasional
+                        ctx.fillStyle = 'rgba(20, 40, 10, 0.22)';
                         ctx.beginPath();
-                        ctx.ellipse(px, py + 0.7, 2.5, 1.2, 0, 0, Math.PI * 2);
+                        ctx.ellipse(px, py + 0.6, 2.3, 1.1, 0, 0, Math.PI * 2);
                         ctx.fill();
 
                         ctx.fillStyle = '#78716c';
                         ctx.beginPath();
-                        ctx.ellipse(px, py, 2.1, 1.3, 0, 0, Math.PI * 2);
+                        ctx.ellipse(px, py, 1.9, 1.1, 0, 0, Math.PI * 2);
                         ctx.fill();
 
-                        ctx.fillStyle = '#cbd5e1';
+                        ctx.fillStyle = '#d6d3d1';
                         ctx.beginPath();
-                        ctx.ellipse(px - 0.4, py - 0.35, 1.1, 0.6, 0, 0, Math.PI * 2);
+                        ctx.ellipse(px - 0.4, py - 0.3, 1.0, 0.5, 0, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 } else if (cell.biome === BIOMES.DESERT || cell.biome === BIOMES.SAND) {
-                    if ((h % 100) < 18 && cell.type === RESOURCES.EMPTY) {
-                        // Ondas suaves en la arena y piedritas cálidas
-                        ctx.strokeStyle = 'rgba(180, 120, 50, 0.22)';
+                    if ((h % 100) < 16 && cell.type === RESOURCES.EMPTY) {
+                        ctx.strokeStyle = 'rgba(180, 120, 50, 0.20)';
                         ctx.lineWidth = 0.8;
                         ctx.beginPath();
                         ctx.arc(px, py + 3, 5, -Math.PI * 0.75, -Math.PI * 0.25);
                         ctx.stroke();
                     }
                 } else if (cell.biome === BIOMES.SNOW) {
-                    if ((h % 100) < 20 && cell.type === RESOURCES.EMPTY) {
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                    if ((h % 100) < 18 && cell.type === RESOURCES.EMPTY) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
                         ctx.beginPath();
                         ctx.ellipse(px, py, 4, 1.8, 0, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 } else if (cell.biome === BIOMES.PINE) {
-                    // Bosque mágico: esporas luminosas y helechos oscuros
-                    if ((h % 100) < 22 && cell.type === RESOURCES.EMPTY) {
-                        const glow = 0.45 + 0.35 * Math.sin(windTime * 1.5 + x + y);
-                        ctx.fillStyle = (h & 1) ? 
-gba(56, 189, 248, ) : 
-gba(192, 132, 252, );
+                    // Bosque mágico: esporas luminosas (fix de rgba)
+                    if ((h % 100) < 20 && cell.type === RESOURCES.EMPTY) {
+                        const glow = (0.45 + 0.35 * Math.sin(windTime * 1.5 + x + y)).toFixed(2);
+                        ctx.fillStyle = (h & 1) ? `rgba(56, 189, 248, ${glow})` : `rgba(192, 132, 252, ${glow})`;
                         ctx.beginPath();
-                        ctx.arc(px, py - 1.5, 1.1, 0, Math.PI * 2);
+                        ctx.arc(px, py - 1.5, 1.15, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
