@@ -163,38 +163,11 @@ export class Renderer {
         // lo demás cuando la cámara sigue a Gruni.
         // Escalado tipo "cover": la imagen cubre todo el rombo de la zona sin
         // deformarse (mantiene su proporción) y queda centrada; lo que sobra se recorta.
-        if (bgImg) {
-            this.ctx.save();
-            // Reseteamos la escala para no perder calidad. Si lo dibujamos achicado
-            // y el canvas luego le aplica el ZOOMx3, se ve borroso.
-            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // Sincronizar layout del bioma (ríos, caminos, costas) y asignar tiles HD por celda
+        this.syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH);
 
-            const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
-            
-            // Calculamos el tamaño y posición en píxeles reales de la pantalla
-            const drawW = bgImg.width  * coverScale * ZOOM * dpr;
-            const drawH = bgImg.height * coverScale * ZOOM * dpr;
-            
-            // Posición base del fondo en el mundo, ajustada por la cámara, y convertida a pantalla
-            const screenX = (bgX - this.cameraX) * ZOOM * dpr;
-            const screenY = (bgY - this.cameraY) * ZOOM * dpr;
-            
-            // Centrar la imagen (cover) dentro de esos límites en pantalla
-            const drawX = screenX + (bgW * ZOOM * dpr - drawW) / 2;
-            const drawY = screenY + (bgH * ZOOM * dpr - drawH) / 2;
-
-            this.ctx.imageSmoothingEnabled = true;
-            this.ctx.imageSmoothingQuality = 'high';
-            this.ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
-
-            this.ctx.restore();
-
-            // Sincronizar píxeles del fondo con la grilla del mundo (agua, caminos de tierra, pasto real)
-            this.syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH);
-        } else {
-            this.ctx.fillStyle = '#111';
-            this.ctx.fillRect(bgX, bgY, bgW, bgH);
-        }
+        // Dibujar el suelo isométrico en HD (sin estirar imágenes de fondo borrosas)
+        this.drawHDGround(world, bgX, bgY, bgW, bgH, dpr);
 
         // ── DETALLES DEL TERRENO 2.5D (MICRO-VEGETACIÓN, FLORES Y SENDEROS) ─────
         this.drawTerrainDetails(world, agent, timestamp, viewW, viewH);
@@ -861,33 +834,38 @@ export class Renderer {
         }
     }
 
-    // ─── Sincronización inteligente entre los píxeles del fondo y la grilla ─────
+    // ─── Sincronización de layout de zona y asignación de Tiles Isométricos HD ──
     syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH) {
-        if (!world || !world.grid || !bgImg || !bgImg.width) return;
-        const syncKey = `${world.currentZoneId}_${bgImg.src}`;
+        if (!world || !world.grid) return;
+        const zoneId = world.currentZoneId || 'pradera';
+        const syncKey = `${zoneId}_${bgImg ? bgImg.src : 'procedural'}`;
         if (world._bgSyncedKey === syncKey) return;
 
         try {
+            let imgData = null;
             const sampleW = 384;
             const sampleH = 216;
-            if (!this._bgSampleCanvas) {
-                this._bgSampleCanvas = document.createElement('canvas');
-                this._bgSampleCanvas.width = sampleW;
-                this._bgSampleCanvas.height = sampleH;
-                this._bgSampleCtx = this._bgSampleCanvas.getContext('2d', { willReadFrequently: true });
+            let worldDrawW = bgW, worldDrawH = bgH, worldDrawX = bgX, worldDrawY = bgY;
+
+            if (bgImg && bgImg.width) {
+                if (!this._bgSampleCanvas) {
+                    this._bgSampleCanvas = document.createElement('canvas');
+                    this._bgSampleCanvas.width = sampleW;
+                    this._bgSampleCanvas.height = sampleH;
+                    this._bgSampleCtx = this._bgSampleCanvas.getContext('2d', { willReadFrequently: true });
+                }
+                const sctx = this._bgSampleCtx;
+                sctx.clearRect(0, 0, sampleW, sampleH);
+                sctx.drawImage(bgImg, 0, 0, sampleW, sampleH);
+                imgData = sctx.getImageData(0, 0, sampleW, sampleH).data;
+
+                const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
+                worldDrawW = bgImg.width * coverScale;
+                worldDrawH = bgImg.height * coverScale;
+                worldDrawX = bgX + (bgW - worldDrawW) / 2;
+                worldDrawY = bgY + (bgH - worldDrawH) / 2;
             }
-            const sctx = this._bgSampleCtx;
-            sctx.clearRect(0, 0, sampleW, sampleH);
-            sctx.drawImage(bgImg, 0, 0, sampleW, sampleH);
-            const imgData = sctx.getImageData(0, 0, sampleW, sampleH).data;
 
-            const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
-            const worldDrawW = bgImg.width * coverScale;
-            const worldDrawH = bgImg.height * coverScale;
-            const worldDrawX = bgX + (bgW - worldDrawW) / 2;
-            const worldDrawY = bgY + (bgH - worldDrawH) / 2;
-
-            const zoneId = world.currentZoneId || 'pradera';
             const hasRealWater = (zoneId === 'bosque_rio' || zoneId === 'playa');
 
             for (let y = 0; y < world.height; y++) {
@@ -895,28 +873,33 @@ export class Renderer {
                     const cell = world.getCell(x, y);
                     if (!cell) continue;
 
-                    const { cx, cy } = this.getIsoBase(x, y);
-                    const u = Math.max(0, Math.min(0.999, (cx - worldDrawX) / worldDrawW));
-                    const v = Math.max(0, Math.min(0.999, (cy - worldDrawY) / worldDrawH));
-                    const px = Math.floor(u * sampleW);
-                    const py = Math.floor(v * sampleH);
-                    const idx = (py * sampleW + px) * 4;
-                    const r = imgData[idx];
-                    const g = imgData[idx + 1];
-                    const b = imgData[idx + 2];
+                    const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
+                    const patch = Math.sin(x * 0.32 + y * 0.24) + Math.cos(x * 0.21 - y * 0.35);
+                    cell.tileFlip = ((h >> 4) & 1) === 1;
 
+                    let r = 88, g = 142, b = 32;
+                    if (imgData) {
+                        const { cx, cy } = this.getIsoBase(x, y);
+                        const u = Math.max(0, Math.min(0.999, (cx - worldDrawX) / worldDrawW));
+                        const v = Math.max(0, Math.min(0.999, (cy - worldDrawY) / worldDrawH));
+                        const px = Math.floor(u * sampleW);
+                        const py = Math.floor(v * sampleH);
+                        const idx = (py * sampleW + px) * 4;
+                        r = imgData[idx];
+                        g = imgData[idx + 1];
+                        b = imgData[idx + 2];
+                    }
                     cell.groundColor = [r, g, b];
 
-                    const isWaterPixel = hasRealWater && (
+                    const isWaterPixel = (cell.type === RESOURCES.WATER) || (hasRealWater && (
                         (b > r + 15 && b > g - 20 && b > 75 && r < 145) ||
                         (b > 125 && g > 105 && r < 115)
-                    );
+                    ));
                     const isGreenGrass = !isWaterPixel && (g > r + 6 && g > b + 16 && g > 45);
                     const isDirtRoad = !isWaterPixel && !isGreenGrass && (r > g + 8 && r > b + 18 && r > 75);
 
                     if (isWaterPixel) {
                         cell.groundType = 'WATER';
-                        // Quitar árboles, rocas o arbustos generados encima de ríos o mar
                         if (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.WOOD_EMPTY ||
                             cell.type === RESOURCES.FOOD || cell.type === RESOURCES.FOOD_EMPTY ||
                             cell.type === RESOURCES.BUSH || cell.type === RESOURCES.BUSH_EMPTY ||
@@ -929,7 +912,6 @@ export class Renderer {
                         cell.groundType = 'GRASS';
                     } else if (isDirtRoad) {
                         cell.groundType = 'DIRT';
-                        // En Aldea y Campo o Bosque y Río, despejar árboles que bloqueen el centro de caminos de tierra
                         if ((zoneId === 'aldea_campo' || zoneId === 'bosque_rio') && (r > g + 16 && r > b + 28)) {
                             if (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.FOOD || cell.type === RESOURCES.BUSH) {
                                 cell.type = RESOURCES.EMPTY;
@@ -939,16 +921,255 @@ export class Renderer {
                     } else {
                         cell.groundType = 'OTHER';
                     }
+
+                    // Selección del tile isométrico HD y su capa de solapamiento (0=agua, 1=tierra/arena/nieve, 2=pasto)
+                    if (cell.groundType === 'WATER') {
+                        cell.tileLayer = 0;
+                        if (zoneId === 'bosque_rio' && (h % 7 === 0)) {
+                            cell.tileKey = 'tile_water_lily';
+                        } else {
+                            cell.tileKey = (h & 1) ? 'tile_water_1' : 'tile_water_2';
+                        }
+                    } else if (zoneId === 'pradera') {
+                        if (cell.groundType === 'DIRT') {
+                            cell.tileLayer = 1;
+                            cell.tileKey = (h & 1) ? 'tile_dirt_1' : 'tile_dirt_2';
+                        } else {
+                            cell.tileLayer = 2;
+                            if (patch > 0.72) {
+                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_3';
+                            } else if (patch < -0.65) {
+                                cell.tileKey = (h & 1) ? 'tile_grass_2' : 'tile_grass_forest';
+                            } else {
+                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_3' : 'tile_grass_1';
+                            }
+                        }
+                    } else if (zoneId === 'aldea_campo') {
+                        if (cell.groundType === 'DIRT') {
+                            cell.tileLayer = 1;
+                            cell.tileKey = (h % 4 === 0) ? 'tile_dirt_cracked' : ((h & 1) ? 'tile_dirt_1' : 'tile_dirt_2');
+                        } else {
+                            cell.tileLayer = 2;
+                            if (patch > 0.55) {
+                                cell.tileKey = (h % 4 === 0) ? 'tile_grass_flowers' : 'tile_grass_gold';
+                            } else {
+                                cell.tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_3';
+                            }
+                        }
+                    } else if (zoneId === 'bosque_rio') {
+                        if (cell.groundType === 'DIRT') {
+                            cell.tileLayer = 1;
+                            cell.tileKey = (h & 1) ? 'tile_marsh_1' : 'tile_dirt_1';
+                        } else {
+                            cell.tileLayer = 2;
+                            if (patch > 0.65) {
+                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_olive';
+                            } else if (patch < -0.45) {
+                                cell.tileKey = (h & 1) ? 'tile_grass_forest' : 'tile_grass_2';
+                            } else {
+                                cell.tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_2';
+                            }
+                        }
+                    } else if (zoneId === 'bosque_magico') {
+                        if (patch < -0.85) {
+                            cell.tileLayer = 1;
+                            cell.tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_ice_2';
+                        } else {
+                            cell.tileLayer = 2;
+                            if (patch > 0.45) {
+                                cell.tileKey = (h & 1) ? 'tile_magic_2' : 'tile_magic_1';
+                            } else {
+                                cell.tileKey = (h % 3 === 0) ? 'tile_magic_short' : 'tile_magic_1';
+                            }
+                        }
+                    } else if (zoneId === 'montanas_nevadas') {
+                        if (patch < -0.6) {
+                            cell.tileLayer = 1;
+                            cell.tileKey = (h & 1) ? 'tile_ice_1' : 'tile_marsh_cracked';
+                        } else {
+                            cell.tileLayer = 2;
+                            cell.tileKey = (patch > 0.4 && (h & 1)) ? 'tile_snow_tuft' : ((h & 1) ? 'tile_snow_1' : 'tile_snow_2');
+                        }
+                    } else if (zoneId === 'zonas_hielo') {
+                        cell.tileLayer = 1;
+                        if (patch > 0.5) {
+                            cell.tileKey = (h & 1) ? 'tile_snow_1' : 'tile_snow_tuft';
+                        } else if (patch < -0.4) {
+                            cell.tileKey = 'tile_ice_crystal';
+                        } else {
+                            cell.tileKey = (h & 1) ? 'tile_ice_1' : 'tile_ice_2';
+                        }
+                    } else if (zoneId === 'playa') {
+                        if (cell.groundType === 'GRASS') {
+                            cell.tileLayer = 2;
+                            cell.tileKey = (h & 1) ? 'tile_grass_gold' : 'tile_grass_1';
+                        } else {
+                            cell.tileLayer = 1;
+                            if (patch > 0.65 && cell.type === RESOURCES.EMPTY) {
+                                cell.tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+                            } else {
+                                cell.tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+                            }
+                        }
+                    } else if (zoneId === 'desierto') {
+                        cell.tileLayer = 1;
+                        if (patch > 0.7 && cell.type === RESOURCES.EMPTY && (h % 4 === 0)) {
+                            cell.tileKey = 'tile_desert_shrub';
+                        } else if (patch < -0.5) {
+                            cell.tileKey = 'tile_desert_cracked';
+                        } else if (patch > 0.3) {
+                            cell.tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+                        } else {
+                            cell.tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+                        }
+                    } else if (zoneId === 'cementerio_animales') {
+                        cell.tileLayer = 1;
+                        if (cell.type === RESOURCES.EMPTY && (h % 24 === 0)) {
+                            cell.tileKey = 'tile_cemetery_skull';
+                            cell.tileFlip = false;
+                        } else if (patch > 0.55 && cell.type === RESOURCES.EMPTY && (h % 3 === 0)) {
+                            cell.tileKey = 'tile_desert_shrub';
+                        } else if (patch < -0.45) {
+                            cell.tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_desert_cracked';
+                        } else {
+                            cell.tileKey = (h & 1) ? 'tile_cemetery_1' : 'tile_cemetery_2';
+                        }
+                    } else {
+                        cell.tileLayer = 2;
+                        cell.tileKey = 'tile_grass_1';
+                    }
                 }
             }
             world._bgSyncedKey = syncKey;
+            this._bakedZoneKey = null; // Forzar re-bake del lienzo HD de la zona
         } catch (err) {
-            console.warn('No se pudo muestrear el fondo de la zona:', err);
+            console.warn('No se pudo sincronizar la zona:', err);
             world._bgSyncedKey = syncKey;
         }
     }
 
-    // ─── Detalles 2.5D del terreno (micro-vegetación, flores, piedras y senderos) ─
+    // ─── Renderizador de Suelo Isométrico HD Pre-Horneado (Nitidez 4K a 60 FPS) ──
+    drawHDGround(world, bgX, bgY, bgW, bgH, dpr) {
+        const zoneId = world.currentZoneId || 'pradera';
+        const bakeKey = `${world._bgSyncedKey || zoneId}`;
+
+        if (!this._zoneGroundCanvas || this._bakedZoneKey !== bakeKey) {
+            const BAKE_SCALE = 3; // 3840 x 1920 píxeles reales para máxima nitidez en ZOOM = 3
+            const cw = Math.round(bgW * BAKE_SCALE);
+            const ch = Math.round(bgH * BAKE_SCALE);
+
+            if (!this._zoneGroundCanvas) {
+                this._zoneGroundCanvas = document.createElement('canvas');
+            }
+            if (this._zoneGroundCanvas.width !== cw || this._zoneGroundCanvas.height !== ch) {
+                this._zoneGroundCanvas.width = cw;
+                this._zoneGroundCanvas.height = ch;
+            }
+
+            const gctx = this._zoneGroundCanvas.getContext('2d');
+            gctx.save();
+            gctx.imageSmoothingEnabled = true;
+            gctx.imageSmoothingQuality = 'high';
+
+            // Color base profundo según bioma para evitar cualquier hueco entre bordes
+            const baseColors = {
+                pradera: '#4d7c0f',
+                aldea_campo: '#4d7c0f',
+                bosque_rio: '#3f6212',
+                bosque_magico: '#1e5b4a',
+                montanas_nevadas: '#b8cfe6',
+                zonas_hielo: '#8ab8e6',
+                playa: '#d4a853',
+                desierto: '#cfa24e',
+                cementerio_animales: '#8c7658'
+            };
+            gctx.fillStyle = baseColors[zoneId] || '#4d7c0f';
+            gctx.fillRect(0, 0, cw, ch);
+
+            // Escalar sistema de coordenadas del bake al espacio del mundo trasladado por (-bgX, -bgY)
+            gctx.scale(BAKE_SCALE, BAKE_SCALE);
+            gctx.translate(-bgX, -bgY);
+
+            // Recolectar todas las celdas y ordenarlas por capa (0=agua, 1=tierra/arena, 2=pasto) y profundidad (x+y)
+            const cellsToDraw = [];
+            for (let y = 0; y < world.height; y++) {
+                for (let x = 0; x < world.width; x++) {
+                    const cell = world.getCell(x, y);
+                    if (!cell) continue;
+                    cellsToDraw.push({
+                        x, y,
+                        layer: cell.tileLayer !== undefined ? cell.tileLayer : 2,
+                        key: cell.tileKey || 'tile_grass_1',
+                        flip: !!cell.tileFlip,
+                        groundType: cell.groundType
+                    });
+                }
+            }
+
+            cellsToDraw.sort((a, b) => {
+                if (a.layer !== b.layer) return a.layer - b.layer;
+                const da = a.x + a.y;
+                const db = b.x + b.y;
+                if (da !== db) return da - db;
+                return a.x - b.x;
+            });
+
+            // Tamaño con solapamiento orgánico (44x27.5 sobre celda de 32x16)
+            const drawW = 44.0;
+            const drawH = drawW * (160.0 / 256.0);
+            const anchorX = drawW / 2.0;
+            const anchorY = drawH * (90.0 / 160.0);
+
+            for (const item of cellsToDraw) {
+                const { cx, cy } = this.getIsoBase(item.x, item.y);
+
+                // Si es agua o camino de tierra, pintar primero una base sólida de su color para que no asome el verde del fondo
+                if (item.layer === 0) {
+                    gctx.fillStyle = '#0ea5c6';
+                    gctx.beginPath();
+                    gctx.ellipse(cx, cy, 18, 9.5, 0, 0, Math.PI * 2);
+                    gctx.fill();
+                } else if (item.groundType === 'DIRT') {
+                    gctx.fillStyle = '#9a6834';
+                    gctx.beginPath();
+                    gctx.ellipse(cx, cy, 18, 9.5, 0, 0, Math.PI * 2);
+                    gctx.fill();
+                }
+
+                const tileImg = this.images ? this.images[item.key] : null;
+                if (tileImg && tileImg.width) {
+                    if (item.flip) {
+                        gctx.save();
+                        gctx.translate(cx, cy - anchorY);
+                        gctx.scale(-1, 1);
+                        gctx.drawImage(tileImg, -anchorX, 0, drawW, drawH);
+                        gctx.restore();
+                    } else {
+                        gctx.drawImage(tileImg, cx - anchorX, cy - anchorY, drawW, drawH);
+                    }
+                }
+            }
+
+            gctx.restore();
+            this._bakedZoneKey = bakeKey;
+        }
+
+        // Volcar el lienzo HD pre-horneado directamente a resolución nativa de pantalla
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+
+        const screenX = (bgX - this.cameraX) * ZOOM * dpr;
+        const screenY = (bgY - this.cameraY) * ZOOM * dpr;
+        const screenW = bgW * ZOOM * dpr;
+        const screenH = bgH * ZOOM * dpr;
+
+        this.ctx.drawImage(this._zoneGroundCanvas, screenX, screenY, screenW, screenH);
+        this.ctx.restore();
+    }
+
+    // ─── Detalles dinámicos 2.5D (ondas de agua en vivo, brisa en flores y esporas) ─
     drawTerrainDetails(world, agent, timestamp, viewW, viewH) {
         const ctx = this.ctx;
         ctx.save();
@@ -966,147 +1187,38 @@ export class Renderer {
                 if (cx < minScreenX || cx > maxScreenX || cy < minScreenY || cy > maxScreenY) continue;
 
                 const cell = world.getCell(x, y);
-                if (!cell || cell.type === RESOURCES.WATER || cell.type === RESOURCES.VOID) continue;
-                if (cell.groundType === 'WATER') continue;
+                if (!cell || cell.type === RESOURCES.VOID) continue;
 
-                // Hash determinístico por celda (x, y)
                 const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
-                const ox = ((h & 0xff) / 255 - 0.5) * 14;
-                const oy = (((h >> 8) & 0xff) / 255 - 0.5) * 7;
+                const ox = ((h & 0xff) / 255 - 0.5) * 12;
+                const oy = (((h >> 8) & 0xff) / 255 - 0.5) * 6;
                 const px = cx + ox;
                 const py = cy + oy;
 
-                if (cell.biome === BIOMES.GRASS) {
-                    // Solo dibujar pasto y flores si el píxel real del fondo es pasto verde (no tierra ni río)
-                    if (cell.groundType && cell.groundType !== 'GRASS') continue;
-
-                    const gc = cell.groundColor || [88, 145, 38];
-                    const darkGreen = `rgb(${Math.max(15, gc[0] - 32)}, ${Math.max(35, gc[1] - 42)}, ${Math.max(8, gc[2] - 18)})`;
-                    const midGreen  = `rgb(${Math.max(25, gc[0] - 12)}, ${Math.max(55, gc[1] - 14)}, ${Math.max(12, gc[2] - 8)})`;
-                    const lightTip  = `rgb(${Math.min(235, gc[0] + 34)}, ${Math.min(248, gc[1] + 42)}, ${Math.min(180, gc[2] + 18)})`;
-
-                    // 1. Pinceladas sutiles de textura sobre el pasto para dar nitidez en ZOOM x3
-                    if ((h % 3) !== 0) {
-                        ctx.fillStyle = (h & 1) ? 'rgba(22, 58, 12, 0.08)' : 'rgba(180, 235, 65, 0.07)';
+                // Brillos de agua animados sobre ríos, lagunas y mar
+                if (cell.type === RESOURCES.WATER || cell.groundType === 'WATER') {
+                    if ((h % 3) === 0) {
+                        const waveOffset = Math.sin(windTime * 1.4 + x * 0.7 + y * 0.5) * 2.2;
+                        const waveAlpha = (0.18 + 0.14 * Math.sin(windTime * 1.8 + x + y)).toFixed(2);
+                        ctx.strokeStyle = `rgba(224, 242, 254, ${waveAlpha})`;
+                        ctx.lineWidth = 0.85;
+                        ctx.lineCap = 'round';
                         ctx.beginPath();
-                        ctx.ellipse(px, py, 6.5 + (h % 4), 2.6 + (h % 2), 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-
-                    // 2. Matas de pasto 2.5D estilo pintura (como las raíces de los árboles)
-                    if ((h % 100) < 48) {
-                        const sway = Math.sin(windTime + x * 0.45 + y * 0.35) * 0.95;
-                        const bladeCount = 3 + (h % 3);
-
-                        // Sombra suave en la raíz de la mata
-                        ctx.fillStyle = 'rgba(18, 45, 10, 0.22)';
-                        ctx.beginPath();
-                        ctx.ellipse(px, py + 0.9, 3.6, 1.4, 0, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        for (let b = 0; b < bladeCount; b++) {
-                            const normB = (b - (bladeCount - 1) / 2);
-                            const spread = normB * 1.85;
-                            const bh = 3.6 + ((h >> (b + 2)) % 3) * 1.15 - Math.abs(normB) * 0.45;
-                            const tipX = px + spread * 1.35 + sway;
-                            const tipY = py - bh;
-
-                            // Hoja cónica rellena (más gruesa en la base y fina en la punta)
-                            ctx.fillStyle = (b % 2 === 0) ? darkGreen : midGreen;
-                            ctx.beginPath();
-                            ctx.moveTo(px + spread * 0.35 - 0.85, py + 0.4);
-                            ctx.quadraticCurveTo(px + spread * 0.75 + sway * 0.4, py - bh * 0.55, tipX, tipY);
-                            ctx.quadraticCurveTo(px + spread * 0.95 + sway * 0.4, py - bh * 0.45, px + spread * 0.35 + 0.85, py + 0.4);
-                            ctx.closePath();
-                            ctx.fill();
-
-                            // Brillo superior iluminado en las hojas centrales
-                            if (b === 1 || b === bladeCount - 2) {
-                                ctx.strokeStyle = lightTip;
-                                ctx.lineWidth = 0.65;
-                                ctx.lineCap = 'round';
-                                ctx.beginPath();
-                                ctx.moveTo(px + spread * 0.75 + sway * 0.5, py - bh * 0.5);
-                                ctx.lineTo(tipX, tipY);
-                                ctx.stroke();
-                            }
-                        }
-                    }
-
-                    // 3. Agrupaciones orgánicas (clusters) de florcitas silvestres en claros naturales
-                    const meadowCluster = Math.sin(x * 0.32 + y * 0.24) * Math.cos(x * 0.21 - y * 0.29);
-                    const flowerRoll = (h >> 12) % 100;
-                    if (meadowCluster > 0.32 && flowerRoll < 22 && cell.type === RESOURCES.EMPTY) {
-                        // El color se define por manchón/cluster para que las flores cercanas sean de la misma especie
-                        const patchType = Math.abs(Math.floor(Math.sin(x * 0.14 + y * 0.17) * 10)) % 3;
-                        const petalColor = patchType === 0 ? '#fffbeb' : (patchType === 1 ? '#fde047' : '#bae6fd');
-                        const centerColor = patchType === 1 ? '#b45309' : '#facc15';
-                        const flowerCount = 1 + (h % 3);
-
-                        for (let f = 0; f < flowerCount; f++) {
-                            const fh = (h >> (f * 5)) & 0xff;
-                            const fx = px + ((fh & 0x0f) / 15 - 0.5) * 7.5;
-                            const fy = py + (((fh >> 4) & 0x0f) / 15 - 0.5) * 3.8 - 1.2;
-
-                            // Hojitas verdes en la base de la flor
-                            ctx.fillStyle = darkGreen;
-                            ctx.beginPath();
-                            ctx.ellipse(fx, fy + 1.1, 1.8, 0.8, 0, 0, Math.PI * 2);
-                            ctx.fill();
-
-                            // Pétalos suaves
-                            ctx.fillStyle = petalColor;
-                            for (let p = 0; p < 4; p++) {
-                                const ang = (p * Math.PI) / 2 + (fh % 3) * 0.25;
-                                ctx.beginPath();
-                                ctx.arc(fx + Math.cos(ang) * 0.95, fy + Math.sin(ang) * 0.75, 0.8, 0, Math.PI * 2);
-                                ctx.fill();
-                            }
-                            // Centro
-                            ctx.fillStyle = centerColor;
-                            ctx.beginPath();
-                            ctx.arc(fx, fy, 0.6, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                    } else if (flowerRoll === 45 && cell.type === RESOURCES.EMPTY) {
-                        // Piedrita natural ocasional
-                        ctx.fillStyle = 'rgba(20, 40, 10, 0.22)';
-                        ctx.beginPath();
-                        ctx.ellipse(px, py + 0.6, 2.3, 1.1, 0, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#78716c';
-                        ctx.beginPath();
-                        ctx.ellipse(px, py, 1.9, 1.1, 0, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#d6d3d1';
-                        ctx.beginPath();
-                        ctx.ellipse(px - 0.4, py - 0.3, 1.0, 0.5, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                } else if (cell.biome === BIOMES.DESERT || cell.biome === BIOMES.SAND) {
-                    if ((h % 100) < 16 && cell.type === RESOURCES.EMPTY) {
-                        ctx.strokeStyle = 'rgba(180, 120, 50, 0.20)';
-                        ctx.lineWidth = 0.8;
-                        ctx.beginPath();
-                        ctx.arc(px, py + 3, 5, -Math.PI * 0.75, -Math.PI * 0.25);
+                        ctx.moveTo(px - 3.5 + waveOffset, py);
+                        ctx.quadraticCurveTo(px + waveOffset, py - 1.1, px + 3.5 + waveOffset, py);
                         ctx.stroke();
                     }
-                } else if (cell.biome === BIOMES.SNOW) {
+                    continue;
+                }
+
+                if (cell.biome === BIOMES.PINE) {
+                    // Bosque mágico: esporas luminosas flotando suavemente
                     if ((h % 100) < 18 && cell.type === RESOURCES.EMPTY) {
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
-                        ctx.beginPath();
-                        ctx.ellipse(px, py, 4, 1.8, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                } else if (cell.biome === BIOMES.PINE) {
-                    // Bosque mágico: esporas luminosas (fix de rgba)
-                    if ((h % 100) < 20 && cell.type === RESOURCES.EMPTY) {
                         const glow = (0.45 + 0.35 * Math.sin(windTime * 1.5 + x + y)).toFixed(2);
+                        const floatY = Math.cos(windTime * 1.2 + x * 0.5) * 1.5;
                         ctx.fillStyle = (h & 1) ? `rgba(56, 189, 248, ${glow})` : `rgba(192, 132, 252, ${glow})`;
                         ctx.beginPath();
-                        ctx.arc(px, py - 1.5, 1.15, 0, Math.PI * 2);
+                        ctx.arc(px, py - 2.0 + floatY, 1.15, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
