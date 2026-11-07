@@ -1,10 +1,10 @@
 // js/main.js
-import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js';
-import { Agent, STATES } from './agent.js';
-import { Renderer } from './renderer.js';
-import { ParticleSystem } from './particles.js';
-import { Wolf } from './wolf.js';
-import { Enemy } from './enemy.js';
+import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261107c';
+import { Agent, STATES } from './agent.js?v=20261107c';
+import { Renderer } from './renderer.js?v=20261107c';
+import { ParticleSystem } from './particles.js?v=20261107c';
+import { Wolf } from './wolf.js?v=20261107c';
+import { Enemy } from './enemy.js?v=20261107c';
 
 const canvas = document.getElementById('gameCanvas');
 
