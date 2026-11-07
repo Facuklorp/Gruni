@@ -889,7 +889,7 @@ export class Renderer {
         } else if (zoneId === 'aldea_campo') {
             if (groundType === 'DIRT') {
                 tileLayer = 1;
-                tileKey = (h % 4 === 0) ? 'tile_dirt_cracked' : ((h & 1) ? 'tile_dirt_1' : 'tile_dirt_2';
+                tileKey = (h % 4 === 0) ? 'tile_dirt_cracked' : ((h & 1) ? 'tile_dirt_1' : 'tile_dirt_2');
             } else {
                 tileLayer = 2;
                 if (patch > 0.55) {

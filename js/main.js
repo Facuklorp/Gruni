@@ -229,11 +229,6 @@ const imageUrls = {
     muralla: 'Muralla/Muralla.png',
     rocas_1: 'Rocas/Rocas 1.png',
     rocas_2: 'Rocas/Rocas 2.png',
-    bg_pasto: 'Biomas/GRANDES/Pasto.png',
-    bg_agua: 'Biomas/GRANDES/Agua.png',
-    bg_arena: 'Biomas/GRANDES/Arena.png',
-    fondo_gruni: 'Fondo_GRUNI.png',
-    fondo_desierto: 'fondodesierto.png',
     bg_aldea_campo: 'Zonas/Aldea y campo.jpg',
     bg_bosque_magico: 'Zonas/Bosque mágico.jpg',
     bg_bosque_rio: 'Zonas/Bosque y río.jpg',
@@ -295,10 +290,31 @@ function loadImage(url) {
 }
 
 async function loadAssets() {
-    for (let key in imageUrls) {
-        let img = await loadImage(imageUrls[key]);
-        IMAGES[key] = img;
+    const entries = Object.entries(imageUrls);
+    // Priorizar tiles HD, fondo inicial y primeros frames para que la pantalla aparezca al instante
+    const priorityKeys = new Set([
+        'bg_pradera', 'bg_montanas_nevadas', 'bg_desierto', 'bg_bosque_rio', 'bg_aldea_campo',
+        'agent_walk_side_1', 'agent_walk_front_1', 'agent_walk_back_1',
+        'iso_arbol_1', 'iso_arbol_2', 'iso_arbol_3', 'iso_arbol_4', 'iso_arbol_5',
+        'iso_frutal_1', 'rocas_1', 'rocas_2', 'casa_1', 'casa_2', 'casa_3', 'muralla'
+    ]);
+    for (const [k] of entries) {
+        if (k.startsWith('tile_')) priorityKeys.add(k);
     }
+
+    const priorityEntries = entries.filter(([k]) => priorityKeys.has(k));
+    const secondaryEntries = entries.filter(([k]) => !priorityKeys.has(k));
+
+    await Promise.all(priorityEntries.map(async ([key, url]) => {
+        IMAGES[key] = await loadImage(url);
+    }));
+
+    // Cargar el resto de los frames y fondos en paralelo en segundo plano
+    Promise.all(secondaryEntries.map(async ([key, url]) => {
+        IMAGES[key] = await loadImage(url);
+    })).then(() => {
+        if (renderer) renderer._bakedZoneKey = null;
+    });
 }
 
 function resizeCanvas() {
