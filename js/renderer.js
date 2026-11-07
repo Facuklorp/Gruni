@@ -1,5 +1,6 @@
 // js/renderer.js — Vista Isométrica
 import { CELL_SIZE, ZOOM, RESOURCES, BIOMES, ISO_W, ISO_H } from './world.js';
+import { ZONES } from './zones.js';
 
 // Árboles ocultos temporalmente mientras se ajusta el fondo anclado al mundo.
 // Poner en true para volver a dibujarlos.
@@ -246,8 +247,30 @@ export class Renderer {
                     } else if (cell.type === RESOURCES.HOUSE && isAgentHome) {
                         // Se dibuja como bighouse
                     } else {
-                        renderQueue.push({ type: 'resource', x, y, cell });
+                        renderQueue.push({ type: 'resource', x, y, cell, isNeighbor: false });
                     }
+                }
+            }
+        }
+
+        // Agregar recursos naturales visibles de las zonas vecinas en las esquinas fuera del rombo
+        const pad = 22;
+        for (let y = -pad; y < world.height + pad; y++) {
+            for (let x = -pad; x < world.width + pad; x++) {
+                if (x >= 0 && x < world.width && y >= 0 && y < world.height) continue;
+                const { cx, cy } = this.getIsoBase(x, y);
+                if (cx < bgX - 48 || cx > bgX + bgW + 48 || cy < bgY - 48 || cy > bgY + bgH + 64) continue;
+
+                const resolved = this.resolveWorldCell(world, x, y);
+                if (!resolved || !resolved.cell || resolved.isClampedEdge) continue;
+                const cell = resolved.cell;
+                if (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.WOOD_EMPTY ||
+                    cell.type === RESOURCES.FOOD || cell.type === RESOURCES.FOOD_EMPTY ||
+                    cell.type === RESOURCES.BUSH || cell.type === RESOURCES.BUSH_EMPTY ||
+                    cell.type === RESOURCES.ROCK || cell.type === RESOURCES.ROCK_EMPTY ||
+                    cell.type === RESOURCES.MAGIC_TREE) {
+                    if (!SHOW_TREES && TREE_TYPES.includes(cell.type)) continue;
+                    renderQueue.push({ type: 'resource', x, y, cell, isNeighbor: true });
                 }
             }
         }
@@ -296,7 +319,7 @@ export class Renderer {
                     case RESOURCES.MARKET:     this.drawMarket(item.x, item.y); break;
                     case RESOURCES.MAGIC_TREE: this.drawMagicTree(item.x, item.y, cell.type, cell.biome, agent); break;
                 }
-                if (cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
+                if (!item.isNeighbor && cell.type !== RESOURCES.HOUSE && cell.type !== RESOURCES.WALL && cell.capacity > 0) {
                     this.drawResourceDots(item.x, item.y, cell.capacity);
                 }
             } else if (item.type === 'bighouse') {
@@ -834,12 +857,147 @@ export class Renderer {
         }
     }
 
-    // ─── Sincronización de layout de zona y asignación de Tiles Isométricos HD ──
-    syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH) {
-        if (!world || !world.grid) return;
-        const zoneId = world.currentZoneId || 'pradera';
-        const syncKey = `${zoneId}_${bgImg ? bgImg.src : 'procedural'}`;
-        if (world._bgSyncedKey === syncKey) return;
+    // ─── Asignación determinista de Tile HD según bioma/zona ───────────────────
+    assignTileForZoneCell(zoneId, x, y, groundType, isEmpty = true) {
+        const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
+        const patch = Math.sin(x * 0.32 + y * 0.24) + Math.cos(x * 0.21 - y * 0.35);
+        let tileFlip = ((h >> 4) & 1) === 1;
+        let tileLayer = 2;
+        let tileKey = 'tile_grass_1';
+
+        if (groundType === 'WATER') {
+            tileLayer = 0;
+            if (zoneId === 'bosque_rio' && (h % 7 === 0)) {
+                tileKey = 'tile_water_lily';
+            } else {
+                tileKey = (h & 1) ? 'tile_water_1' : 'tile_water_2';
+            }
+        } else if (zoneId === 'pradera') {
+            if (groundType === 'DIRT') {
+                tileLayer = 1;
+                tileKey = (h & 1) ? 'tile_dirt_1' : 'tile_dirt_2';
+            } else {
+                tileLayer = 2;
+                if (patch > 0.72) {
+                    tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_3';
+                } else if (patch < -0.65) {
+                    tileKey = (h & 1) ? 'tile_grass_2' : 'tile_grass_forest';
+                } else {
+                    tileKey = (h % 3 === 0) ? 'tile_grass_3' : 'tile_grass_1';
+                }
+            }
+        } else if (zoneId === 'aldea_campo') {
+            if (groundType === 'DIRT') {
+                tileLayer = 1;
+                tileKey = (h % 4 === 0) ? 'tile_dirt_cracked' : ((h & 1) ? 'tile_dirt_1' : 'tile_dirt_2';
+            } else {
+                tileLayer = 2;
+                if (patch > 0.55) {
+                    tileKey = (h % 4 === 0) ? 'tile_grass_flowers' : 'tile_grass_gold';
+                } else {
+                    tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_3';
+                }
+            }
+        } else if (zoneId === 'bosque_rio') {
+            if (groundType === 'DIRT') {
+                tileLayer = 1;
+                tileKey = (h & 1) ? 'tile_marsh_1' : 'tile_dirt_1';
+            } else {
+                tileLayer = 2;
+                if (patch > 0.65) {
+                    tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_olive';
+                } else if (patch < -0.45) {
+                    tileKey = (h & 1) ? 'tile_grass_forest' : 'tile_grass_2';
+                } else {
+                    tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_2';
+                }
+            }
+        } else if (zoneId === 'bosque_magico') {
+            if (patch < -0.85) {
+                tileLayer = 1;
+                tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_ice_2';
+            } else {
+                tileLayer = 2;
+                if (patch > 0.45) {
+                    tileKey = (h & 1) ? 'tile_magic_2' : 'tile_magic_1';
+                } else {
+                    tileKey = (h % 3 === 0) ? 'tile_magic_short' : 'tile_magic_1';
+                }
+            }
+        } else if (zoneId === 'montanas_nevadas') {
+            if (patch < -0.6) {
+                tileLayer = 1;
+                tileKey = (h & 1) ? 'tile_ice_1' : 'tile_marsh_cracked';
+            } else {
+                tileLayer = 2;
+                tileKey = (patch > 0.4 && (h & 1)) ? 'tile_snow_tuft' : ((h & 1) ? 'tile_snow_1' : 'tile_snow_2');
+            }
+        } else if (zoneId === 'zonas_hielo') {
+            tileLayer = 1;
+            if (patch > 0.5) {
+                tileKey = (h & 1) ? 'tile_snow_1' : 'tile_snow_tuft';
+            } else if (patch < -0.4) {
+                tileKey = 'tile_ice_crystal';
+            } else {
+                tileKey = (h & 1) ? 'tile_ice_1' : 'tile_ice_2';
+            }
+        } else if (zoneId === 'playa') {
+            if (groundType === 'GRASS') {
+                tileLayer = 2;
+                tileKey = (h & 1) ? 'tile_grass_gold' : 'tile_grass_1';
+            } else {
+                tileLayer = 1;
+                if (patch > 0.65 && isEmpty) {
+                    tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+                } else {
+                    tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+                }
+            }
+        } else if (zoneId === 'desierto') {
+            tileLayer = 1;
+            if (patch > 0.7 && isEmpty && (h % 4 === 0)) {
+                tileKey = 'tile_desert_shrub';
+            } else if (patch < -0.5) {
+                tileKey = 'tile_desert_cracked';
+            } else if (patch > 0.3) {
+                tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+            } else {
+                tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+            }
+        } else if (zoneId === 'cementerio_animales') {
+            tileLayer = 1;
+            if (isEmpty && (h % 24 === 0)) {
+                tileKey = 'tile_cemetery_skull';
+                tileFlip = false;
+            } else if (patch > 0.55 && isEmpty && (h % 3 === 0)) {
+                tileKey = 'tile_desert_shrub';
+            } else if (patch < -0.45) {
+                tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_desert_cracked';
+            } else {
+                tileKey = (h & 1) ? 'tile_cemetery_1' : 'tile_cemetery_2';
+            }
+        }
+
+        return { tileLayer, tileKey, tileFlip };
+    }
+
+    // ─── Sincroniza una zona individual con su imagen de fondo / bioma ──────────
+    syncSingleZone(world, zoneId, bgX, bgY, bgW, bgH) {
+        if (!world || !zoneId || !ZONES[zoneId]) return '';
+        if (!world.grids[zoneId]) {
+            world.generateWorld(zoneId);
+        }
+        const grid = world.grids[zoneId];
+        if (!grid) return '';
+
+        const zoneDef = ZONES[zoneId];
+        const bgImg = (this.images && zoneDef) ? this.images[zoneDef.background] : null;
+        const syncKey = `${zoneId}_${bgImg && bgImg.width ? bgImg.src : 'procedural'}`;
+
+        world._syncedZones = world._syncedZones || {};
+        if (world._syncedZones[zoneId] === syncKey) {
+            return syncKey;
+        }
 
         try {
             let imgData = null;
@@ -867,15 +1025,13 @@ export class Renderer {
             }
 
             const hasRealWater = (zoneId === 'bosque_rio' || zoneId === 'playa');
+            const H = zoneDef.height || world.height;
+            const W = zoneDef.width || world.width;
 
-            for (let y = 0; y < world.height; y++) {
-                for (let x = 0; x < world.width; x++) {
-                    const cell = world.getCell(x, y);
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const cell = grid[y] && grid[y][x];
                     if (!cell) continue;
-
-                    const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
-                    const patch = Math.sin(x * 0.32 + y * 0.24) + Math.cos(x * 0.21 - y * 0.35);
-                    cell.tileFlip = ((h >> 4) & 1) === 1;
 
                     let r = 88, g = 142, b = 32;
                     if (imgData) {
@@ -922,129 +1078,151 @@ export class Renderer {
                         cell.groundType = 'OTHER';
                     }
 
-                    // Selección del tile isométrico HD y su capa de solapamiento (0=agua, 1=tierra/arena/nieve, 2=pasto)
-                    if (cell.groundType === 'WATER') {
-                        cell.tileLayer = 0;
-                        if (zoneId === 'bosque_rio' && (h % 7 === 0)) {
-                            cell.tileKey = 'tile_water_lily';
-                        } else {
-                            cell.tileKey = (h & 1) ? 'tile_water_1' : 'tile_water_2';
-                        }
-                    } else if (zoneId === 'pradera') {
-                        if (cell.groundType === 'DIRT') {
-                            cell.tileLayer = 1;
-                            cell.tileKey = (h & 1) ? 'tile_dirt_1' : 'tile_dirt_2';
-                        } else {
-                            cell.tileLayer = 2;
-                            if (patch > 0.72) {
-                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_3';
-                            } else if (patch < -0.65) {
-                                cell.tileKey = (h & 1) ? 'tile_grass_2' : 'tile_grass_forest';
-                            } else {
-                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_3' : 'tile_grass_1';
-                            }
-                        }
-                    } else if (zoneId === 'aldea_campo') {
-                        if (cell.groundType === 'DIRT') {
-                            cell.tileLayer = 1;
-                            cell.tileKey = (h % 4 === 0) ? 'tile_dirt_cracked' : ((h & 1) ? 'tile_dirt_1' : 'tile_dirt_2');
-                        } else {
-                            cell.tileLayer = 2;
-                            if (patch > 0.55) {
-                                cell.tileKey = (h % 4 === 0) ? 'tile_grass_flowers' : 'tile_grass_gold';
-                            } else {
-                                cell.tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_3';
-                            }
-                        }
-                    } else if (zoneId === 'bosque_rio') {
-                        if (cell.groundType === 'DIRT') {
-                            cell.tileLayer = 1;
-                            cell.tileKey = (h & 1) ? 'tile_marsh_1' : 'tile_dirt_1';
-                        } else {
-                            cell.tileLayer = 2;
-                            if (patch > 0.65) {
-                                cell.tileKey = (h % 3 === 0) ? 'tile_grass_flowers' : 'tile_grass_olive';
-                            } else if (patch < -0.45) {
-                                cell.tileKey = (h & 1) ? 'tile_grass_forest' : 'tile_grass_2';
-                            } else {
-                                cell.tileKey = (h & 1) ? 'tile_grass_1' : 'tile_grass_2';
-                            }
-                        }
-                    } else if (zoneId === 'bosque_magico') {
-                        if (patch < -0.85) {
-                            cell.tileLayer = 1;
-                            cell.tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_ice_2';
-                        } else {
-                            cell.tileLayer = 2;
-                            if (patch > 0.45) {
-                                cell.tileKey = (h & 1) ? 'tile_magic_2' : 'tile_magic_1';
-                            } else {
-                                cell.tileKey = (h % 3 === 0) ? 'tile_magic_short' : 'tile_magic_1';
-                            }
-                        }
-                    } else if (zoneId === 'montanas_nevadas') {
-                        if (patch < -0.6) {
-                            cell.tileLayer = 1;
-                            cell.tileKey = (h & 1) ? 'tile_ice_1' : 'tile_marsh_cracked';
-                        } else {
-                            cell.tileLayer = 2;
-                            cell.tileKey = (patch > 0.4 && (h & 1)) ? 'tile_snow_tuft' : ((h & 1) ? 'tile_snow_1' : 'tile_snow_2');
-                        }
-                    } else if (zoneId === 'zonas_hielo') {
-                        cell.tileLayer = 1;
-                        if (patch > 0.5) {
-                            cell.tileKey = (h & 1) ? 'tile_snow_1' : 'tile_snow_tuft';
-                        } else if (patch < -0.4) {
-                            cell.tileKey = 'tile_ice_crystal';
-                        } else {
-                            cell.tileKey = (h & 1) ? 'tile_ice_1' : 'tile_ice_2';
-                        }
-                    } else if (zoneId === 'playa') {
-                        if (cell.groundType === 'GRASS') {
-                            cell.tileLayer = 2;
-                            cell.tileKey = (h & 1) ? 'tile_grass_gold' : 'tile_grass_1';
-                        } else {
-                            cell.tileLayer = 1;
-                            if (patch > 0.65 && cell.type === RESOURCES.EMPTY) {
-                                cell.tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
-                            } else {
-                                cell.tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
-                            }
-                        }
-                    } else if (zoneId === 'desierto') {
-                        cell.tileLayer = 1;
-                        if (patch > 0.7 && cell.type === RESOURCES.EMPTY && (h % 4 === 0)) {
-                            cell.tileKey = 'tile_desert_shrub';
-                        } else if (patch < -0.5) {
-                            cell.tileKey = 'tile_desert_cracked';
-                        } else if (patch > 0.3) {
-                            cell.tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
-                        } else {
-                            cell.tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
-                        }
-                    } else if (zoneId === 'cementerio_animales') {
-                        cell.tileLayer = 1;
-                        if (cell.type === RESOURCES.EMPTY && (h % 24 === 0)) {
-                            cell.tileKey = 'tile_cemetery_skull';
-                            cell.tileFlip = false;
-                        } else if (patch > 0.55 && cell.type === RESOURCES.EMPTY && (h % 3 === 0)) {
-                            cell.tileKey = 'tile_desert_shrub';
-                        } else if (patch < -0.45) {
-                            cell.tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_desert_cracked';
-                        } else {
-                            cell.tileKey = (h & 1) ? 'tile_cemetery_1' : 'tile_cemetery_2';
-                        }
-                    } else {
-                        cell.tileLayer = 2;
-                        cell.tileKey = 'tile_grass_1';
-                    }
+                    const { tileLayer, tileKey, tileFlip } = this.assignTileForZoneCell(
+                        zoneId, x, y, cell.groundType, cell.type === RESOURCES.EMPTY
+                    );
+                    cell.tileLayer = tileLayer;
+                    cell.tileKey = tileKey;
+                    cell.tileFlip = tileFlip;
                 }
             }
-            world._bgSyncedKey = syncKey;
-            this._bakedZoneKey = null; // Forzar re-bake del lienzo HD de la zona
+
+            world._syncedZones[zoneId] = syncKey;
         } catch (err) {
-            console.warn('No se pudo sincronizar la zona:', err);
-            world._bgSyncedKey = syncKey;
+            console.warn('No se pudo sincronizar la zona:', zoneId, err);
+            world._syncedZones[zoneId] = syncKey;
+        }
+        return syncKey;
+    }
+
+    // ─── Resuelve la celda correspondiente a (x, y), incluyendo zonas vecinas ───
+    resolveWorldCell(world, x, y) {
+        const W = world.width;
+        const H = world.height;
+        const currentZoneId = world.currentZoneId || 'pradera';
+
+        if (x >= 0 && x < W && y >= 0 && y < H) {
+            return { cell: world.getCell(x, y), zoneId: currentZoneId, isClampedEdge: false };
+        }
+
+        const conn = world.currentZone?.connections || {};
+        let targetZoneId = null;
+        let nx = x;
+        let ny = y;
+
+        if (x < 0 && y >= 0 && y < H) {
+            targetZoneId = conn.west;
+            nx = x + W;
+        } else if (x >= W && y >= 0 && y < H) {
+            targetZoneId = conn.east;
+            nx = x - W;
+        } else if (y < 0 && x >= 0 && x < W) {
+            targetZoneId = conn.north;
+            ny = y + H;
+        } else if (y >= H && x >= 0 && x < W) {
+            targetZoneId = conn.south;
+            ny = y - H;
+        } else if (x < 0 && y < 0) {
+            targetZoneId = (conn.north && ZONES[conn.north]?.connections?.west) ||
+                           (conn.west && ZONES[conn.west]?.connections?.north) ||
+                           conn.north || conn.west;
+            nx = x + W;
+            ny = y + H;
+        } else if (x >= W && y < 0) {
+            targetZoneId = (conn.north && ZONES[conn.north]?.connections?.east) ||
+                           (conn.east && ZONES[conn.east]?.connections?.north) ||
+                           conn.north || conn.east;
+            nx = x - W;
+            ny = y + H;
+        } else if (x < 0 && y >= H) {
+            targetZoneId = (conn.south && ZONES[conn.south]?.connections?.west) ||
+                           (conn.west && ZONES[conn.west]?.connections?.south) ||
+                           conn.south || conn.west;
+            nx = x + W;
+            ny = y - H;
+        } else if (x >= W && y >= H) {
+            targetZoneId = (conn.south && ZONES[conn.south]?.connections?.east) ||
+                           (conn.east && ZONES[conn.east]?.connections?.south) ||
+                           conn.south || conn.east;
+            nx = x - W;
+            ny = y - H;
+        }
+
+        if (targetZoneId && ZONES[targetZoneId]) {
+            const nGrid = world.grids[targetZoneId];
+            if (nGrid) {
+                const cx = Math.max(0, Math.min(W - 1, nx));
+                const cy = Math.max(0, Math.min(H - 1, ny));
+                const nCell = nGrid[cy] && nGrid[cy][cx];
+                if (nCell) {
+                    // Transición orgánica en la primera fila fronteriza (entrelazado suave de biomas)
+                    const isFirstBorderRow = (x === -1 || x === W || y === -1 || y === H);
+                    if (isFirstBorderRow && nCell.groundType !== 'WATER') {
+                        const h = ((x * 374761393) ^ (y * 668265263)) >>> 0;
+                        if ((h % 3) === 0) {
+                            const edgeX = Math.max(0, Math.min(W - 1, x));
+                            const edgeY = Math.max(0, Math.min(H - 1, y));
+                            const edgeCell = world.getCell(edgeX, edgeY);
+                            if (edgeCell && edgeCell.groundType !== 'WATER') {
+                                return { cell: edgeCell, zoneId: currentZoneId, isClampedEdge: true };
+                            }
+                        }
+                    }
+                    return { cell: nCell, zoneId: targetZoneId, isClampedEdge: false };
+                }
+            }
+        }
+
+        // Borde exterior del mundo 3x3 (sin zona vecina): extender el propio bioma con variación natural
+        const edgeX = Math.max(0, Math.min(W - 1, x));
+        const edgeY = Math.max(0, Math.min(H - 1, y));
+        const edgeCell = world.getCell(edgeX, edgeY);
+        const groundType = edgeCell ? edgeCell.groundType : 'OTHER';
+        const { tileLayer, tileKey, tileFlip } = this.assignTileForZoneCell(currentZoneId, x, y, groundType, true);
+
+        return {
+            cell: {
+                type: groundType === 'WATER' ? RESOURCES.WATER : RESOURCES.EMPTY,
+                biome: edgeCell ? edgeCell.biome : BIOMES.GRASS,
+                groundType,
+                tileLayer,
+                tileKey,
+                tileFlip
+            },
+            zoneId: currentZoneId,
+            isClampedEdge: true
+        };
+    }
+
+    // ─── Sincronización de layout de zona y zonas vecinas ───────────────────────
+    syncZoneWithBackground(world, bgImg, bgX, bgY, bgW, bgH) {
+        if (!world || !world.grid) return;
+        const zoneId = world.currentZoneId || 'pradera';
+        const conn = world.currentZone?.connections || {};
+
+        const zonesToSync = new Set([zoneId]);
+        if (conn.north) {
+            zonesToSync.add(conn.north);
+            if (ZONES[conn.north]?.connections?.west) zonesToSync.add(ZONES[conn.north].connections.west);
+            if (ZONES[conn.north]?.connections?.east) zonesToSync.add(ZONES[conn.north].connections.east);
+        }
+        if (conn.south) {
+            zonesToSync.add(conn.south);
+            if (ZONES[conn.south]?.connections?.west) zonesToSync.add(ZONES[conn.south].connections.west);
+            if (ZONES[conn.south]?.connections?.east) zonesToSync.add(ZONES[conn.south].connections.east);
+        }
+        if (conn.east) zonesToSync.add(conn.east);
+        if (conn.west) zonesToSync.add(conn.west);
+
+        const keys = [];
+        for (const zid of zonesToSync) {
+            keys.push(this.syncSingleZone(world, zid, bgX, bgY, bgW, bgH));
+        }
+
+        const combinedKey = keys.join('|');
+        if (world._bgSyncedKey !== combinedKey) {
+            world._bgSyncedKey = combinedKey;
+            this._bakedZoneKey = null; // Forzar re-bake del lienzo HD con las zonas vecinas
         }
     }
 
@@ -1090,12 +1268,18 @@ export class Renderer {
             gctx.scale(BAKE_SCALE, BAKE_SCALE);
             gctx.translate(-bgX, -bgY);
 
-            // Recolectar todas las celdas y ordenarlas por capa (0=agua, 1=tierra/arena, 2=pasto) y profundidad (x+y)
+            // Recolectar todas las celdas (incluyendo las esquinas donde se ven las zonas vecinas)
             const cellsToDraw = [];
-            for (let y = 0; y < world.height; y++) {
-                for (let x = 0; x < world.width; x++) {
-                    const cell = world.getCell(x, y);
-                    if (!cell) continue;
+            const pad = 22;
+            for (let y = -pad; y < world.height + pad; y++) {
+                for (let x = -pad; x < world.width + pad; x++) {
+                    const { cx, cy } = this.getIsoBase(x, y);
+                    if (cx < bgX - 64 || cx > bgX + bgW + 64 || cy < bgY - 64 || cy > bgY + bgH + 64) continue;
+
+                    const resolved = this.resolveWorldCell(world, x, y);
+                    if (!resolved || !resolved.cell) continue;
+                    const cell = resolved.cell;
+
                     cellsToDraw.push({
                         x, y,
                         layer: cell.tileLayer !== undefined ? cell.tileLayer : 2,
@@ -1180,13 +1364,15 @@ export class Renderer {
         const maxScreenY = this.cameraY + viewH + 48;
 
         const windTime = (timestamp || 0) * 0.002;
+        const pad = 22;
 
-        for (let y = 0; y < world.height; y++) {
-            for (let x = 0; x < world.width; x++) {
+        for (let y = -pad; y < world.height + pad; y++) {
+            for (let x = -pad; x < world.width + pad; x++) {
                 const { cx, cy } = this.getIsoBase(x, y);
                 if (cx < minScreenX || cx > maxScreenX || cy < minScreenY || cy > maxScreenY) continue;
 
-                const cell = world.getCell(x, y);
+                const resolved = this.resolveWorldCell(world, x, y);
+                const cell = resolved ? resolved.cell : null;
                 if (!cell || cell.type === RESOURCES.VOID) continue;
 
                 const h = ((x * 374761393) ^ (y * 668265263) ^ ((x * y) * 1274126177)) >>> 0;
