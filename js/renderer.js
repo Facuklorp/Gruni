@@ -451,7 +451,7 @@ export class Renderer {
             // Los sprites de árboles vivos en pasto ya traen sombra integrada en el PNG;
             // solo dibujamos elipse para tocones u otros biomas sin sombra propia
             if (isStump || biome === BIOMES.DESERT || biome === BIOMES.SNOW || biome === BIOMES.PINE) {
-                this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+                this.ctx.fillStyle = (biome === BIOMES.DESERT || biome === BIOMES.SAND) ? 'rgba(75, 45, 15, 0.22)' : 'rgba(15, 35, 10, 0.22)';
                 this.ctx.beginPath();
                 this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 22, isStump ? 4.5 : 10.5, 0, 0, Math.PI * 2);
                 this.ctx.fill();
@@ -572,7 +572,7 @@ export class Renderer {
             // Los sprites de árboles vivos en pasto ya traen sombra integrada en el PNG;
             // solo dibujamos elipse para tocones u otros biomas sin sombra propia
             if (isStump || biome === BIOMES.DESERT || biome === BIOMES.SNOW || biome === BIOMES.PINE) {
-                this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+                this.ctx.fillStyle = (biome === BIOMES.DESERT || biome === BIOMES.SAND) ? 'rgba(75, 45, 15, 0.22)' : 'rgba(15, 35, 10, 0.22)';
                 this.ctx.beginPath();
                 this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 21, isStump ? 4.5 : 10, 0, 0, Math.PI * 2);
                 this.ctx.fill();
@@ -961,14 +961,15 @@ export class Renderer {
             }
         } else if (zoneId === 'desierto') {
             tileLayer = 1;
-            if (patch > 0.7 && isEmpty && (h % 4 === 0)) {
+            if (patch > 0.72 && isEmpty && (h % 4 === 0)) {
                 tileKey = 'tile_desert_shrub';
-            } else if (patch < -0.5) {
+            } else if (patch < -0.65 && (h % 3 === 0)) {
                 tileKey = 'tile_desert_cracked';
-            } else if (patch > 0.3) {
-                tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+            } else if ((h % 8 === 0) && isEmpty) {
+                tileKey = 'tile_sand_pebble';
             } else {
-                tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+                // Terreno continuo de dunas sin costuras de rombos
+                tileKey = null;
             }
         } else if (zoneId === 'cementerio_animales') {
             tileLayer = 1;
@@ -1273,6 +1274,18 @@ export class Renderer {
             // Escalar sistema de coordenadas del bake al espacio del mundo trasladado por (-bgX, -bgY)
             gctx.scale(BAKE_SCALE, BAKE_SCALE);
             gctx.translate(-bgX, -bgY);
+
+            // Ilustración continua en alta resolución del terreno base (dunas suaves y pintura digital estilo Wakfu/Dofus)
+            const zoneDef = ZONES[zoneId];
+            const bgImg = (this.images && zoneDef) ? this.images[zoneDef.background] : null;
+            if (bgImg && bgImg.width) {
+                const coverScale = Math.max(bgW / bgImg.width, bgH / bgImg.height);
+                const dw = bgImg.width * coverScale;
+                const dh = bgImg.height * coverScale;
+                const dx = bgX + (bgW - dw) / 2;
+                const dy = bgY + (bgH - dh) / 2;
+                gctx.drawImage(bgImg, dx, dy, dw, dh);
+            }
 
             // Recolectar todas las celdas (incluyendo las esquinas donde se ven las zonas vecinas)
             const cellsToDraw = [];
