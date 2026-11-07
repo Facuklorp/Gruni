@@ -416,16 +416,18 @@ export class Renderer {
         const drawY = sy + offsetY;
 
         if (img) {
-            let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
-            let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
+            // Variación sutil de escala por posición para que el bosque se vea más orgánico
+            const scaleVar = 0.94 + (((x * 19 + y * 37) % 15) / 100); // 0.94 a 1.08
+            let w = (isStump && biome !== BIOMES.DESERT) ? 32 : Math.round(78 * scaleVar);
+            let h = (isStump && biome !== BIOMES.DESERT) ? 23 : Math.round(96 * scaleVar);
             
             if (img.width && img.height) {
                 if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
-                    w = 46;
+                    w = Math.round(80 * scaleVar);
                     h = w * (img.height / img.width);
-                    if (h < 50) h = 50;
+                    if (h < 84) h = 84;
                 }
             }
 
@@ -436,26 +438,26 @@ export class Renderer {
                 const agentBodyY = agentIso.baseY - 6;
                 const treeLeft = drawX - w / 2;
                 const treeRight = treeLeft + w;
-                const treeTop = drawY - h + ISO_H + 2;
+                const treeTop = drawY - h + ISO_H + 4;
                 const treeBottom = treeTop + h;
                 
                 // If agent is drawn before or at same time as tree, and is inside tree rect
-                if ((agent.x + agent.y) <= (x + y + 1.5)) {
+                if ((agent.x + agent.y) <= (x + y + 2.5)) {
                     if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
                         agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        alpha = 0.5;
+                        alpha = 0.48;
                     }
                 }
             }
 
             // Sombra suave de contacto en el suelo bajo el árbol
-            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.24)';
             this.ctx.beginPath();
-            this.ctx.ellipse(drawX, drawY + ISO_H * 0.55, isStump ? 8 : 13, isStump ? 4 : 6.5, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 22, isStump ? 4.5 : 10.5, 0, 0, Math.PI * 2);
             this.ctx.fill();
 
             this.ctx.globalAlpha = alpha;
-            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
+            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 4, w, h);
             this.ctx.globalAlpha = 1.0;
         } else {
             // Tronco
@@ -535,15 +537,16 @@ export class Renderer {
         const drawY = sy + offsetY;
 
         if (img) {
-            let w = isStump && biome !== BIOMES.DESERT ? 28 : 38;
-            let h = isStump && biome !== BIOMES.DESERT ? 20 : 60;
+            const scaleVar = 0.92 + (((x * 23 + y * 41) % 18) / 100); // 0.92 a 1.09
+            let w = (isStump && biome !== BIOMES.DESERT) ? 32 : Math.round(74 * scaleVar);
+            let h = (isStump && biome !== BIOMES.DESERT) ? 23 : Math.round(94 * scaleVar);
             
             if (img.width && img.height) {
                 if (isStump && biome !== BIOMES.DESERT) {
                     h = w * (img.height / img.width);
                 } else {
                     h = w * (img.height / img.width); // Use exact proportions for alive trees
-                    if (h < 50) h = 50;
+                    if (h < 80) h = 80;
                 }
             }
 
@@ -554,26 +557,26 @@ export class Renderer {
                 const agentBodyY = agentIso.baseY - 6;
                 const treeLeft = drawX - w / 2;
                 const treeRight = treeLeft + w;
-                const treeTop = drawY - h + ISO_H + 2;
+                const treeTop = drawY - h + ISO_H + 4;
                 const treeBottom = treeTop + h;
                 
                 // If agent is drawn before or at same time as tree, and is inside tree rect
-                if ((agent.x + agent.y) <= (x + y + 1.5)) {
+                if ((agent.x + agent.y) <= (x + y + 2.5)) {
                     if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
                         agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        alpha = 0.5;
+                        alpha = 0.48;
                     }
                 }
             }
 
             // Sombra suave de contacto en el suelo bajo el árbol
-            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.22)';
+            this.ctx.fillStyle = 'rgba(15, 35, 10, 0.24)';
             this.ctx.beginPath();
-            this.ctx.ellipse(drawX, drawY + ISO_H * 0.55, isStump ? 8 : 13, isStump ? 4 : 6.5, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 21, isStump ? 4.5 : 10, 0, 0, Math.PI * 2);
             this.ctx.fill();
 
             this.ctx.globalAlpha = alpha;
-            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 2, w, h);
+            this.ctx.drawImage(img, drawX - w / 2, drawY - h + ISO_H + 4, w, h);
             this.ctx.globalAlpha = 1.0;
         } else {
             this.ctx.fillStyle = isAlive ? '#78350f' : '#57534e';
