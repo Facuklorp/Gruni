@@ -290,8 +290,8 @@ export class Renderer {
         renderQueue.sort((a, b) => {
             let da = a.x + a.y;
             let db = b.x + b.y;
-            if (a.type === 'bighouse') da += 1;
-            if (b.type === 'bighouse') db += 1;
+            if (a.type === 'bighouse') da += 1.8;
+            if (b.type === 'bighouse') db += 1.8;
             if (da !== db) return da - db;
             return a.x - b.x; // desempate por x
         });
@@ -323,7 +323,7 @@ export class Renderer {
                     this.drawResourceDots(item.x, item.y, cell.capacity);
                 }
             } else if (item.type === 'bighouse') {
-                this.drawBigHouse(item.x, item.y, item.homeStage);
+                this.drawBigHouse(item.x, item.y, item.homeStage, agent);
             } else {
                 this.drawEntity(item.entity, item.type, timestamp);
             }
@@ -709,20 +709,45 @@ export class Renderer {
     }
 
     // ─── Casa grande ────────────────────────────────────────────────────────────
-    drawBigHouse(x, y, homeStage) {
+    drawBigHouse(x, y, homeStage, agent = null) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
 
         const stage = Math.max(1, Math.min(3, homeStage || 1));
         const img = stage === 1 ? this.images?.casa_1 : (stage === 2 ? this.images?.casa_2 : this.images?.casa_3);
         if (img && img.width && img.height) {
-            const w = 88;
+            // Escala grande y majestuosa para la casa de Gruni
+            const w = 138;
             const h = w * (img.height / img.width);
-            const bottomY = sy + ISO_H * 1.65;
-            this.ctx.fillStyle = 'rgba(15, 30, 10, 0.26)';
+            const bottomY = sy + ISO_H * 2.0;
+
+            // Transparencia sutil si Gruni está detrás del techo/paredes
+            let alpha = 1.0;
+            if (agent) {
+                const agentIso = this.getIsoBase(agent.x, agent.y);
+                const houseLeft = cx - w / 2;
+                const houseRight = cx + w / 2;
+                const houseTop = bottomY - h;
+                const houseBottom = bottomY;
+                if ((agent.x + agent.y) <= (x + y + 1.8)) {
+                    if (agentIso.cx >= houseLeft && agentIso.cx <= houseRight &&
+                        agentIso.baseY >= houseTop && agentIso.baseY <= houseBottom) {
+                        alpha = 0.55;
+                    }
+                }
+            }
+
+            // Sombra suave adherida directamente a la base de la casa (sin separarse adelante)
+            const shY = bottomY - h * 0.18;
+            const rx = w * 0.38;
+            const ry = 12;
+            this.ctx.fillStyle = 'rgba(15, 30, 10, 0.28)';
             this.ctx.beginPath();
-            this.ctx.ellipse(cx, bottomY - 6, 38, 18, 0, 0, Math.PI * 2);
+            this.ctx.ellipse(cx + 2, shY, rx, ry, 0, 0, Math.PI * 2);
             this.ctx.fill();
+
+            this.ctx.globalAlpha = alpha;
             this.ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
+            this.ctx.globalAlpha = 1.0;
             return;
         }
 
