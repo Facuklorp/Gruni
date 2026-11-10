@@ -87,7 +87,11 @@ export class Wolf {
             this.world.consumeResource(nx, ny);
             return true;
         }
-        if (cell && cell.type === RESOURCES.ROCK) return false;
+        if (cell && (cell.type === RESOURCES.ROCK || cell.type === RESOURCES.WALL ||
+                     cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY ||
+                     cell.type === RESOURCES.HOUSE)) {
+            return false;
+        }
         return true;
     }
 

@@ -271,7 +271,7 @@ export class World {
             if (agent && agent.home) {
                 let hx = agent.home.x;
                 let hy = agent.home.y;
-                if (x >= hx - 6 && x <= hx + 7 && y >= hy - 6 && y <= hy + 8) {
+                if (x >= hx - 7 && x <= hx + 8 && y >= hy - 7 && y <= hy + 8) {
                     return;
                 }
             }

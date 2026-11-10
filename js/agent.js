@@ -440,14 +440,16 @@ export class Agent {
                 if (this.inventory.wood >= 1) {
                     let emptyWallPos = null;
                     let hx = this.home.x, hy = this.home.y;
-                    let R = 3; // Radio más amplio para que la casa no tape las murallas
-                    for (let y = hy - R; y <= hy + 1 + R; y++) {
-                        for (let x = hx - R; x <= hx + 1 + R; x++) {
-                            // Solo construir en el perímetro
-                            if (x > hx - R && x < hx + 1 + R && y > hy - R && y < hy + 1 + R) continue;
+                    // Límites perfectamente centrados respecto a la casa (4.5 casillas a cada lado)
+                    let minX = hx - 4, maxX = hx + 5;
+                    let minY = hy - 4, maxY = hy + 5;
+                    for (let y = minY; y <= maxY; y++) {
+                        for (let x = minX; x <= maxX; x++) {
+                            // Solo construir en el perímetro exterior
+                            if (x > minX && x < maxX && y > minY && y < maxY) continue;
                             
-                            // Dejar libre el acceso (portón de entrada) frente a la escalera de la casa
-                            if (y === hy + 1 + R && (x === hx || x === hx + 1)) continue;
+                            // Dejar libre el acceso (portón de entrada) frente a la escalera y puerta de la casa
+                            if (y === maxY && (x === hx || x === hx + 1)) continue;
                             
                             let cell = this.world.getCell(x, y);
                             if (cell && cell.type !== RESOURCES.WALL && cell.type !== RESOURCES.HOUSE) {
@@ -674,97 +676,167 @@ export class Agent {
         }
     }
 
+    findPathStep(tx, ty) {
+        if (this.x === tx && this.y === ty) return null;
+
+        const targetWalkable = this.tryStep(tx, ty);
+        const isGoal = (gx, gy) => {
+            if (targetWalkable) return gx === tx && gy === ty;
+            return Math.abs(gx - tx) + Math.abs(gy - ty) <= 1;
+        };
+
+        if (isGoal(this.x, this.y)) return null;
+
+        const visited = new Set();
+        visited.add(${this.x},);
+
+        const moves = [
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: 1 },
+            { dx: -1, dy: 0 },
+            { dx: 1, dy: 0 }
+        ];
+
+        const sortMoves = (cx, cy) => {
+            return [...moves].sort((a, b) => {
+                const da = Math.abs((cx + a.dx) - tx) + Math.abs((cy + a.dy) - ty);
+                const db = Math.abs((cx + b.dx) - tx) + Math.abs((cy + b.dy) - ty);
+                return da - db;
+            });
+        };
+
+        const queue = [];
+        const initialMoves = sortMoves(this.x, this.y);
+
+        for (let m of initialMoves) {
+            let nx = this.x + m.dx;
+            let ny = this.y + m.dy;
+            if (isGoal(nx, ny)) {
+                return { x: nx, y: ny, dx: m.dx, dy: m.dy };
+            }
+            if (this.tryStep(nx, ny)) {
+                visited.add(${nx},);
+                queue.push({ x: nx, y: ny, firstStep: { x: nx, y: ny, dx: m.dx, dy: m.dy } });
+            }
+        }
+
+        let iterations = 0;
+        const maxIterations = 350;
+
+        while (queue.length > 0 && iterations < maxIterations) {
+            iterations++;
+            const { x: cx, y: cy, firstStep } = queue.shift();
+            const curMoves = sortMoves(cx, cy);
+
+            for (let m of curMoves) {
+                let nx = cx + m.dx;
+                let ny = cy + m.dy;
+                const key = ${nx},;
+                if (visited.has(key)) continue;
+
+                if (isGoal(nx, ny)) {
+                    return firstStep;
+                }
+
+                if (this.tryStep(nx, ny)) {
+                    visited.add(key);
+                    queue.push({ x: nx, y: ny, firstStep });
+                }
+            }
+        }
+
+        return null;
+    }
+
     moveTowards(tx, ty) {
-        let oldX = this.x;
-        let oldY = this.y;
+        // Intentar paso inteligente con pathfinding para esquivar murallas, ramas y obstáculos
+        const step = this.findPathStep(tx, ty);
+        if (step) {
+            this.x = step.x;
+            this.y = step.y;
+            this.dx = step.dx;
+            this.dy = step.dy;
+            this.stepOnCell(this.x, this.y);
+            this.checkZoneTransition();
+            this.stuckTimer = 0;
+            return;
+        }
 
-        if (this.x < tx && this.tryStep(this.x + 1, this.y)) { this.x++; this.dx = 1; this.dy = 0; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
-        else if (this.x > tx && this.tryStep(this.x - 1, this.y)) { this.x--; this.dx = -1; this.dy = 0; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
-        else if (this.y < ty && this.tryStep(this.x, this.y + 1)) { this.y++; this.dx = 0; this.dy = 1; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
-        else if (this.y > ty && this.tryStep(this.x, this.y - 1)) { this.y--; this.dx = 0; this.dy = -1; this.stepOnCell(this.x, this.y); this.checkZoneTransition(); }
+        // Si el pathfinding directo no encuentra camino (obstáculos como roca o agua en el camino directo)
+        let dx = 0, dy = 0;
+        if (this.x < tx) dx = 1;
+        else if (this.x > tx) dx = -1;
+        else if (this.y < ty) dy = 1;
+        else if (this.y > ty) dy = -1;
 
-        if (this.x === oldX && this.y === oldY) {
-            this.stuckTimer++;
-            
-            let dx = 0, dy = 0;
-            if (this.x < tx) dx = 1;
-            else if (this.x > tx) dx = -1;
-            else if (this.y < ty) dy = 1;
-            else if (this.y > ty) dy = -1;
+        let nx = this.x + dx;
+        let ny = this.y + dy;
 
-            let nx = this.x + dx;
-            let ny = this.y + dy;
-
-            if (this.isValidCoord(nx, ny)) {
-                let cell = this.world.getCell(nx, ny);
-                if (cell && cell.type === RESOURCES.ROCK) {
-                    if (this.inventory.pickaxes > 0) {
-                        this.inventory.pickaxes--;
-                        this.world.setCell(nx, ny, RESOURCES.EMPTY);
-                        this.happyTimer = 5;
-                        this.stuckTimer = 0;
-                    } else if (this.stuckTimer > 3) {
-                        this.wanderTimer = 8; // Escape the obstacle
-                        this.stuckTimer = 0;
-                        if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
-                    }
-                } else if (cell && cell.type === RESOURCES.WATER) {
-                    if (this.inventory.wood > 0) {
-                        this.inventory.wood--;
-                        this.inventory.bridges++; // Aumenta las estadísticas o trackeo
-                        this.world.setCell(nx, ny, RESOURCES.BRIDGE);
-                        this.happyTimer = 5;
-                        this.stuckTimer = 0;
-                    } else if (this.stuckTimer > 5) {
-                        // Sin madera para puente: marcar el target como inaccesible
-                        if (this.target) {
-                            this.ignoreTarget = {x: this.target.x, y: this.target.y};
-                            // Agregar a la lista general de inaccesibles
-                            this.inaccessibleTargets.push({x: this.target.x, y: this.target.y});
-                            if (this.state === STATES.SEEK_BOOK) {
-                                this.inaccessibleBooks.push({x: this.target.x, y: this.target.y});
-                            }
-                            this.target = null;
-                        }
-                        this.wanderTimer = 8;
-                        this.stuckTimer = 0;
-                    }
+        if (this.isValidCoord(nx, ny)) {
+            let cell = this.world.getCell(nx, ny);
+            if (cell && cell.type === RESOURCES.ROCK) {
+                if (this.inventory.pickaxes > 0) {
+                    this.inventory.pickaxes--;
+                    this.world.setCell(nx, ny, RESOURCES.EMPTY);
+                    this.happyTimer = 5;
+                    this.stuckTimer = 0;
+                    return;
+                } else if (this.stuckTimer > 3) {
+                    this.wanderTimer = 8;
+                    this.stuckTimer = 0;
+                    if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
+                    return;
+                }
+            } else if (cell && cell.type === RESOURCES.WATER) {
+                if (this.inventory.wood > 0) {
+                    this.inventory.wood--;
+                    this.inventory.bridges++;
+                    this.world.setCell(nx, ny, RESOURCES.BRIDGE);
+                    this.happyTimer = 5;
+                    this.stuckTimer = 0;
+                    return;
                 } else if (this.stuckTimer > 5) {
                     if (this.target) {
-                        this.ignoreTarget = {x: this.target.x, y: this.target.y};
-                    }
-                    this.wanderTimer = 8; // Escape the obstacle
-                    this.stuckTimer = 0;
-                } else {
-                    this.wander(); 
-                }
-            } else {
-                if (this.stuckTimer > 5) {
-                    if (this.target) {
-                        this.ignoreTarget = {x: this.target.x, y: this.target.y};
+                        this.ignoreTarget = { x: this.target.x, y: this.target.y };
+                        this.inaccessibleTargets.push({ x: this.target.x, y: this.target.y });
+                        if (this.state === STATES.SEEK_BOOK) {
+                            this.inaccessibleBooks.push({ x: this.target.x, y: this.target.y });
+                        }
+                        this.target = null;
                     }
                     this.wanderTimer = 8;
                     this.stuckTimer = 0;
+                    return;
                 }
-                this.wander();
             }
-        } else {
+        }
+
+        this.stuckTimer++;
+        if (this.stuckTimer > 4) {
+            if (this.target) {
+                this.ignoreTarget = { x: this.target.x, y: this.target.y };
+            }
+            this.wanderTimer = 6;
             this.stuckTimer = 0;
         }
+        this.wander();
     }
 
     tryStep(nx, ny) {
         if (!this.isValidCoord(nx, ny)) {
             if (nx < 0 && this.world.currentZone && this.world.currentZone.connections.west) return true;
-            if (nx >= this.this.world.width && this.world.currentZone && this.world.currentZone.connections.east) return true;
+            if (nx >= this.world.width && this.world.currentZone && this.world.currentZone.connections.east) return true;
             if (ny < 0 && this.world.currentZone && this.world.currentZone.connections.north) return true;
-            if (ny >= this.this.world.height && this.world.currentZone && this.world.currentZone.connections.south) return true;
+            if (ny >= this.world.height && this.world.currentZone && this.world.currentZone.connections.south) return true;
             return false;
         }
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
         if (cell.type === RESOURCES.ROCK) return false;
-        if (cell.type === RESOURCES.WATER) return false; // El agua bloquea el paso, hay que hacer puentes
+        if (cell.type === RESOURCES.WATER) return false;
+        if (cell.type === RESOURCES.WALL) return false; // Bloquea murallas sólidas (se debe usar el portón)
+        if (cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY) return false; // Bloquea ramas y troncos caídos
+        if (cell.type === RESOURCES.HOUSE) return false; // Bloquea paredes de la casa
         return true;
     }
 
@@ -810,18 +882,26 @@ export class Agent {
         if (!hx && this.home) { hx = this.home.x; hy = this.home.y; }
         if (hx === undefined || hy === undefined) return;
 
-        // Limpiar un claro amplio alrededor de la casa y la muralla:
-        // En Y: desde hy - 6 (atrás) hasta hy + 8 (al frente para que las copas altas no tapen la muralla ni el portón)
-        // En X: desde hx - 6 (izquierda) hasta hx + 7 (derecha)
+        const minX = hx - 4, maxX = hx + 5;
+        const minY = hy - 4, maxY = hy + 5;
+
+        // Limpiar un claro amplio alrededor de la casa y la muralla centrada:
         let clearedWood = 0;
-        for (let cy = hy - 6; cy <= hy + 8; cy++) {
-            for (let cx = hx - 6; cx <= hx + 7; cx++) {
+        for (let cy = minY - 3; cy <= maxY + 3; cy++) {
+            for (let cx = minX - 3; cx <= maxX + 3; cx++) {
                 if (this.isValidCoord(cx, cy)) {
                     let cell = this.world.getCell(cx, cy);
                     if (!cell) continue;
 
-                    // Preservar la casa y las murallas construidas
-                    if (cell.type === RESOURCES.HOUSE || cell.type === RESOURCES.WALL) continue;
+                    // Preservar la casa
+                    if (cell.type === RESOURCES.HOUSE) continue;
+
+                    // Si hay murallas viejas dentro del nuevo patio centrado, removerlas
+                    if (cell.type === RESOURCES.WALL && cx > minX && cx < maxX && cy > minY && cy < maxY) {
+                        this.world.setCell(cx, cy, RESOURCES.EMPTY);
+                        continue;
+                    }
+                    if (cell.type === RESOURCES.WALL) continue;
 
                     // Si es árbol, tocón, arbusto, roca o árbol mágico, limpiar celda
                     const isObstacle = 
