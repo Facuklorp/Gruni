@@ -688,7 +688,7 @@ export class Agent {
         if (isGoal(this.x, this.y)) return null;
 
         const visited = new Set();
-        visited.add(${this.x},);
+        visited.add(this.x + ',' + this.y);
 
         const moves = [
             { dx: 0, dy: -1 },
@@ -715,7 +715,7 @@ export class Agent {
                 return { x: nx, y: ny, dx: m.dx, dy: m.dy };
             }
             if (this.tryStep(nx, ny)) {
-                visited.add(${nx},);
+                visited.add(nx + ',' + ny);
                 queue.push({ x: nx, y: ny, firstStep: { x: nx, y: ny, dx: m.dx, dy: m.dy } });
             }
         }
@@ -731,7 +731,7 @@ export class Agent {
             for (let m of curMoves) {
                 let nx = cx + m.dx;
                 let ny = cy + m.dy;
-                const key = ${nx},;
+                const key = nx + ',' + ny;
                 if (visited.has(key)) continue;
 
                 if (isGoal(nx, ny)) {
@@ -838,6 +838,14 @@ export class Agent {
         if (cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY) return false; // Bloquea ramas y troncos caídos
         if (cell.type === RESOURCES.HOUSE) return false; // Bloquea paredes de la casa
         return true;
+    }
+
+    checkZoneTransition() {
+        if (!this.world || !this.world.transitionZone) return;
+        if (this.x < 0) this.world.transitionZone(this, 'west');
+        else if (this.x >= this.world.width) this.world.transitionZone(this, 'east');
+        else if (this.y < 0) this.world.transitionZone(this, 'north');
+        else if (this.y >= this.world.height) this.world.transitionZone(this, 'south');
     }
 
     stepOnCell(nx, ny) {
