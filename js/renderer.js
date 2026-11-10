@@ -309,7 +309,7 @@ export class Renderer {
                     case RESOURCES.WOOD:
                     case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome, agent); break;
                     case RESOURCES.BUSH:
-                    case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type); break;
+                    case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type, agent); break;
                     case RESOURCES.ROCK:
                     case RESOURCES.ROCK_EMPTY: this.drawRock(item.x, item.y, cell.type); break;
                     case RESOURCES.HOUSE:      this.drawHouse(item.x, item.y, cell.capacity); break;
@@ -349,7 +349,14 @@ export class Renderer {
         // Por lo tanto, no la dibujamos para evitar superposiciones.
     }
 
-    drawMagicTree(x, y, type, biome, agent) {
+    drawMagicTree(x, y, type, biome, agent = null) {
+        if (agent) {
+            const isBehind = (agent.x + agent.y) <= (x + y + 2.0);
+            const isNear = Math.hypot(agent.x - x, agent.y - y) <= 2.0;
+            if (isBehind && isNear) {
+                return;
+            }
+        }
         // Placeholder for magic tree (reddish), until image is added
         const { sx, sy, cx } = this.getIsoBase(x, y);
         this.ctx.fillStyle = '#7f1d1d'; // Dark red trunk
@@ -429,22 +436,24 @@ export class Renderer {
                 w = (img.width && img.height) ? h * (img.width / img.height) : Math.round(114 * scaleVar);
             }
 
-            // Check if agent is behind the tree to apply transparency
+            // Check if agent is behind or near the tree to make it disappear
             let alpha = 1.0;
             if (agent && !isStump) {
                 const agentIso = this.getIsoBase(agent.x, agent.y);
                 const agentBodyY = agentIso.baseY - 6;
-                const treeLeft = drawX - w / 2;
-                const treeRight = treeLeft + w;
-                const treeTop = drawY - h + ISO_H + 5;
-                const treeBottom = treeTop + h;
+                const treeLeft = drawX - w / 2 - 4;
+                const treeRight = treeLeft + w + 8;
+                const treeTop = drawY - h + ISO_H;
+                const treeBottom = treeTop + h + 8;
                 
-                // Si Gruni pasa detrás del árbol, el árbol desaparece directamente
-                if ((agent.x + agent.y) <= (x + y + 3.2)) {
-                    if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
-                        agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        return;
-                    }
+                // Si Gruni pasa detrás del árbol o cerca por detrás, el árbol desaparece directamente
+                const isBehind = (agent.x + agent.y) <= (x + y + 3.2);
+                const insideFoliage = agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
+                                      agentBodyY >= treeTop && agentBodyY <= treeBottom;
+                const isNearBehind = isBehind && (Math.hypot(agent.x - x, agent.y - y) <= 2.2);
+
+                if (isBehind && (insideFoliage || isNearBehind)) {
+                    return;
                 }
 
                 if (alpha === 1.0 && agent.home) {
@@ -560,22 +569,24 @@ export class Renderer {
                 w = (img.width && img.height) ? h * (img.width / img.height) : Math.round(104 * scaleVar);
             }
 
-            // Check if agent is behind the tree to apply transparency
+            // Check if agent is behind or near the tree to make it disappear
             let alpha = 1.0;
             if (agent && !isStump) {
                 const agentIso = this.getIsoBase(agent.x, agent.y);
                 const agentBodyY = agentIso.baseY - 6;
-                const treeLeft = drawX - w / 2;
-                const treeRight = treeLeft + w;
-                const treeTop = drawY - h + ISO_H + 5;
-                const treeBottom = treeTop + h;
+                const treeLeft = drawX - w / 2 - 4;
+                const treeRight = treeLeft + w + 8;
+                const treeTop = drawY - h + ISO_H;
+                const treeBottom = treeTop + h + 8;
                 
-                // Si Gruni pasa detrás del árbol, el árbol desaparece directamente
-                if ((agent.x + agent.y) <= (x + y + 3.2)) {
-                    if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
-                        agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        return;
-                    }
+                // Si Gruni pasa detrás del árbol o cerca por detrás, el árbol desaparece directamente
+                const isBehind = (agent.x + agent.y) <= (x + y + 3.2);
+                const insideFoliage = agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
+                                      agentBodyY >= treeTop && agentBodyY <= treeBottom;
+                const isNearBehind = isBehind && (Math.hypot(agent.x - x, agent.y - y) <= 2.2);
+
+                if (isBehind && (insideFoliage || isNearBehind)) {
+                    return;
                 }
 
                 if (alpha === 1.0 && agent.home) {
@@ -612,7 +623,14 @@ export class Renderer {
     }
 
     // ─── Arbusto ────────────────────────────────────────────────────────────────
-    drawBush(x, y, type) {
+    drawBush(x, y, type, agent = null) {
+        if (agent) {
+            const isBehind = (agent.x + agent.y) <= (x + y + 1.2);
+            const isNear = Math.hypot(agent.x - x, agent.y - y) <= 1.3;
+            if (isBehind && isNear) {
+                return;
+            }
+        }
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.BUSH;
 
@@ -740,21 +758,8 @@ export class Renderer {
             const h = w * (img.height / img.width);
             const bottomY = sy + ISO_H * 2.0;
 
-            // Transparencia sutil si Gruni está detrás del techo/paredes
+            // La casa es una estructura sólida permanente (no desaparece)
             let alpha = 1.0;
-            if (agent) {
-                const agentIso = this.getIsoBase(agent.x, agent.y);
-                const houseLeft = cx - w / 2;
-                const houseRight = cx + w / 2;
-                const houseTop = bottomY - h;
-                const houseBottom = bottomY;
-                if ((agent.x + agent.y) <= (x + y + 1.8)) {
-                    if (agentIso.cx >= houseLeft && agentIso.cx <= houseRight &&
-                        agentIso.baseY >= houseTop && agentIso.baseY <= houseBottom) {
-                        return; // La casa desaparece directamente cuando Gruni pasa detrás
-                    }
-                }
-            }
 
             // Sombra suave adherida directamente a la base de la casa (sin separarse adelante)
             const shY = bottomY - h * 0.18;
@@ -880,16 +885,6 @@ export class Renderer {
     // ─── Muralla Isométrica Modular (Autotiling HD) ─────────────────────────────
     drawWall(x, y, hp, world, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
-
-        // Si Gruni pasa detrás de este segmento de muralla, desaparece directamente
-        if (agent) {
-            const agentIso = this.getIsoBase(agent.x, agent.y);
-            if ((agent.x + agent.y) <= (x + y + 1.2)) {
-                if (Math.abs(agentIso.cx - cx) <= 20 && agentIso.baseY >= sy - 30 && agentIso.baseY <= sy + ISO_H + 4) {
-                    return;
-                }
-            }
-        }
 
         // Si tenemos los sprites isométricos modulares
         if (this.images?.muralla_x && this.images?.muralla_y && this.images?.muralla_pilar) {
@@ -1422,72 +1417,6 @@ export class Renderer {
                 const dx = bgX + (bgW - dw) / 2;
                 const dy = bgY + (bgH - dh) / 2;
                 gctx.drawImage(bgImg, dx, dy, dw, dh);
-            }
-
-            // Recolectar todas las celdas (incluyendo las esquinas donde se ven las zonas vecinas)
-            const cellsToDraw = [];
-            const pad = 22;
-            for (let y = -pad; y < world.height + pad; y++) {
-                for (let x = -pad; x < world.width + pad; x++) {
-                    const { cx, cy } = this.getIsoBase(x, y);
-                    if (cx < bgX - 64 || cx > bgX + bgW + 64 || cy < bgY - 64 || cy > bgY + bgH + 64) continue;
-
-                    const resolved = this.resolveWorldCell(world, x, y);
-                    if (!resolved || !resolved.cell) continue;
-                    const cell = resolved.cell;
-
-                    cellsToDraw.push({
-                        x, y,
-                        layer: cell.tileLayer !== undefined ? cell.tileLayer : 2,
-                        key: cell.tileKey || 'tile_grass_1',
-                        flip: !!cell.tileFlip,
-                        groundType: cell.groundType
-                    });
-                }
-            }
-
-            cellsToDraw.sort((a, b) => {
-                if (a.layer !== b.layer) return a.layer - b.layer;
-                const da = a.x + a.y;
-                const db = b.x + b.y;
-                if (da !== db) return da - db;
-                return a.x - b.x;
-            });
-
-            // Tamaño con solapamiento orgánico (44x27.5 sobre celda de 32x16)
-            const drawW = 44.0;
-            const drawH = drawW * (160.0 / 256.0);
-            const anchorX = drawW / 2.0;
-            const anchorY = drawH * (90.0 / 160.0);
-
-            for (const item of cellsToDraw) {
-                const { cx, cy } = this.getIsoBase(item.x, item.y);
-
-                // Si es agua o camino de tierra, pintar primero una base sólida de su color para que no asome el verde del fondo
-                if (item.layer === 0) {
-                    gctx.fillStyle = '#0ea5c6';
-                    gctx.beginPath();
-                    gctx.ellipse(cx, cy, 18, 9.5, 0, 0, Math.PI * 2);
-                    gctx.fill();
-                } else if (item.groundType === 'DIRT') {
-                    gctx.fillStyle = '#9a6834';
-                    gctx.beginPath();
-                    gctx.ellipse(cx, cy, 18, 9.5, 0, 0, Math.PI * 2);
-                    gctx.fill();
-                }
-
-                const tileImg = this.images ? this.images[item.key] : null;
-                if (tileImg && tileImg.width) {
-                    if (item.flip) {
-                        gctx.save();
-                        gctx.translate(cx, cy - anchorY);
-                        gctx.scale(-1, 1);
-                        gctx.drawImage(tileImg, -anchorX, 0, drawW, drawH);
-                        gctx.restore();
-                    } else {
-                        gctx.drawImage(tileImg, cx - anchorX, cy - anchorY, drawW, drawH);
-                    }
-                }
             }
 
             gctx.restore();
