@@ -446,6 +446,16 @@ export class Renderer {
                         alpha = 0.48;
                     }
                 }
+
+                if (alpha === 1.0 && agent.home) {
+                    const homeIso = this.getIsoBase(agent.home.x + 0.5, agent.home.y + 0.5);
+                    if ((agent.home.x + agent.home.y) <= (x + y + 2.5)) {
+                        if (homeIso.cx >= treeLeft && homeIso.cx <= treeRight &&
+                            homeIso.sy >= treeTop && homeIso.sy <= treeBottom) {
+                            alpha = 0.35;
+                        }
+                    }
+                }
             }
 
             // Los sprites de árboles vivos en pasto ya traen sombra integrada en el PNG;
@@ -565,6 +575,16 @@ export class Renderer {
                     if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
                         agentBodyY >= treeTop && agentBodyY <= treeBottom) {
                         alpha = 0.48;
+                    }
+                }
+
+                if (alpha === 1.0 && agent.home) {
+                    const homeIso = this.getIsoBase(agent.home.x + 0.5, agent.home.y + 0.5);
+                    if ((agent.home.x + agent.home.y) <= (x + y + 2.5)) {
+                        if (homeIso.cx >= treeLeft && homeIso.cx <= treeRight &&
+                            homeIso.sy >= treeTop && homeIso.sy <= treeBottom) {
+                            alpha = 0.35;
+                        }
                     }
                 }
             }

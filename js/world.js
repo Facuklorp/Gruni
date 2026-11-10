@@ -267,11 +267,11 @@ export class World {
             let x = Math.floor(Math.random() * this.width);
             let y = Math.floor(Math.random() * this.height);
             
-            // Evitar spawnear recursos muy cerca de la casa para dejar espacio a las murallas
+            // Evitar spawnear recursos dentro del patio de la muralla y en el claro de visión
             if (agent && agent.home) {
                 let hx = agent.home.x;
                 let hy = agent.home.y;
-                if (x >= hx - 2 && x <= hx + 3 && y >= hy - 2 && y <= hy + 3) {
+                if (x >= hx - 6 && x <= hx + 7 && y >= hy - 6 && y <= hy + 8) {
                     return;
                 }
             }

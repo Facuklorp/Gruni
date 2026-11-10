@@ -255,6 +255,10 @@ export class Agent {
         }
 
         if (this.home) {
+            if (!this._settlementCleared) {
+                this.clearSettlementClearing(this.home.x, this.home.y);
+                this._settlementCleared = true;
+            }
             let hx = this.home.x, hy = this.home.y;
             let cells = [
                 this.world.getCell(hx, hy),
@@ -430,6 +434,9 @@ export class Agent {
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_WALLS') {
+                if (this.home) {
+                    this.clearSettlementClearing(this.home.x, this.home.y);
+                }
                 if (this.inventory.wood >= 1) {
                     let emptyWallPos = null;
                     let hx = this.home.x, hy = this.home.y;
@@ -443,9 +450,12 @@ export class Agent {
                             if (y === hy + 1 + R && (x === hx || x === hx + 1)) continue;
                             
                             let cell = this.world.getCell(x, y);
-                            if (cell && cell.type === RESOURCES.EMPTY) {
+                            if (cell && cell.type !== RESOURCES.WALL && cell.type !== RESOURCES.HOUSE) {
                                 // Si está ignorado por estar trabado, pasamos al siguiente
                                 if (this.ignoreTarget && this.ignoreTarget.x === x && this.ignoreTarget.y === y) continue;
+                                if (cell.type !== RESOURCES.EMPTY) {
+                                    this.world.setCell(x, y, RESOURCES.EMPTY);
+                                }
                                 emptyWallPos = {x, y};
                                 break;
                             }
@@ -595,21 +605,6 @@ export class Agent {
                     if (this.inventory.wood >= 3 && this.inventory.rock >= 3) {
                         if (this.homeStage === 0) {
                             if (this.isValidCoord(tx, ty) && this.isValidCoord(tx+1, ty+1)) {
-                                // Limpiamos el area visual de la casa (aprox 10x11) para evitar superposiciones
-                                for (let cy = ty - 6; cy <= ty + 4; cy++) {
-                                    for (let cx = tx - 4; cx <= tx + 5; cx++) {
-                                        if (this.isValidCoord(cx, cy)) {
-                                            let cell = this.world.getCell(cx, cy);
-                                            if (cell && (cell.type === RESOURCES.WOOD || cell.type === RESOURCES.FOOD || 
-                                                         cell.type === RESOURCES.ROCK || cell.type === RESOURCES.BUSH ||
-                                                         cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY ||
-                                                         cell.type === RESOURCES.BUSH_EMPTY || cell.type === RESOURCES.ROCK_EMPTY)) {
-                                                this.world.setCell(cx, cy, RESOURCES.EMPTY);
-                                            }
-                                        }
-                                    }
-                                }
-                                
                                 this.world.setCell(tx, ty, RESOURCES.HOUSE);
                                 this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
                                 this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
@@ -618,11 +613,13 @@ export class Agent {
                                 this.homeStage = 1;
                                 this.inventory.wood -= 3;
                                 this.inventory.rock -= 3;
+                                this.clearSettlementClearing(tx, ty);
                             }
                         } else if (this.homeStage < 3) {
                             this.homeStage++;
                             this.inventory.wood -= 3;
                             this.inventory.rock -= 3;
+                            if (this.home) this.clearSettlementClearing(this.home.x, this.home.y);
                         }
                     }
                     this.emergencyMission = null;
@@ -807,6 +804,42 @@ export class Agent {
                 this.checkZoneTransition();
                 break;
             }
+        }
+    }
+    clearSettlementClearing(hx, hy) {
+        if (!hx && this.home) { hx = this.home.x; hy = this.home.y; }
+        if (hx === undefined || hy === undefined) return;
+
+        // Limpiar un claro amplio alrededor de la casa y la muralla:
+        // En Y: desde hy - 6 (atrás) hasta hy + 8 (al frente para que las copas altas no tapen la muralla ni el portón)
+        // En X: desde hx - 6 (izquierda) hasta hx + 7 (derecha)
+        let clearedWood = 0;
+        for (let cy = hy - 6; cy <= hy + 8; cy++) {
+            for (let cx = hx - 6; cx <= hx + 7; cx++) {
+                if (this.isValidCoord(cx, cy)) {
+                    let cell = this.world.getCell(cx, cy);
+                    if (!cell) continue;
+
+                    // Preservar la casa y las murallas construidas
+                    if (cell.type === RESOURCES.HOUSE || cell.type === RESOURCES.WALL) continue;
+
+                    // Si es árbol, tocón, arbusto, roca o árbol mágico, limpiar celda
+                    const isObstacle = 
+                        cell.type === RESOURCES.WOOD || cell.type === RESOURCES.WOOD_EMPTY ||
+                        cell.type === RESOURCES.FOOD || cell.type === RESOURCES.FOOD_EMPTY ||
+                        cell.type === RESOURCES.BUSH || cell.type === RESOURCES.BUSH_EMPTY ||
+                        cell.type === RESOURCES.MAGIC_TREE ||
+                        cell.type === RESOURCES.ROCK || cell.type === RESOURCES.ROCK_EMPTY;
+
+                    if (isObstacle) {
+                        if (cell.type === RESOURCES.WOOD) clearedWood++;
+                        this.world.setCell(cx, cy, RESOURCES.EMPTY);
+                    }
+                }
+            }
+        }
+        if (clearedWood > 0) {
+            this.inventory.wood = Math.min(this.inventory.wood + Math.min(clearedWood, 10), 25);
         }
     }
 }
