@@ -315,7 +315,7 @@ export class Renderer {
                     case RESOURCES.HOUSE:      this.drawHouse(item.x, item.y, cell.capacity); break;
                     case RESOURCES.BOOK:       this.drawBook(item.x, item.y, timestamp, world); break;
                     case RESOURCES.TELESCOPE:  this.drawTelescope(item.x, item.y); break;
-                    case RESOURCES.WALL:       this.drawWall(item.x, item.y, cell.capacity); break;
+                    case RESOURCES.WALL:       this.drawWall(item.x, item.y, cell.capacity, world, agent); break;
                     case RESOURCES.MARKET:     this.drawMarket(item.x, item.y); break;
                     case RESOURCES.MAGIC_TREE: this.drawMagicTree(item.x, item.y, cell.type, cell.biome, agent); break;
                 }
@@ -857,11 +857,93 @@ export class Renderer {
         }
     }
 
-    // ─── Muralla ────────────────────────────────────────────────────────────────
-    drawWall(x, y, hp) {
+    // ─── Muralla Isométrica Modular (Autotiling HD) ─────────────────────────────
+    drawWall(x, y, hp, world, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
-        const wh = 9; // altura de la muralla
 
+        // Si tenemos los sprites isométricos modulares
+        if (this.images?.muralla_x && this.images?.muralla_y && this.images?.muralla_pilar) {
+            const isWall = (gx, gy) => {
+                if (!world) return false;
+                const c = world.getCell(gx, gy);
+                return c && c.type === RESOURCES.WALL;
+            };
+
+            const leftX  = isWall(x - 1, y); // dirección X (arriba-izquierda)
+            const rightX = isWall(x + 1, y); // dirección X (abajo-derecha)
+            const upY    = isWall(x, y - 1); // dirección Y (arriba-derecha)
+            const downY  = isWall(x, y + 1); // dirección Y (abajo-izquierda)
+
+            const hasX = leftX || rightX;
+            const hasY = upY || downY;
+
+            // Determinar si es esquina (cambio de dirección ortogonal en la cuadrícula)
+            const isCorner = (leftX && upY) || (leftX && downY) || (rightX && upY) || (rightX && downY);
+
+            // Determinar si es terminación / poste junto al portón o vano
+            const isEndCap = (hasX && (!leftX || !rightX)) || (hasY && (!upY || !downY));
+
+            // Sombra de contacto en el suelo
+            this.ctx.fillStyle = 'rgba(15, 25, 10, 0.22)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(cx, sy + ISO_H / 2, 13, 6.5, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Si es esquina o muro aislado, colocar pilar
+            if (isCorner || (!hasX && !hasY)) {
+                const img = this.images.muralla_pilar;
+                const w = 20;
+                const h = w * (img.height / img.width);
+                this.ctx.drawImage(img, cx - w / 2, sy + ISO_H - h + 2, w, h);
+                return;
+            }
+
+            // Tramo a lo largo del Eje X (diagonal hacia abajo-derecha)
+            if (hasX && !hasY) {
+                const img = this.images.muralla_x;
+                const w = 34;
+                const h = w * (img.height / img.width);
+                this.ctx.drawImage(img, cx - w / 2, sy + ISO_H - h + 2, w, h);
+
+                // Si es extremo abierto (junto a una entrada/portón), añadir el poste decorativo
+                if (isEndCap) {
+                    const pilar = this.images.muralla_pilar;
+                    const pw = 18;
+                    const ph = pw * (pilar.height / pilar.width);
+                    const px = !rightX ? cx + 7 : cx - 7;
+                    const py = !rightX ? sy + 3 : sy - 3;
+                    this.ctx.drawImage(pilar, px - pw / 2, py + ISO_H - ph + 2, pw, ph);
+                }
+                return;
+            }
+
+            // Tramo a lo largo del Eje Y (diagonal hacia abajo-izquierda)
+            if (hasY && !hasX) {
+                const img = this.images.muralla_y;
+                const w = 34;
+                const h = w * (img.height / img.width);
+                this.ctx.drawImage(img, cx - w / 2, sy + ISO_H - h + 2, w, h);
+
+                if (isEndCap) {
+                    const pilar = this.images.muralla_pilar;
+                    const pw = 18;
+                    const ph = pw * (pilar.height / pilar.width);
+                    const px = !downY ? cx - 7 : cx + 7;
+                    const py = !downY ? sy + 3 : sy - 3;
+                    this.ctx.drawImage(pilar, px - pw / 2, py + ISO_H - ph + 2, pw, ph);
+                }
+                return;
+            }
+
+            // Caso general / intersección
+            const img = this.images.muralla_pilar;
+            const w = 20;
+            const h = w * (img.height / img.width);
+            this.ctx.drawImage(img, cx - w / 2, sy + ISO_H - h + 2, w, h);
+            return;
+        }
+
+        const wh = 9;
         if (this.images?.muralla) {
             this.ctx.drawImage(this.images.muralla, cx - 14, sy - wh - 2, 28, wh + ISO_H + 2);
         } else {

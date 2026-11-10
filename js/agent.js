@@ -439,6 +439,9 @@ export class Agent {
                             // Solo construir en el perímetro
                             if (x > hx - R && x < hx + 1 + R && y > hy - R && y < hy + 1 + R) continue;
                             
+                            // Dejar libre el acceso (portón de entrada) frente a la escalera de la casa
+                            if (y === hy + 1 + R && (x === hx || x === hx + 1)) continue;
+                            
                             let cell = this.world.getCell(x, y);
                             if (cell && cell.type === RESOURCES.EMPTY) {
                                 // Si está ignorado por estar trabado, pasamos al siguiente
