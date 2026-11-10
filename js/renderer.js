@@ -439,11 +439,11 @@ export class Renderer {
                 const treeTop = drawY - h + ISO_H + 5;
                 const treeBottom = treeTop + h;
                 
-                // If agent is drawn before or at same time as tree, and is inside tree rect
+                // Si Gruni pasa detrás del árbol, el árbol desaparece directamente
                 if ((agent.x + agent.y) <= (x + y + 3.2)) {
                     if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
                         agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        alpha = 0.48;
+                        return;
                     }
                 }
 
@@ -570,11 +570,11 @@ export class Renderer {
                 const treeTop = drawY - h + ISO_H + 5;
                 const treeBottom = treeTop + h;
                 
-                // If agent is drawn before or at same time as tree, and is inside tree rect
+                // Si Gruni pasa detrás del árbol, el árbol desaparece directamente
                 if ((agent.x + agent.y) <= (x + y + 3.2)) {
                     if (agentIso.cx >= treeLeft && agentIso.cx <= treeRight &&
                         agentBodyY >= treeTop && agentBodyY <= treeBottom) {
-                        alpha = 0.48;
+                        return;
                     }
                 }
 
@@ -751,7 +751,7 @@ export class Renderer {
                 if ((agent.x + agent.y) <= (x + y + 1.8)) {
                     if (agentIso.cx >= houseLeft && agentIso.cx <= houseRight &&
                         agentIso.baseY >= houseTop && agentIso.baseY <= houseBottom) {
-                        alpha = 0.55;
+                        return; // La casa desaparece directamente cuando Gruni pasa detrás
                     }
                 }
             }
@@ -880,6 +880,16 @@ export class Renderer {
     // ─── Muralla Isométrica Modular (Autotiling HD) ─────────────────────────────
     drawWall(x, y, hp, world, agent) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
+
+        // Si Gruni pasa detrás de este segmento de muralla, desaparece directamente
+        if (agent) {
+            const agentIso = this.getIsoBase(agent.x, agent.y);
+            if ((agent.x + agent.y) <= (x + y + 1.2)) {
+                if (Math.abs(agentIso.cx - cx) <= 20 && agentIso.baseY >= sy - 30 && agentIso.baseY <= sy + ISO_H + 4) {
+                    return;
+                }
+            }
+        }
 
         // Si tenemos los sprites isométricos modulares
         if (this.images?.muralla_x && this.images?.muralla_y && this.images?.muralla_pilar) {
