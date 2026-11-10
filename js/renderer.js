@@ -1051,31 +1051,29 @@ export class Renderer {
                 }
             }
         } else if (zoneId === 'bosque_magico') {
-            if (patch < -0.85) {
-                tileLayer = 1;
-                tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_ice_2';
+            tileLayer = 2;
+            if (patch > 0.45) {
+                tileKey = (h & 1) ? 'tile_magic_2' : 'tile_magic_1';
+            } else if (patch < -0.45) {
+                tileKey = (h % 3 === 0) ? 'tile_magic_short' : 'tile_magic_2';
             } else {
-                tileLayer = 2;
-                if (patch > 0.45) {
-                    tileKey = (h & 1) ? 'tile_magic_2' : 'tile_magic_1';
-                } else {
-                    tileKey = (h % 3 === 0) ? 'tile_magic_short' : 'tile_magic_1';
-                }
+                tileKey = (h & 1) ? 'tile_magic_1' : 'tile_magic_short';
             }
         } else if (zoneId === 'montanas_nevadas') {
-            if (patch < -0.6) {
-                tileLayer = 1;
-                tileKey = (h & 1) ? 'tile_ice_1' : 'tile_marsh_cracked';
+            tileLayer = 2;
+            if (patch > 0.45) {
+                tileKey = (h & 1) ? 'tile_snow_tuft' : 'tile_snow_1';
+            } else if (patch < -0.45) {
+                tileKey = (h % 4 === 0) ? 'tile_ice_1' : 'tile_snow_2';
             } else {
-                tileLayer = 2;
-                tileKey = (patch > 0.4 && (h & 1)) ? 'tile_snow_tuft' : ((h & 1) ? 'tile_snow_1' : 'tile_snow_2');
+                tileKey = (h & 1) ? 'tile_snow_1' : 'tile_snow_2';
             }
         } else if (zoneId === 'zonas_hielo') {
             tileLayer = 1;
-            if (patch > 0.5) {
-                tileKey = (h & 1) ? 'tile_snow_1' : 'tile_snow_tuft';
-            } else if (patch < -0.4) {
-                tileKey = 'tile_ice_crystal';
+            if (patch > 0.45) {
+                tileKey = (h % 3 === 0) ? 'tile_snow_tuft' : 'tile_ice_1';
+            } else if (patch < -0.45) {
+                tileKey = (h % 4 === 0) ? 'tile_ice_crystal' : 'tile_ice_2';
             } else {
                 tileKey = (h & 1) ? 'tile_ice_1' : 'tile_ice_2';
             }
@@ -1087,31 +1085,32 @@ export class Renderer {
                 tileLayer = 1;
                 if (patch > 0.65 && isEmpty) {
                     tileKey = (h & 1) ? 'tile_sand_tuft' : 'tile_sand_2';
+                } else if (patch < -0.45) {
+                    tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : 'tile_sand_flat';
                 } else {
-                    tileKey = (h % 3 === 0) ? 'tile_sand_pebble' : ((h & 1) ? 'tile_sand_1' : 'tile_sand_flat');
+                    tileKey = (h & 1) ? 'tile_sand_1' : 'tile_sand_2';
                 }
             }
         } else if (zoneId === 'desierto') {
             tileLayer = 1;
-            if (patch > 0.72 && isEmpty && (h % 4 === 0)) {
+            if (patch > 0.75 && isEmpty && (h % 6 === 0)) {
                 tileKey = 'tile_desert_shrub';
-            } else if (patch < -0.65 && (h % 3 === 0)) {
+            } else if (patch < -0.7 && (h % 3 === 0)) {
                 tileKey = 'tile_desert_cracked';
-            } else if ((h % 8 === 0) && isEmpty) {
-                tileKey = 'tile_sand_pebble';
+            } else if (patch > 0.4) {
+                tileKey = (h % 8 === 0) ? 'tile_sand_pebble' : 'tile_sand_flat';
             } else {
-                // Terreno continuo de dunas sin costuras de rombos
-                tileKey = null;
+                tileKey = (h & 1) ? 'tile_sand_1' : 'tile_sand_2';
             }
         } else if (zoneId === 'cementerio_animales') {
             tileLayer = 1;
-            if (isEmpty && (h % 24 === 0)) {
+            if (isEmpty && (h % 16 === 0)) {
                 tileKey = 'tile_cemetery_skull';
                 tileFlip = false;
-            } else if (patch > 0.55 && isEmpty && (h % 3 === 0)) {
+            } else if (patch > 0.65 && isEmpty && (h % 5 === 0)) {
                 tileKey = 'tile_desert_shrub';
-            } else if (patch < -0.45) {
-                tileKey = (h & 1) ? 'tile_marsh_cracked' : 'tile_desert_cracked';
+            } else if (patch < -0.45 && (h % 3 === 0)) {
+                tileKey = 'tile_dirt_cracked';
             } else {
                 tileKey = (h & 1) ? 'tile_cemetery_1' : 'tile_cemetery_2';
             }
@@ -1407,7 +1406,7 @@ export class Renderer {
             gctx.scale(BAKE_SCALE, BAKE_SCALE);
             gctx.translate(-bgX, -bgY);
 
-            // Ilustración continua en alta resolución del terreno base (dunas suaves y pintura digital estilo Wakfu/Dofus)
+            // Ilustración continua en alta resolución del terreno base
             const zoneDef = ZONES[zoneId];
             const bgImg = (this.images && zoneDef) ? this.images[zoneDef.background] : null;
             if (bgImg && bgImg.width) {
@@ -1417,6 +1416,60 @@ export class Renderer {
                 const dx = bgX + (bgW - dw) / 2;
                 const dy = bgY + (bgH - dh) / 2;
                 gctx.drawImage(bgImg, dx, dy, dw, dh);
+            }
+
+            // Rombos isométricos de alta definición (estilo RPG táctico / Dofus / Wakfu)
+            const cellsToDraw = [];
+            const pad = 22;
+            for (let y = -pad; y < world.height + pad; y++) {
+                for (let x = -pad; x < world.width + pad; x++) {
+                    const { cx, cy } = this.getIsoBase(x, y);
+                    if (cx < bgX - 64 || cx > bgX + bgW + 64 || cy < bgY - 64 || cy > bgY + bgH + 64) continue;
+
+                    const resolved = this.resolveWorldCell(world, x, y);
+                    if (!resolved || !resolved.cell) continue;
+                    const cell = resolved.cell;
+
+                    if (cell.tileKey) {
+                        cellsToDraw.push({
+                            x, y,
+                            layer: cell.tileLayer !== undefined ? cell.tileLayer : 2,
+                            key: cell.tileKey,
+                            flip: !!cell.tileFlip,
+                            groundType: cell.groundType
+                        });
+                    }
+                }
+            }
+
+            cellsToDraw.sort((a, b) => {
+                if (a.layer !== b.layer) return a.layer - b.layer;
+                const da = a.x + a.y;
+                const db = b.x + b.y;
+                if (da !== db) return da - db;
+                return a.x - b.x;
+            });
+
+            // Tamaño calibrado para ajuste perfecto de rombos (34px con solapamiento milimétrico sin huecos)
+            const drawW = 34.0;
+            const drawH = drawW * (160.0 / 256.0);
+            const anchorX = drawW / 2.0;
+            const anchorY = drawH * (94.0 / 160.0);
+
+            for (const item of cellsToDraw) {
+                const { cx, cy } = this.getIsoBase(item.x, item.y);
+                const tileImg = this.images ? this.images[item.key] : null;
+                if (tileImg && tileImg.width) {
+                    if (item.flip) {
+                        gctx.save();
+                        gctx.translate(cx, cy - anchorY);
+                        gctx.scale(-1, 1);
+                        gctx.drawImage(tileImg, -anchorX, 0, drawW, drawH);
+                        gctx.restore();
+                    } else {
+                        gctx.drawImage(tileImg, cx - anchorX, cy - anchorY, drawW, drawH);
+                    }
+                }
             }
 
             gctx.restore();
