@@ -82,8 +82,9 @@ export class Agent {
         this.animationTimer++;
         this.isAttacking = false;
         this.isActioning = false;
-        this.actionType = null;
-        this.actionTimer = 0;
+        if (this.actionTimer <= 0) {
+            this.actionType = null;
+        }
         this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
@@ -135,6 +136,8 @@ export class Agent {
         // Determinar acción activa para sprites animados
         if (this.isAttacking || this.state === STATES.DEFENDING) {
             this.actionType = 'ATTACK';
+        } else if (this.actionTimer > 0) {
+            this.isActioning = true;
         } else if (this.state === STATES.GATHERING) {
             this.actionType = (this.lastGathered === 'ROCK') ? 'MINE' : 'CHOP';
         } else if (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE || 
@@ -142,7 +145,6 @@ export class Agent {
             this.actionType = 'BUILD';
         } else {
             this.actionType = null;
-        this.actionTimer = 0;
         }
     }
 
@@ -219,6 +221,10 @@ export class Agent {
     }
 
     decideState(enemies) {
+        // Si Gruni está en medio de una acción activa, no interrumpir el estado
+        if (this.actionTimer > 0) {
+            return;
+        }
         let enemyThreat = false;
         let targetEnemy = null;
         let closestDist = Infinity;
@@ -433,13 +439,21 @@ export class Agent {
                         } else {
                             this.emergencyMission = null;
                         }
-                    } else {
+                    } else if (this.home) {
                         this.state = STATES.BUILDING_HOUSE;
                         this.target = {x: this.home.x, y: this.home.y};
+                        return;
+                    } else {
+                        this.homeStage = 0;
+                        this.emergencyMission = 'BUILD_HOUSE';
                         return;
                     }
                 }
             } else if (this.emergencyMission === 'RESTORE_HOUSE') {
+                if (!this.home) {
+                    this.emergencyMission = null;
+                    return;
+                }
                 if (this.inventory.wood >= 1) {
                     this.state = STATES.RESTORING_HOUSE;
                     this.target = { x: this.home.x, y: this.home.y };
@@ -449,9 +463,11 @@ export class Agent {
                     if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
                 }
             } else if (this.emergencyMission === 'BUILD_WALLS') {
-                if (this.home) {
-                    this.clearSettlementClearing(this.home.x, this.home.y);
+                if (!this.home) {
+                    this.emergencyMission = 'BUILD_HOUSE';
+                    return;
                 }
+                this.clearSettlementClearing(this.home.x, this.home.y);
                 if (this.inventory.wood >= 1) {
                     let emptyWallPos = null;
                     let hx = this.home.x, hy = this.home.y;

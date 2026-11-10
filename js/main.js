@@ -1,7 +1,7 @@
 // js/main.js
-import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261110c';
-import { Agent, STATES } from './agent.js?v=20261110c';
-import { Renderer } from './renderer.js?v=20261110c';
+import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261110d';
+import { Agent, STATES } from './agent.js?v=20261110d';
+import { Renderer } from './renderer.js?v=20261110d';
 import { ParticleSystem } from './particles.js?v=20261108a';
 import { Wolf } from './wolf.js?v=20261108a';
 import { Enemy } from './enemy.js?v=20261108a';
