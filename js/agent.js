@@ -82,6 +82,7 @@ export class Agent {
         this.animationTimer++;
         this.isAttacking = false;
         this.isActioning = false;
+        this.actionType = null;
         this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
@@ -129,6 +130,18 @@ export class Agent {
             this.act();
         }
         this.updateEmotion();
+
+        // Determinar acción activa para sprites animados
+        if (this.isAttacking || this.state === STATES.DEFENDING) {
+            this.actionType = 'ATTACK';
+        } else if (this.state === STATES.GATHERING) {
+            this.actionType = (this.lastGathered === 'ROCK') ? 'MINE' : 'CHOP';
+        } else if (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE || 
+                   this.state === STATES.BUILDING_TELESCOPE || this.state === STATES.BUILDING_WALL) {
+            this.actionType = 'BUILD';
+        } else {
+            this.actionType = null;
+        }
     }
 
     craft(type = null) {

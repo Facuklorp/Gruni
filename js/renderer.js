@@ -1615,16 +1615,32 @@ export class Renderer {
             
             let img = null;
             let flip = false;
-            
-            if (dir === 2 && this.images[`agent_walk_side_${frame + 1}`]) { 
-                img = this.images[`agent_walk_side_${frame + 1}`];
-                flip = true;
-            } else if (dir === 3 && this.images[`agent_walk_side_${frame + 1}`]) {
-                img = this.images[`agent_walk_side_${frame + 1}`];
-            } else if (dir === 0 && this.images[`agent_walk_front_${frame + 1}`]) {
-                img = this.images[`agent_walk_front_${frame + 1}`];
-            } else if (dir === 1 && this.images[`agent_walk_back_${frame + 1}`]) {
-                img = this.images[`agent_walk_back_${frame + 1}`];
+            let isAction = !moving && !!entity.actionType;
+
+            if (isAction) {
+                if (entity.actionType === 'CHOP' && this.images['agent_action_chop']) {
+                    img = this.images['agent_action_chop'];
+                } else if (entity.actionType === 'MINE' && this.images['agent_action_mine']) {
+                    img = this.images['agent_action_mine'];
+                } else if (entity.actionType === 'BUILD' && this.images['agent_action_build']) {
+                    img = this.images['agent_action_build'];
+                } else if (entity.actionType === 'ATTACK' && this.images['agent_action_attack']) {
+                    img = this.images['agent_action_attack'];
+                }
+                if (dir === 2) flip = true;
+            }
+
+            if (!img) {
+                if (dir === 2 && this.images[`agent_walk_side_${frame + 1}`]) { 
+                    img = this.images[`agent_walk_side_${frame + 1}`];
+                    flip = true;
+                } else if (dir === 3 && this.images[`agent_walk_side_${frame + 1}`]) {
+                    img = this.images[`agent_walk_side_${frame + 1}`];
+                } else if (dir === 0 && this.images[`agent_walk_front_${frame + 1}`]) {
+                    img = this.images[`agent_walk_front_${frame + 1}`];
+                } else if (dir === 1 && this.images[`agent_walk_back_${frame + 1}`]) {
+                    img = this.images[`agent_walk_back_${frame + 1}`];
+                }
             }
 
             if (img) {
@@ -1634,7 +1650,8 @@ export class Renderer {
                 let drawW = drawH * (fW / fH);
 
                 let drawX = cx - drawW / 2;
-                let drawY = baseY - drawH + 4 - bob; 
+                let actionSwing = isAction ? Math.abs(Math.sin(t * 0.012)) * 3 : 0;
+                let drawY = baseY - drawH + 4 - bob + actionSwing; 
 
                 this.ctx.save();
                 if (flip) {
