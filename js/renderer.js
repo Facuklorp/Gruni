@@ -1668,7 +1668,8 @@ export class Renderer {
             
             let img = null;
             let flip = false;
-            let isAction = !moving && !!entity.actionType;
+            let isAction = !!entity.actionType && (entity.actionTimer > 0 || entity.state === 'GATHERING' || entity.isAttacking || !moving);
+            if (isAction) moving = false;
 
             if (isAction) {
                 if (entity.actionType === 'CHOP' && this.images['agent_action_chop']) {
@@ -1680,7 +1681,11 @@ export class Renderer {
                 } else if (entity.actionType === 'ATTACK' && this.images['agent_action_attack']) {
                     img = this.images['agent_action_attack'];
                 }
-                if (dir === 2) flip = true;
+                if (entity.target) {
+                    flip = (entity.target.x < entity.x);
+                } else if (dir === 2) {
+                    flip = true;
+                }
             }
 
             if (!img) {

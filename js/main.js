@@ -1,7 +1,7 @@
 // js/main.js
-import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261108a';
-import { Agent, STATES } from './agent.js?v=20261108a';
-import { Renderer } from './renderer.js?v=20261108a';
+import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261110c';
+import { Agent, STATES } from './agent.js?v=20261110c';
+import { Renderer } from './renderer.js?v=20261110c';
 import { ParticleSystem } from './particles.js?v=20261108a';
 import { Wolf } from './wolf.js?v=20261108a';
 import { Enemy } from './enemy.js?v=20261108a';
@@ -50,10 +50,10 @@ const imageUrls = {
     sprout_tools: 'assets/sprout_tools.png',
     sprout_cow: 'assets/sprout_cow.png',
     sprout_chicken: 'assets/sprout_chicken.png',
-    agent_action_chop: 'Gruni Sprites/Acciones/gruni_talar.png',
-    agent_action_mine: 'Gruni Sprites/Acciones/gruni_picar.png',
-    agent_action_build: 'Gruni Sprites/Acciones/gruni_construir.png',
-    agent_action_attack: 'Gruni Sprites/Acciones/gruni_atacar.png',
+    agent_action_chop: 'assets/sprites/gruni/gruni_talar.png',
+    agent_action_mine: 'assets/sprites/gruni/gruni_picar.png',
+    agent_action_build: 'assets/sprites/gruni/gruni_construir.png',
+    agent_action_attack: 'assets/sprites/gruni/gruni_atacar.png',
     agent_walk_side_1: 'Gruni Sprites/Caminata_Derecha_Fluida_Rapida/Gruni_caminando_derecha_fluido_01.png',
     agent_walk_side_2: 'Gruni Sprites/Caminata_Derecha_Fluida_Rapida/Gruni_caminando_derecha_fluido_02.png',
     agent_walk_side_3: 'Gruni Sprites/Caminata_Derecha_Fluida_Rapida/Gruni_caminando_derecha_fluido_03.png',
@@ -304,6 +304,7 @@ async function loadAssets() {
     const priorityKeys = new Set([
         'bg_pradera', 'bg_montanas_nevadas', 'bg_desierto', 'bg_bosque_rio', 'bg_aldea_campo',
         'agent_walk_side_1', 'agent_walk_front_1', 'agent_walk_back_1',
+        'agent_action_chop', 'agent_action_mine', 'agent_action_build', 'agent_action_attack',
         'iso_arbol_1', 'iso_arbol_2', 'iso_arbol_3', 'iso_arbol_4', 'iso_arbol_5',
         'iso_frutal_1', 'rocas_1', 'rocas_2', 'casa_1', 'casa_2', 'casa_3', 'muralla'
     ]);

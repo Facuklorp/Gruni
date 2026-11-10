@@ -83,6 +83,7 @@ export class Agent {
         this.isAttacking = false;
         this.isActioning = false;
         this.actionType = null;
+        this.actionTimer = 0;
         this.eclipseWarning = eclipseWarning;
         if (this.koTimer > 0) {
             this.koTimer--;
@@ -141,6 +142,7 @@ export class Agent {
             this.actionType = 'BUILD';
         } else {
             this.actionType = null;
+        this.actionTimer = 0;
         }
     }
 
@@ -591,12 +593,36 @@ export class Agent {
                         this.applesEaten = 0;
                     }
                 } else if (this.state === STATES.SEEK_WOOD) {
+                    if (this.actionTimer <= 0) {
+                        this.actionTimer = 2;
+                        this.actionType = 'CHOP';
+                        this.renderX = this.x;
+                        this.renderY = this.y;
+                        return;
+                    }
+                    this.actionTimer--;
+                    if (this.actionTimer > 0) {
+                        this.actionType = 'CHOP';
+                        return;
+                    }
                     this.inventory.wood++;
                     this.lastGathered = 'WOOD';
                     this.world.consumeResource(this.target.x, this.target.y);
                     this.state = STATES.GATHERING;
                     this.happyTimer = 3;
                 } else if (this.state === STATES.SEEK_ROCK) {
+                    if (this.actionTimer <= 0) {
+                        this.actionTimer = 2;
+                        this.actionType = 'MINE';
+                        this.renderX = this.x;
+                        this.renderY = this.y;
+                        return;
+                    }
+                    this.actionTimer--;
+                    if (this.actionTimer > 0) {
+                        this.actionType = 'MINE';
+                        return;
+                    }
                     this.inventory.rock++;
                     this.lastGathered = 'ROCK';
                     this.world.consumeResource(this.target.x, this.target.y);
@@ -615,6 +641,18 @@ export class Agent {
                     // o usando una flag. Añadiremos una flag.
                     this.bookFound = true;
                 } else if (this.state === STATES.BUILDING_HOUSE) {
+                    if (this.actionTimer <= 0) {
+                        this.actionTimer = 3;
+                        this.actionType = 'BUILD';
+                        this.renderX = this.x;
+                        this.renderY = this.y;
+                        return;
+                    }
+                    this.actionTimer--;
+                    if (this.actionTimer > 0) {
+                        this.actionType = 'BUILD';
+                        return;
+                    }
                     let tx = this.target.x;
                     let ty = this.target.y;
                     if (this.inventory.wood >= 3 && this.inventory.rock >= 3) {
