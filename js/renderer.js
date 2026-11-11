@@ -474,12 +474,33 @@ export class Renderer {
                 }
             }
 
-            // Los sprites de árboles vivos en pasto ya traen sombra integrada en el PNG;
-            // solo dibujamos elipse para tocones u otros biomas sin sombra propia
-            if (isStump || biome === BIOMES.DESERT || biome === BIOMES.SNOW || biome === BIOMES.PINE) {
-                this.ctx.fillStyle = (biome === BIOMES.DESERT || biome === BIOMES.SAND) ? 'rgba(75, 45, 15, 0.22)' : 'rgba(15, 35, 10, 0.22)';
+            // Sombra proyectada en el suelo (isométrica 2.5D con copa y contacto de raíces)
+            const isSand = biome === BIOMES.DESERT || biome === BIOMES.SAND;
+            const isSnow = biome === BIOMES.SNOW;
+            const shadowCoreColor = isSand ? 'rgba(50, 30, 10, 0.38)' : (isSnow ? 'rgba(25, 35, 55, 0.30)' : 'rgba(8, 20, 8, 0.38)');
+            const shadowCanopyColor = isSand ? 'rgba(50, 30, 10, 0.20)' : (isSnow ? 'rgba(25, 35, 55, 0.16)' : 'rgba(8, 20, 8, 0.22)');
+
+            if (isStump) {
+                this.ctx.fillStyle = shadowCoreColor;
                 this.ctx.beginPath();
-                this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 22, isStump ? 4.5 : 10.5, 0, 0, Math.PI * 2);
+                this.ctx.ellipse(drawX, drawY + ISO_H + 2, 14, 7, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else {
+                const isHalf = (capacity !== null && capacity !== undefined && capacity <= 2);
+                this.ctx.fillStyle = shadowCanopyColor;
+                this.ctx.beginPath();
+                this.ctx.ellipse(
+                    drawX + Math.round(w * (isHalf ? 0.08 : 0.12)),
+                    drawY + Math.round(ISO_H * 0.85),
+                    Math.round(w * (isHalf ? 0.28 : 0.36)),
+                    Math.round(w * (isHalf ? 0.14 : 0.18)),
+                    -0.12, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                this.ctx.fillStyle = shadowCoreColor;
+                this.ctx.beginPath();
+                this.ctx.ellipse(drawX, drawY + ISO_H + 2, Math.round(w * 0.20), Math.round(w * 0.10), 0, 0, Math.PI * 2);
                 this.ctx.fill();
             }
 
@@ -615,12 +636,33 @@ export class Renderer {
                 }
             }
 
-            // Los sprites de árboles vivos en pasto ya traen sombra integrada en el PNG;
-            // solo dibujamos elipse para tocones u otros biomas sin sombra propia
-            if (isStump || biome === BIOMES.DESERT || biome === BIOMES.SNOW || biome === BIOMES.PINE) {
-                this.ctx.fillStyle = (biome === BIOMES.DESERT || biome === BIOMES.SAND) ? 'rgba(75, 45, 15, 0.22)' : 'rgba(15, 35, 10, 0.22)';
+            // Sombra proyectada en el suelo (isométrica 2.5D con copa y contacto de raíces)
+            const isSand = biome === BIOMES.DESERT || biome === BIOMES.SAND;
+            const isSnow = biome === BIOMES.SNOW;
+            const shadowCoreColor = isSand ? 'rgba(50, 30, 10, 0.38)' : (isSnow ? 'rgba(25, 35, 55, 0.30)' : 'rgba(8, 20, 8, 0.38)');
+            const shadowCanopyColor = isSand ? 'rgba(50, 30, 10, 0.20)' : (isSnow ? 'rgba(25, 35, 55, 0.16)' : 'rgba(8, 20, 8, 0.22)');
+
+            if (isStump) {
+                this.ctx.fillStyle = shadowCoreColor;
                 this.ctx.beginPath();
-                this.ctx.ellipse(drawX, drawY + ISO_H * 0.58, isStump ? 9 : 21, isStump ? 4.5 : 10, 0, 0, Math.PI * 2);
+                this.ctx.ellipse(drawX, drawY + ISO_H + 2, 14, 7, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else {
+                const isHalf = (capacity !== null && capacity !== undefined && capacity <= 2);
+                this.ctx.fillStyle = shadowCanopyColor;
+                this.ctx.beginPath();
+                this.ctx.ellipse(
+                    drawX + Math.round(w * (isHalf ? 0.08 : 0.12)),
+                    drawY + Math.round(ISO_H * 0.85),
+                    Math.round(w * (isHalf ? 0.28 : 0.36)),
+                    Math.round(w * (isHalf ? 0.14 : 0.18)),
+                    -0.12, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+
+                this.ctx.fillStyle = shadowCoreColor;
+                this.ctx.beginPath();
+                this.ctx.ellipse(drawX, drawY + ISO_H + 2, Math.round(w * 0.20), Math.round(w * 0.10), 0, 0, Math.PI * 2);
                 this.ctx.fill();
             }
 
