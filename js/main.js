@@ -181,6 +181,30 @@ const imageUrls = {
     agent_walk_back_27: 'Gruni Sprites/Caminata_Atras_Fluida_Rapida/Gruni_caminando_atras_fluido_27.png',
     agent_walk_back_28: 'Gruni Sprites/Caminata_Atras_Fluida_Rapida/Gruni_caminando_atras_fluido_28.png',
     agent_walk_back_29: 'Gruni Sprites/Caminata_Atras_Fluida_Rapida/Gruni_caminando_atras_fluido_29.png',
+    // ── Caminatas Diagonales HD de Gruni (Nuevas) ──────────────
+    agent_walk_diag_se_1: 'Gruni Sprites/Caminata_Diagonal_SE/gruni_diagonal_se_01.png?v=20261111new',
+    agent_walk_diag_se_2: 'Gruni Sprites/Caminata_Diagonal_SE/gruni_diagonal_se_02.png?v=20261111new',
+    agent_walk_diag_se_3: 'Gruni Sprites/Caminata_Diagonal_SE/gruni_diagonal_se_03.png?v=20261111new',
+    agent_walk_diag_se_4: 'Gruni Sprites/Caminata_Diagonal_SE/gruni_diagonal_se_04.png?v=20261111new',
+    agent_walk_diag_se_5: 'Gruni Sprites/Caminata_Diagonal_SE/gruni_diagonal_se_05.png?v=20261111new',
+
+    agent_walk_diag_sw_1: 'Gruni Sprites/Caminata_Diagonal_SW/gruni_diagonal_sw_01.png?v=20261111new',
+    agent_walk_diag_sw_2: 'Gruni Sprites/Caminata_Diagonal_SW/gruni_diagonal_sw_02.png?v=20261111new',
+    agent_walk_diag_sw_3: 'Gruni Sprites/Caminata_Diagonal_SW/gruni_diagonal_sw_03.png?v=20261111new',
+    agent_walk_diag_sw_4: 'Gruni Sprites/Caminata_Diagonal_SW/gruni_diagonal_sw_04.png?v=20261111new',
+    agent_walk_diag_sw_5: 'Gruni Sprites/Caminata_Diagonal_SW/gruni_diagonal_sw_05.png?v=20261111new',
+
+    agent_walk_diag_ne_1: 'Gruni Sprites/Caminata_Diagonal_NE/gruni_diagonal_ne_01.png?v=20261111new',
+    agent_walk_diag_ne_2: 'Gruni Sprites/Caminata_Diagonal_NE/gruni_diagonal_ne_02.png?v=20261111new',
+    agent_walk_diag_ne_3: 'Gruni Sprites/Caminata_Diagonal_NE/gruni_diagonal_ne_03.png?v=20261111new',
+    agent_walk_diag_ne_4: 'Gruni Sprites/Caminata_Diagonal_NE/gruni_diagonal_ne_04.png?v=20261111new',
+    agent_walk_diag_ne_5: 'Gruni Sprites/Caminata_Diagonal_NE/gruni_diagonal_ne_05.png?v=20261111new',
+
+    agent_walk_diag_nw_1: 'Gruni Sprites/Caminata_Diagonal_NW/gruni_diagonal_nw_01.png?v=20261111new',
+    agent_walk_diag_nw_2: 'Gruni Sprites/Caminata_Diagonal_NW/gruni_diagonal_nw_02.png?v=20261111new',
+    agent_walk_diag_nw_3: 'Gruni Sprites/Caminata_Diagonal_NW/gruni_diagonal_nw_03.png?v=20261111new',
+    agent_walk_diag_nw_4: 'Gruni Sprites/Caminata_Diagonal_NW/gruni_diagonal_nw_04.png?v=20261111new',
+    agent_walk_diag_nw_5: 'Gruni Sprites/Caminata_Diagonal_NW/gruni_diagonal_nw_05.png?v=20261111new',
     gruni_walk: 'assets/sprites/gruni/gruni_walk.png',
     malo_walk_side_1: 'Gruni Sprites/Paso MALO 1.png',
     malo_walk_side_2: 'Gruni Sprites/Paso MALO 2.png',
@@ -316,7 +340,7 @@ async function loadAssets() {
         'iso_frutal_1', 'iso_frutal_medio_1', 'rocas_1', 'rocas_2', 'casa_1', 'casa_2', 'casa_3', 'muralla'
     ]);
     for (const [k] of entries) {
-        if (k.startsWith('tile_')) priorityKeys.add(k);
+        if (k.startsWith('tile_') || k.startsWith('agent_walk_diag_')) priorityKeys.add(k);
     }
 
     const priorityEntries = entries.filter(([k]) => priorityKeys.has(k));

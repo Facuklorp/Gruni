@@ -761,13 +761,17 @@ export class Agent {
             { dx: 0, dy: -1 },
             { dx: 0, dy: 1 },
             { dx: -1, dy: 0 },
-            { dx: 1, dy: 0 }
+            { dx: 1, dy: 0 },
+            { dx: 1, dy: 1 },
+            { dx: -1, dy: -1 },
+            { dx: 1, dy: -1 },
+            { dx: -1, dy: 1 }
         ];
 
         const sortMoves = (cx, cy) => {
             return [...moves].sort((a, b) => {
-                const da = Math.abs((cx + a.dx) - tx) + Math.abs((cy + a.dy) - ty);
-                const db = Math.abs((cx + b.dx) - tx) + Math.abs((cy + b.dy) - ty);
+                const da = Math.hypot((cx + a.dx) - tx, (cy + a.dy) - ty);
+                const db = Math.hypot((cx + b.dx) - tx, (cy + b.dy) - ty);
                 return da - db;
             });
         };
@@ -778,6 +782,9 @@ export class Agent {
         for (let m of initialMoves) {
             let nx = this.x + m.dx;
             let ny = this.y + m.dy;
+            if (m.dx !== 0 && m.dy !== 0 && (!this.tryStep(this.x + m.dx, this.y) || !this.tryStep(this.x, this.y + m.dy))) {
+                continue;
+            }
             if (isGoal(nx, ny)) {
                 return { x: nx, y: ny, dx: m.dx, dy: m.dy };
             }
@@ -798,6 +805,9 @@ export class Agent {
             for (let m of curMoves) {
                 let nx = cx + m.dx;
                 let ny = cy + m.dy;
+                if (m.dx !== 0 && m.dy !== 0 && (!this.tryStep(cx + m.dx, cy) || !this.tryStep(cx, cy + m.dy))) {
+                    continue;
+                }
                 const key = nx + ',' + ny;
                 if (visited.has(key)) continue;
 
@@ -935,16 +945,23 @@ export class Agent {
             {dx: 0, dy: -1},
             {dx: 0, dy: 1},
             {dx: -1, dy: 0},
-            {dx: 1, dy: 0}
+            {dx: 1, dy: 0},
+            {dx: 1, dy: 1},
+            {dx: -1, dy: -1},
+            {dx: 1, dy: -1},
+            {dx: -1, dy: 1}
         ];
         moves.sort(() => Math.random() - 0.5);
         
         for (let m of moves) {
             let nx = this.x + m.dx;
             let ny = this.y + m.dy;
+            if (m.dx !== 0 && m.dy !== 0 && (!this.tryStep(this.x + m.dx, this.y) || !this.tryStep(this.x, this.y + m.dy))) {
+                continue;
+            }
             if (this.tryStep(nx, ny)) {
-                if (m.dx !== 0) { this.dx = m.dx; this.dy = 0; }
-                if (m.dy !== 0) { this.dy = m.dy; this.dx = 0; }
+                this.dx = m.dx;
+                this.dy = m.dy;
                 this.x = nx;
                 this.y = ny;
                 this.stepOnCell(nx, ny);
