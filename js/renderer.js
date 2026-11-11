@@ -311,8 +311,8 @@ export class Renderer {
         renderQueue.sort((a, b) => {
             let da = a.x + a.y;
             let db = b.x + b.y;
-            if (a.type === 'bighouse') da += 1.8;
-            if (b.type === 'bighouse') db += 1.8;
+            if (a.type === 'bighouse') da += 0.85;
+            if (b.type === 'bighouse') db += 0.85;
             if (da !== db) return da - db;
             return a.x - b.x; // desempate por x
         });
@@ -805,8 +805,26 @@ export class Renderer {
             const h = w * (img.height / img.width);
             const bottomY = sy + ISO_H * 2.0;
 
-            // La casa es una estructura sólida permanente (no desaparece)
+            // Transparencia dinámica cuando Gruni camina detrás de la casa o de su tejado
             let alpha = 1.0;
+            if (agent) {
+                const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
+                const ay = agent.renderY !== undefined ? agent.renderY : agent.y;
+                const { cx: acx, baseY: abaseY } = this.getIsoBase(ax, ay);
+
+                const houseLeft = cx - w / 2;
+                const houseRight = cx + w / 2;
+                const houseTop = bottomY - h;
+                const houseBottom = bottomY;
+
+                // Si Gruni está dentro de la proyección visual de la casa y detrás de la base frontal
+                if (acx >= houseLeft - 4 && acx <= houseRight + 4 &&
+                    abaseY >= houseTop && abaseY <= houseBottom) {
+                    if ((ax + ay) <= (x + y + 1.8)) {
+                        alpha = 0.38;
+                    }
+                }
+            }
 
             // Sombra suave adherida directamente a la base de la casa (sin separarse adelante)
             const shY = bottomY - h * 0.18;
