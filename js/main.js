@@ -197,12 +197,18 @@ const imageUrls = {
     casa_1: 'Casa/Casa 1.png',
     casa_2: 'Casa/Casa 2.png',
     casa_3: 'Casa/Casa entera.png',
-    iso_arbol_1: 'Vegetación/Arbol A.png?v=20261110hd',
-    iso_arbol_2: 'Vegetación/Arbol B.png?v=20261110hd',
-    iso_arbol_3: 'Vegetación/Arbol C.png?v=20261110hd',
-    iso_arbol_4: 'Vegetación/Arbol E.png?v=20261110hd',
-    iso_arbol_5: 'Vegetación/Arbol F.png?v=20261110hd',
-    iso_frutal_1: 'Vegetación/Arbol D frutal.png?v=20261110hd',
+    iso_arbol_1: 'Vegetación/Arbol A.png?v=20261111hd',
+    iso_arbol_2: 'Vegetación/Arbol B.png?v=20261111hd',
+    iso_arbol_3: 'Vegetación/Arbol C.png?v=20261111hd',
+    iso_arbol_4: 'Vegetación/Arbol E.png?v=20261111hd',
+    iso_arbol_5: 'Vegetación/Arbol F.png?v=20261111hd',
+    iso_arbol_medio_1: 'Vegetación/Arbol A medio.png?v=20261111hd',
+    iso_arbol_medio_2: 'Vegetación/Arbol B medio.png?v=20261111hd',
+    iso_arbol_medio_3: 'Vegetación/Arbol C medio.png?v=20261111hd',
+    iso_arbol_medio_4: 'Vegetación/Arbol E medio.png?v=20261111hd',
+    iso_arbol_medio_5: 'Vegetación/Arbol F medio.png?v=20261111hd',
+    iso_frutal_1: 'Vegetación/Arbol D frutal.png?v=20261111hd',
+    iso_frutal_medio_1: 'Vegetación/Arbol D frutal medio.png?v=20261111hd',
     iso_tronco_1: 'Vegetación/no/iso_tronco_1.png',
     iso_tronco_2: 'Vegetación/no/iso_tronco_2.png',
     iso_tronco_3: 'Vegetación/no/iso_tronco_3.png',
@@ -306,7 +312,8 @@ async function loadAssets() {
         'agent_walk_side_1', 'agent_walk_front_1', 'agent_walk_back_1',
         'agent_action_chop', 'agent_action_mine', 'agent_action_build', 'agent_action_attack',
         'iso_arbol_1', 'iso_arbol_2', 'iso_arbol_3', 'iso_arbol_4', 'iso_arbol_5',
-        'iso_frutal_1', 'rocas_1', 'rocas_2', 'casa_1', 'casa_2', 'casa_3', 'muralla'
+        'iso_arbol_medio_1', 'iso_arbol_medio_2', 'iso_arbol_medio_3', 'iso_arbol_medio_4', 'iso_arbol_medio_5',
+        'iso_frutal_1', 'iso_frutal_medio_1', 'rocas_1', 'rocas_2', 'casa_1', 'casa_2', 'casa_3', 'muralla'
     ]);
     for (const [k] of entries) {
         if (k.startsWith('tile_')) priorityKeys.add(k);

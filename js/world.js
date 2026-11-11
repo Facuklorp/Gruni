@@ -90,7 +90,7 @@ export class World {
                 
                 
                 let capacity = 0;
-                if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 3) + 2;
+                if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 2) + 3; // 3 a 4 (Fase 1 completa)
                 else if (type === RESOURCES.FOOD)  capacity = Math.floor(Math.random() * 2) + 2;
                 else if (type === RESOURCES.BUSH)  capacity = 1;
                 else if (type === RESOURCES.ROCK)  capacity = Math.floor(Math.random() * 3) + 1;
@@ -147,7 +147,7 @@ export class World {
                 } else if (type === RESOURCES.WALL) {
                     cap = 5; // La muralla tiene 5 de vida
                 } else if (type === RESOURCES.WOOD) {
-                    cap = Math.floor(Math.random() * 3) + 2;
+                    cap = Math.floor(Math.random() * 2) + 3; // 3 a 4 (Fase 1 completa)
                 } else if (type === RESOURCES.BUSH) {
                     cap = 1;
                 } else {

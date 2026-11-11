@@ -305,9 +305,9 @@ export class Renderer {
                 const cell = item.cell;
                 switch (cell.type) {
                     case RESOURCES.FOOD:
-                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome, agent); break;
+                    case RESOURCES.FOOD_EMPTY: this.drawFruitTree(item.x, item.y, cell.type, cell.biome, agent, cell.capacity); break;
                     case RESOURCES.WOOD:
-                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome, agent); break;
+                    case RESOURCES.WOOD_EMPTY: this.drawTree(item.x, item.y, cell.type, cell.biome, agent, cell.capacity); break;
                     case RESOURCES.BUSH:
                     case RESOURCES.BUSH_EMPTY: this.drawBush(item.x, item.y, cell.type, agent); break;
                     case RESOURCES.ROCK:
@@ -367,7 +367,7 @@ export class Renderer {
         this.ctx.fill();
     }
 
-    drawFruitTree(x, y, type, biome, agent) {
+    drawFruitTree(x, y, type, biome, agent, capacity = null) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.FOOD;
 
@@ -407,8 +407,15 @@ export class Renderer {
         } else {
             if (isAlive) {
                 const idx = 1; // Solo tenemos 1 frutal (Arbol D frutal)
-                img = this.images?.[`iso_frutal_${idx}`];
+                // Fase 2 (medio talado) cuando la capacidad se redujo por recolección/tala
+                if (capacity !== null && capacity !== undefined && capacity <= 1) {
+                    img = this.images?.[`iso_frutal_medio_${idx}`] || this.images?.[`iso_frutal_${idx}`];
+                } else {
+                    // Fase 1: Árbol parado completo
+                    img = this.images?.[`iso_frutal_${idx}`];
+                }
             } else {
+                // Fase 3: Árbol totalmente talado (tocón)
                 const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
                 const idx = stumpIds[(x * 17 + y * 19) % 9];
                 img = this.images?.[`iso_tronco_${idx}`];
@@ -501,7 +508,7 @@ export class Renderer {
         }
     }
 
-    drawTree(x, y, type, biome, agent) {
+    drawTree(x, y, type, biome, agent, capacity = null) {
         const { sx, sy, cx } = this.getIsoBase(x, y);
         const isAlive = type === RESOURCES.WOOD;
 
@@ -539,10 +546,18 @@ export class Renderer {
                 isStump = true;
             }
         } else {
+            // Pradera / Pasto (3 Fases de tala)
             if (isAlive) {
                 const idx = ((x * 11 + y * 17) % 5) + 1; // 1 to 5
-                img = this.images?.[`iso_arbol_${idx}`];
+                // Fase 2: Árbol medio talado (cuando ya recibió hachazos)
+                if (capacity !== null && capacity !== undefined && capacity <= 2) {
+                    img = this.images?.[`iso_arbol_medio_${idx}`] || this.images?.[`iso_arbol_${idx}`];
+                } else {
+                    // Fase 1: Árbol parado completo
+                    img = this.images?.[`iso_arbol_${idx}`];
+                }
             } else {
+                // Fase 3: Árbol totalmente talado (tocón / pequeña parte del tronco)
                 const stumpIds = [1, 2, 3, 5, 6, 7, 8, 9, 10];
                 const idx = stumpIds[(x * 23 + y * 29) % 9];
                 img = this.images?.[`iso_tronco_${idx}`];
@@ -1628,46 +1643,111 @@ export class Renderer {
         this.ctx.fill();
 
         if (type === 'agent') {
-            let dir = 0; // 0=frente, 1=espalda, 2=izq, 3=der
+            let dir = 'S'; // 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE' (8 direcciones)
             
-            // Calculate direction based on visual delta (diffX / diffY are computed above)
-            if (typeof entity.renderDir === 'undefined') entity.renderDir = 3; // Default right
+            // Calculate direction based on visual screen vector in isometric projection
+            if (typeof entity.renderDir === 'undefined') entity.renderDir = 'S';
             
             if (moving) {
                 let dx = entity.x - entity.renderX;
                 let dy = entity.y - entity.renderY;
                 
-                if (dx > 0.05) entity.renderDir = 3;
-                else if (dx < -0.05) entity.renderDir = 2;
-                else if (dy < -0.05) entity.renderDir = 1;
-                else if (dy > 0.05) entity.renderDir = 0;
+                // Screen coordinates in isometric view:
+                let screenDx = (dx - dy) * (ISO_W / 2);
+                let screenDy = (dx + dy) * (ISO_H / 2);
+                
+                if (Math.hypot(screenDx, screenDy) > 0.05) {
+                    // Angle in degrees [0, 360) where 0 is screen right, 90 is screen down
+                    let deg = (Math.atan2(screenDy, screenDx) * 180 / Math.PI + 360) % 360;
+                    
+                    // 8 direcciones (sectores de 45° según la rosa de los vientos del diagrama)
+                    if (deg >= 337.5 || deg < 22.5) {
+                        entity.renderDir = 'E';   // Derecha (0°)
+                    } else if (deg >= 22.5 && deg < 67.5) {
+                        entity.renderDir = 'SE';  // Abajo-Derecha / Frente-Derecha (45°)
+                    } else if (deg >= 67.5 && deg < 112.5) {
+                        entity.renderDir = 'S';   // Abajo / Frente (90°)
+                    } else if (deg >= 112.5 && deg < 157.5) {
+                        entity.renderDir = 'SW';  // Abajo-Izquierda / Frente-Izquierda (135°)
+                    } else if (deg >= 157.5 && deg < 202.5) {
+                        entity.renderDir = 'W';   // Izquierda (180°)
+                    } else if (deg >= 202.5 && deg < 247.5) {
+                        entity.renderDir = 'NW';  // Arriba-Izquierda / Espalda-Izquierda (225°)
+                    } else if (deg >= 247.5 && deg < 292.5) {
+                        entity.renderDir = 'N';   // Arriba / Espalda (270°)
+                    } else {
+                        entity.renderDir = 'NE';  // Arriba-Derecha / Espalda-Derecha (315°)
+                    }
+                }
             }
             
-            dir = entity.renderDir;
+            dir = entity.renderDir || 'S';
             
-            // Adjust frames for fluid walks
-            let fCount = 4;
-            let animSpeed = 125;
-            
-            if (dir === 0) {
-                fCount = 35;
-                animSpeed = 28;
-            } else if (dir === 1) {
-                fCount = 29;
-                animSpeed = 34;
-            } else if (dir === 2) {
-                fCount = 32;
-                animSpeed = 31;
-            } else if (dir === 3) {
-                fCount = 32;
-                animSpeed = 31;
+            // Adjust frames and speeds for fluid walk cycles
+            let fCount = 32;
+            let animSpeed = 31;
+            let animType = 'side';
+            let flip = false;
+
+            switch (dir) {
+                case 'S':
+                    animType = 'front';
+                    fCount = 35;
+                    animSpeed = 28;
+                    flip = false;
+                    break;
+                case 'SE':
+                    animType = 'side';
+                    fCount = 32;
+                    animSpeed = 31;
+                    flip = false;
+                    break;
+                case 'E':
+                    animType = 'side';
+                    fCount = 32;
+                    animSpeed = 31;
+                    flip = false;
+                    break;
+                case 'NE':
+                    animType = 'back';
+                    fCount = 29;
+                    animSpeed = 34;
+                    flip = false;
+                    break;
+                case 'N':
+                    animType = 'back';
+                    fCount = 29;
+                    animSpeed = 34;
+                    flip = false;
+                    break;
+                case 'NW':
+                    animType = 'back';
+                    fCount = 29;
+                    animSpeed = 34;
+                    flip = true;
+                    break;
+                case 'W':
+                    animType = 'left';
+                    fCount = 31;
+                    animSpeed = 31;
+                    flip = false;
+                    break;
+                case 'SW':
+                    animType = 'left';
+                    fCount = 31;
+                    animSpeed = 31;
+                    flip = false;
+                    break;
+                default:
+                    animType = 'side';
+                    fCount = 32;
+                    animSpeed = 31;
+                    flip = false;
             }
             
             frame = moving ? Math.floor(t / animSpeed) % fCount : 0;
-
             
             let img = null;
-            let flip = false;
             let isAction = !!entity.actionType && (entity.actionTimer > 0 || entity.state === 'GATHERING' || entity.isAttacking || !moving);
             if (isAction) moving = false;
 
@@ -1682,22 +1762,23 @@ export class Renderer {
                     img = this.images['agent_action_attack'];
                 }
                 if (entity.target) {
-                    flip = (entity.target.x < entity.x);
-                } else if (dir === 2) {
+                    let targetScreenDx = (entity.target.x - entity.x) - (entity.target.y - entity.y);
+                    flip = targetScreenDx < 0;
+                } else if (dir === 'W' || dir === 'SW' || dir === 'NW') {
                     flip = true;
                 }
             }
 
             if (!img) {
-                if (dir === 2 && this.images[`agent_walk_side_${frame + 1}`]) { 
-                    img = this.images[`agent_walk_side_${frame + 1}`];
-                    flip = true;
-                } else if (dir === 3 && this.images[`agent_walk_side_${frame + 1}`]) {
-                    img = this.images[`agent_walk_side_${frame + 1}`];
-                } else if (dir === 0 && this.images[`agent_walk_front_${frame + 1}`]) {
+                if (animType === 'front') {
                     img = this.images[`agent_walk_front_${frame + 1}`];
-                } else if (dir === 1 && this.images[`agent_walk_back_${frame + 1}`]) {
+                } else if (animType === 'back') {
                     img = this.images[`agent_walk_back_${frame + 1}`];
+                } else if (animType === 'left') {
+                    img = this.images[`agent_walk_left_${frame + 1}`] || this.images[`agent_walk_side_${frame + 1}`];
+                    if (!this.images[`agent_walk_left_${frame + 1}`]) flip = true;
+                } else {
+                    img = this.images[`agent_walk_side_${frame + 1}`];
                 }
             }
 
