@@ -600,6 +600,77 @@ function updateUI() {
     craftWallW.innerText = ww;
     barCraftWall.style.width = `${ww * 100}%`;
     barCraftWall.style.background = agent.emergencyMission === 'BUILD_WALLS' ? '#f43f5e' : '#64748b';
+
+    updateMinimap();
+}
+
+// ─── Minimapa de Biomas (Matriz 3x3 de Rectángulos) ──────────────────────
+const minimapPanel = document.getElementById('biome-minimap-panel');
+const minimapZoneName = document.getElementById('minimap-zone-name');
+const minimapCoords = document.getElementById('minimap-coords');
+const minimapMarker = document.getElementById('gruni-map-marker');
+const minimapToggleBtn = document.getElementById('minimap-toggle-btn');
+const minimapZones = document.querySelectorAll('.minimap-zone');
+
+if (minimapToggleBtn && minimapPanel) {
+    minimapToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        minimapPanel.classList.toggle('collapsed');
+        minimapToggleBtn.innerText = minimapPanel.classList.contains('collapsed') ? '➕' : '─';
+    });
+}
+
+minimapZones.forEach(zoneEl => {
+    zoneEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetZoneId = zoneEl.dataset.zone;
+        if (targetZoneId && targetZoneId !== world.currentZoneId) {
+            world.loadZone(targetZoneId);
+            agent.x = Math.floor(world.width / 2);
+            agent.y = Math.floor(world.height / 2);
+            agent.renderX = agent.x;
+            agent.renderY = agent.y;
+            agent.path = [];
+            agent.target = null;
+            if (enemies) enemies.length = 0;
+            if (wolf) { wolf.x = agent.x; wolf.y = agent.y; }
+            updateMinimap();
+        }
+    });
+});
+
+function updateMinimap() {
+    const currentZoneId = world.currentZoneId;
+    if (minimapZoneName && world.currentZone) {
+        minimapZoneName.innerText = world.currentZone.name;
+    }
+    
+    const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
+    const ay = agent.renderY !== undefined ? agent.renderY : agent.y;
+    
+    if (minimapCoords) {
+        minimapCoords.innerText = `(${Math.round(ax)}, ${Math.round(ay)})`;
+    }
+    
+    minimapZones.forEach(zoneEl => {
+        if (zoneEl.dataset.zone === currentZoneId) {
+            if (!zoneEl.classList.contains('is-current')) {
+                zoneEl.classList.add('is-current');
+            }
+            if (minimapMarker && minimapMarker.parentElement !== zoneEl) {
+                zoneEl.appendChild(minimapMarker);
+            }
+        } else {
+            zoneEl.classList.remove('is-current');
+        }
+    });
+    
+    if (minimapMarker && world.width > 0 && world.height > 0) {
+        const pctX = Math.max(12, Math.min(88, (ax / world.width) * 100));
+        const pctY = Math.max(14, Math.min(86, (ay / world.height) * 100));
+        minimapMarker.style.left = `${pctX}%`;
+        minimapMarker.style.top = `${pctY}%`;
+    }
 }
 
 function runTick() {
@@ -739,6 +810,7 @@ function gameLoop(timestamp) {
     let eclipseWarning = eclipseTimer > 7100 && eclipseTimer < 7160;
     try {
         renderer.draw(world, agent, enemies, wolf, eclipseWarning, timestamp, timeOfDay, particles);
+        updateMinimap();
     } catch (e) {
         if (!window.renderedError) {
             window.renderedError = true;

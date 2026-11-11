@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Dios</title>
     <link href="https://fonts.googleapis.com/css2?family=Macondo&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261111minimap">
 </head>
 <body>
     <div id="rotate-message">
@@ -89,6 +89,63 @@
             </div>
         </aside>
 
+        <!-- Minimapa de Biomas (Matriz 3x3 de Rectángulos) -->
+        <div id="biome-minimap-panel" class="glass-panel minimap-panel">
+            <div class="minimap-header">
+                <div class="minimap-header-title">
+                    <span class="minimap-icon">🗺️</span>
+                    <span class="minimap-title">Mundo de Gruni</span>
+                </div>
+                <button id="minimap-toggle-btn" class="minimap-toggle-btn" title="Minimizar / Expandir minimapa">─</button>
+            </div>
+            <div id="minimap-current-info" class="minimap-current-info">
+                📍 Zona: <strong id="minimap-zone-name">Pradera</strong> <span id="minimap-coords">(0, 0)</span>
+            </div>
+            <div id="minimap-body" class="minimap-body">
+                <div class="minimap-grid">
+                    <!-- Fila Norte (y = -1) -->
+                    <div class="minimap-zone" data-zone="zonas_hielo" style="--zone-color: #a5f2f3; --text-color: #0f172a;" title="Zonas de Hielo (Noroeste)">
+                        <span class="zone-label">Hielo</span>
+                    </div>
+                    <div class="minimap-zone" data-zone="montanas_nevadas" style="--zone-color: #e2e8f0; --text-color: #0f172a;" title="Montañas Nevadas (Norte)">
+                        <span class="zone-label">Nieve</span>
+                    </div>
+                    <div class="minimap-zone" data-zone="bosque_magico" style="--zone-color: #a855f7; --text-color: #ffffff;" title="Bosque Mágico (Noreste)">
+                        <span class="zone-label">Mágico</span>
+                    </div>
+                    <!-- Fila Centro (y = 0) -->
+                    <div class="minimap-zone" data-zone="aldea_campo" style="--zone-color: #bef264; --text-color: #0f172a;" title="Aldea y Campo (Oeste)">
+                        <span class="zone-label">Aldea</span>
+                    </div>
+                    <div class="minimap-zone is-current" data-zone="pradera" style="--zone-color: #22c55e; --text-color: #ffffff;" title="Pradera (Centro - Spawn de Gruni)">
+                        <span class="zone-label">Pradera</span>
+                        <!-- Marcador de Gruni -->
+                        <div id="gruni-map-marker" class="gruni-marker" title="¡Aquí está Gruni!">
+                            <div class="gruni-marker-pulse"></div>
+                            <div class="gruni-marker-dot"></div>
+                            <span class="gruni-marker-icon">🧔</span>
+                        </div>
+                    </div>
+                    <div class="minimap-zone" data-zone="bosque_rio" style="--zone-color: #0d9488; --text-color: #ffffff;" title="Bosque y Río (Este)">
+                        <span class="zone-label">B. Río</span>
+                    </div>
+                    <!-- Fila Sur (y = 1) -->
+                    <div class="minimap-zone" data-zone="playa" style="--zone-color: #facc15; --text-color: #0f172a;" title="Playa (Suroeste)">
+                        <span class="zone-label">Playa</span>
+                    </div>
+                    <div class="minimap-zone" data-zone="desierto" style="--zone-color: #ea580c; --text-color: #ffffff;" title="Desierto (Sur)">
+                        <span class="zone-label">Desierto</span>
+                    </div>
+                    <div class="minimap-zone" data-zone="cementerio_animales" style="--zone-color: #78350f; --text-color: #ffffff;" title="Cementerio de Animales (Sureste)">
+                        <span class="zone-label">Cementerio</span>
+                    </div>
+                </div>
+                <div class="minimap-legend">
+                    <span>💡 Haz clic en un bioma para teletransportar a Gruni</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Centro: El Mundo (Canvas) -->
         <main class="canvas-container">
             <canvas id="gameCanvas"></canvas>
@@ -110,6 +167,6 @@
     </div>
 
     <!-- Cargar todos los scripts modulares -->
-    <script type="module" src="js/main.js?v=20261110hd"></script>
+    <script type="module" src="js/main.js?v=20261111minimap"></script>
 </body>
 </html>

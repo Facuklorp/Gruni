@@ -347,3 +347,227 @@ button:active {
     0% { opacity: 0; transform: translateY(10px) translateX(-50%) scale(0.9); }
     100% { opacity: 1; transform: translateY(0) translateX(-50%) scale(1); }
 }
+
+/* ========================================================
+   MINIMAPA DE BIOMAS (Matriz 3x3 de Rectángulos)
+   ======================================================== */
+.minimap-panel {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 100;
+    padding: 10px 14px;
+    background: rgba(22, 16, 12, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(224, 204, 160, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    user-select: none;
+    transition: all 0.25s ease;
+    min-width: 216px;
+}
+
+.minimap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(224, 204, 160, 0.18);
+}
+
+.minimap-header-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.minimap-icon {
+    font-size: 0.95rem;
+}
+
+.minimap-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #f5ebd6;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.minimap-toggle-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(224, 204, 160, 0.25);
+    color: #e2d5b5;
+    font-size: 0.75rem;
+    line-height: 1;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+.minimap-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: none;
+}
+.minimap-toggle-btn:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.minimap-current-info {
+    font-size: 0.72rem;
+    color: #e2d5b5;
+    margin-bottom: 8px;
+    opacity: 0.95;
+}
+
+.minimap-current-info strong {
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.minimap-current-info span {
+    color: #cbd5e1;
+    font-size: 0.68rem;
+    margin-left: 2px;
+}
+
+.minimap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 62px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 6px;
+}
+
+.minimap-zone {
+    position: relative;
+    background-color: var(--zone-color, #4ade80);
+    border-radius: 7px;
+    border: 1.5px solid rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.minimap-zone:hover {
+    transform: scale(1.05);
+    box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.4), 0 0 12px rgba(255, 255, 255, 0.5);
+    z-index: 5;
+}
+
+.minimap-zone.is-current {
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.85), inset 0 0 8px rgba(255, 255, 255, 0.5) !important;
+    z-index: 6;
+    animation: activeZonePulse 2.2s infinite alternate ease-in-out;
+}
+
+@keyframes activeZonePulse {
+    0% {
+        border-color: #ffffff;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), inset 0 0 6px rgba(255, 255, 255, 0.4);
+    }
+    100% {
+        border-color: #facc15;
+        box-shadow: 0 0 18px rgba(250, 204, 21, 0.95), inset 0 0 12px rgba(250, 204, 21, 0.6);
+    }
+}
+
+.zone-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-color, #0f172a);
+    text-align: center;
+    line-height: 1.1;
+    pointer-events: none;
+    letter-spacing: 0.2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    z-index: 1;
+}
+
+/* Marcador interactivo de Gruni dentro del rectángulo */
+.gruni-marker {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.12s linear, top 0.12s linear;
+}
+
+.gruni-marker-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: #3b82f6;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #60a5fa, 0 0 10px rgba(0, 0, 0, 0.8);
+    z-index: 2;
+}
+
+.gruni-marker-pulse {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: rgba(96, 165, 250, 0.45);
+    animation: markerPulse 1.4s infinite ease-out;
+    z-index: 1;
+}
+
+.gruni-marker-icon {
+    position: absolute;
+    top: -16px;
+    font-size: 0.85rem;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
+    animation: markerBounce 1.5s infinite alternate ease-in-out;
+    z-index: 3;
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes markerBounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-3px); }
+}
+
+.minimap-legend {
+    margin-top: 8px;
+    font-size: 0.64rem;
+    color: #cbd5e1;
+    opacity: 0.7;
+    text-align: center;
+}
+
+/* Modo colapsado/minimizado */
+.minimap-panel.collapsed .minimap-body {
+    display: none;
+}
+.minimap-panel.collapsed .minimap-current-info {
+    margin-bottom: 0;
+}
+.minimap-panel.collapsed {
+    min-width: 160px;
+}
