@@ -276,31 +276,35 @@ export class Agent {
         }
 
         if (this.home) {
-            if (!this._settlementCleared) {
-                this.clearSettlementClearing(this.home.x, this.home.y);
-                this._settlementCleared = true;
-            }
-            let hx = this.home.x, hy = this.home.y;
-            let cells = [
-                this.world.getCell(hx, hy),
-                this.world.getCell(hx+1, hy),
-                this.world.getCell(hx, hy+1),
-                this.world.getCell(hx+1, hy+1)
-            ];
-            let houseExists = false;
-            let totalCap = 0;
-            for (let c of cells) {
-                if (c && c.type === RESOURCES.HOUSE) {
-                    houseExists = true;
-                    totalCap += c.capacity;
-                }
-            }
+            const currentZoneId = this.world.currentZone ? this.world.currentZone.id : 'pradera';
+            const homeZoneId = this.home.zoneId || 'pradera';
 
-            if (!houseExists) {
-                this.home = null; // La casa fue destruida totalmente
-                this.homeStage = 0;
-                this.emotion = 'SAD';
-            } else {
+            if (currentZoneId === homeZoneId) {
+                if (!this._settlementCleared) {
+                    this.clearSettlementClearing(this.home.x, this.home.y);
+                    this._settlementCleared = true;
+                }
+                let hx = this.home.x, hy = this.home.y;
+                let cells = [
+                    this.world.getCell(hx, hy),
+                    this.world.getCell(hx+1, hy),
+                    this.world.getCell(hx, hy+1),
+                    this.world.getCell(hx+1, hy+1)
+                ];
+                let houseExists = false;
+                let totalCap = 0;
+                for (let c of cells) {
+                    if (c && c.type === RESOURCES.HOUSE) {
+                        houseExists = true;
+                        totalCap += c.capacity;
+                    }
+                }
+
+                if (!houseExists) {
+                    this.home = null; // La casa fue destruida totalmente
+                    this.homeStage = 0;
+                    this.emotion = 'SAD';
+                } else {
                 for (let e of enemies) {
                     if (e.hp > 0) {
                         let distToHouse = Math.abs(e.x - this.home.x) + Math.abs(e.y - this.home.y);
@@ -325,6 +329,27 @@ export class Agent {
                         this.emergencyMission = null;
                     }
                 }
+            }
+        } else {
+            // Auto-reconnect with existing 2x2 house in current zone if any
+            const currentZoneId = this.world.currentZone ? this.world.currentZone.id : 'pradera';
+            for (let y = 0; y < this.world.height - 1; y++) {
+                for (let x = 0; x < this.world.width - 1; x++) {
+                    let c00 = this.world.getCell(x, y);
+                    let c10 = this.world.getCell(x+1, y);
+                    let c01 = this.world.getCell(x, y+1);
+                    let c11 = this.world.getCell(x+1, y+1);
+                    if (c00 && c00.type === RESOURCES.HOUSE &&
+                        c10 && c10.type === RESOURCES.HOUSE &&
+                        c01 && c01.type === RESOURCES.HOUSE &&
+                        c11 && c11.type === RESOURCES.HOUSE) {
+                        this.home = { x, y, zoneId: currentZoneId };
+                        if (!this.homeStage) this.homeStage = 1;
+                        break;
+                    }
+                }
+                if (this.home) break;
+            }
                 
                 // Tareas de tiempo libre cuando la casa está en perfectas condiciones
                 if (!enemyThreat && totalCap >= 40) {
@@ -678,7 +703,7 @@ export class Agent {
                                 this.world.setCell(tx+1, ty, RESOURCES.HOUSE);
                                 this.world.setCell(tx, ty+1, RESOURCES.HOUSE);
                                 this.world.setCell(tx+1, ty+1, RESOURCES.HOUSE);
-                                this.home = {x: tx, y: ty};
+                                this.home = {x: tx, y: ty, zoneId: (this.world.currentZone ? this.world.currentZone.id : 'pradera')};
                                 this.homeStage = 1;
                                 this.inventory.wood -= 3;
                                 this.inventory.rock -= 3;

@@ -226,26 +226,47 @@ export class Renderer {
         // ── COLA DE RENDER (objetos + entidades) ────────────────────────────────
         const renderQueue = [];
 
+        // Detectar y agrupar cualquier casa 2x2 en el mapa para dibujarla SIEMPRE como BigHouse (arte digital HD)
+        const house2x2Handled = new Set();
+        for (let y = 0; y < world.height - 1; y++) {
+            for (let x = 0; x < world.width - 1; x++) {
+                const c00 = world.getCell(x, y);
+                const c10 = world.getCell(x + 1, y);
+                const c01 = world.getCell(x, y + 1);
+                const c11 = world.getCell(x + 1, y + 1);
+                if (c00 && c00.type === RESOURCES.HOUSE &&
+                    c10 && c10.type === RESOURCES.HOUSE &&
+                    c01 && c01.type === RESOURCES.HOUSE &&
+                    c11 && c11.type === RESOURCES.HOUSE) {
+                    
+                    house2x2Handled.add(`${x},${y}`);
+                    house2x2Handled.add(`${x + 1},${y}`);
+                    house2x2Handled.add(`${x},${y + 1}`);
+                    house2x2Handled.add(`${x + 1},${y + 1}`);
+
+                    let hStage = (agent && agent.home && agent.home.x === x && agent.home.y === y)
+                        ? (agent.homeStage || 1)
+                        : (agent && agent.homeStage ? agent.homeStage : 3);
+
+                    renderQueue.push({ type: 'bighouse', x, y, homeStage: hStage });
+                }
+            }
+        }
+
         for (let y = 0; y < world.height; y++) {
             for (let x = 0; x < world.width; x++) {
+                if (house2x2Handled.has(`${x},${y}`)) continue;
+
                 const cell = world.getCell(x, y);
                 if (!cell) continue;
-
-                let isAgentHome = false;
-                if (agent && agent.home) {
-                    if (x >= agent.home.x && x <= agent.home.x + 1 &&
-                        y >= agent.home.y && y <= agent.home.y + 1) {
-                        isAgentHome = true;
-                    }
-                }
 
                 if (cell.type !== RESOURCES.EMPTY &&
                     cell.type !== RESOURCES.WATER &&
                     cell.type !== RESOURCES.BRIDGE) {
                     if (!SHOW_TREES && TREE_TYPES.includes(cell.type)) {
                         // Árboles ocultos temporalmente (ver SHOW_TREES)
-                    } else if (cell.type === RESOURCES.HOUSE && isAgentHome) {
-                        // Se dibuja como bighouse
+                    } else if (cell.type === RESOURCES.HOUSE) {
+                        renderQueue.push({ type: 'bighouse', x, y, homeStage: agent && agent.homeStage ? agent.homeStage : 1 });
                     } else {
                         renderQueue.push({ type: 'resource', x, y, cell, isNeighbor: false });
                     }
@@ -275,8 +296,8 @@ export class Renderer {
             }
         }
 
-        if (agent.home) {
-            renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y, homeStage: agent.homeStage });
+        if (agent && agent.home && !house2x2Handled.has(`${agent.home.x},${agent.home.y}`)) {
+            renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y, homeStage: agent.homeStage || 1 });
         }
         if (enemies) {
             enemies.forEach(e => renderQueue.push({ type: 'enemy', entity: e, x: e.x, y: e.y }));
@@ -769,38 +790,7 @@ export class Renderer {
 
     // ─── Casa en construcción ───────────────────────────────────────────────────
     drawHouse(x, y, hp) {
-        const { sx, sy, cx } = this.getIsoBase(x, y);
-        const h = 12; // altura de la caja
-
-        // Cara superior
-        this.drawDiamond(sx, sy - h, '#b45309', '#92400e');
-
-        // Cara izquierda
-        this.ctx.fillStyle = '#92400e';
-        this.ctx.beginPath();
-        this.ctx.moveTo(sx,           sy - h + ISO_H / 2);
-        this.ctx.lineTo(sx + ISO_W/2, sy - h + ISO_H);
-        this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
-        this.ctx.lineTo(sx,           sy + ISO_H / 2);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Cara derecha
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.beginPath();
-        this.ctx.moveTo(sx + ISO_W/2, sy - h + ISO_H);
-        this.ctx.lineTo(sx + ISO_W,   sy - h + ISO_H / 2);
-        this.ctx.lineTo(sx + ISO_W,   sy + ISO_H / 2);
-        this.ctx.lineTo(sx + ISO_W/2, sy + ISO_H / 2);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        if (hp < 10) {
-            this.ctx.fillStyle = '#475569';
-            this.ctx.fillRect(cx - 10, sy - h - 5, 20, 3);
-            this.ctx.fillStyle = '#22c55e';
-            this.ctx.fillRect(cx - 10, sy - h - 5, 20 * hp / 10, 3);
-        }
+        this.drawBigHouse(x, y, 1);
     }
 
     // ─── Casa grande ────────────────────────────────────────────────────────────
