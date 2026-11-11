@@ -1739,9 +1739,9 @@ export class Renderer {
                     flip = false;
                     break;
                 case 'SE':
-                    animType = 'diag_se';
-                    fCount = 5;
-                    animSpeed = 120;
+                    animType = 'side';
+                    fCount = 32;
+                    animSpeed = 31;
                     flip = false;
                     break;
                 case 'E':
@@ -1751,9 +1751,9 @@ export class Renderer {
                     flip = false;
                     break;
                 case 'NE':
-                    animType = 'diag_ne';
-                    fCount = 5;
-                    animSpeed = 120;
+                    animType = 'back';
+                    fCount = 29;
+                    animSpeed = 34;
                     flip = false;
                     break;
                 case 'N':
@@ -1763,10 +1763,10 @@ export class Renderer {
                     flip = false;
                     break;
                 case 'NW':
-                    animType = 'diag_nw';
-                    fCount = 5;
-                    animSpeed = 120;
-                    flip = false;
+                    animType = 'back';
+                    fCount = 29;
+                    animSpeed = 34;
+                    flip = true;
                     break;
                 case 'W':
                     animType = 'left';
@@ -1775,9 +1775,9 @@ export class Renderer {
                     flip = false;
                     break;
                 case 'SW':
-                    animType = 'diag_sw';
-                    fCount = 5;
-                    animSpeed = 120;
+                    animType = 'left';
+                    fCount = 31;
+                    animSpeed = 31;
                     flip = false;
                     break;
                 default:
@@ -1819,14 +1819,6 @@ export class Renderer {
                 } else if (animType === 'left') {
                     img = this.images[`agent_walk_left_${frame + 1}`] || this.images[`agent_walk_side_${frame + 1}`];
                     if (!this.images[`agent_walk_left_${frame + 1}`]) flip = true;
-                } else if (animType === 'diag_se') {
-                    img = this.images[`agent_walk_diag_se_${frame + 1}`] || this.images[`agent_walk_side_${frame + 1}`];
-                } else if (animType === 'diag_sw') {
-                    img = this.images[`agent_walk_diag_sw_${frame + 1}`] || this.images[`agent_walk_left_${frame + 1}`];
-                } else if (animType === 'diag_ne') {
-                    img = this.images[`agent_walk_diag_ne_${frame + 1}`] || this.images[`agent_walk_back_${frame + 1}`];
-                } else if (animType === 'diag_nw') {
-                    img = this.images[`agent_walk_diag_nw_${frame + 1}`] || this.images[`agent_walk_back_${frame + 1}`];
                 } else {
                     img = this.images[`agent_walk_side_${frame + 1}`];
                 }
