@@ -120,10 +120,12 @@ export class World {
         agent.renderX = agent.x;
         agent.renderY = agent.y;
         
-        if (window.game && window.game.setEnemies) window.game.setEnemies([]);
-        if (window.game && window.game.getWolf) {
-            let w = window.game.getWolf();
-            if (w) { w.x = agent.x; w.y = agent.y; }
+        if (typeof window !== 'undefined' && window.game) {
+            if (window.game.setEnemies) window.game.setEnemies([]);
+            if (window.game.getWolf) {
+                let w = window.game.getWolf();
+                if (w) { w.x = agent.x; w.y = agent.y; }
+            }
         }
         
         agent.path = [];

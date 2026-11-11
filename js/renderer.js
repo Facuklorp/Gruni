@@ -296,7 +296,8 @@ export class Renderer {
             }
         }
 
-        if (agent && agent.home && !house2x2Handled.has(`${agent.home.x},${agent.home.y}`)) {
+        const currentZoneId = world.currentZone ? world.currentZone.id : 'pradera';
+        if (agent && agent.home && (!agent.home.zoneId || agent.home.zoneId === currentZoneId) && !house2x2Handled.has(`${agent.home.x},${agent.home.y}`)) {
             renderQueue.push({ type: 'bighouse', x: agent.home.x, y: agent.home.y, homeStage: agent.homeStage || 1 });
         }
         if (enemies) {

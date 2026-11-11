@@ -713,108 +713,113 @@ function updateMinimap() {
 function runTick() {
     if (gamePaused) return;
 
-    if (dialogueTimer > 0) {
-        dialogueTimer--;
-    }
-
-    let eclipseWarning = eclipseTimer > 7100 && eclipseTimer < 7160; // Aviso 50s antes del eclipse
-    
-    // Auto-select book branch (Twitch 24/7 Mode)
-    if (agent.bookFound && agent.branches.length < 3) {
-        let branchName = 'ASTRONOMY';
-        if (agent.pickedBookBranch === 1) branchName = 'BIOLOGY';
-        if (agent.pickedBookBranch === 2) branchName = 'BLACKSMITH';
-        selectBranch(branchName);
-        agent.bookFound = false; // Reset to avoid infinite loop
-        bookSpawned = false; // Allow a new book to spawn later
-        bookCooldownTimer = 180; // 90 seconds cooldown after reading
-    }
-
-    agent.update(enemies, eclipseWarning);
-
-    if (wolf) wolf.update(agent, enemies);
-
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        enemies[i].update(agent, wolf);
-        if (enemies[i].hp <= 0) {
-            enemies.splice(i, 1);
-        }
-    }
-
-    // Eclipse logic (Ciclo de 70 segundos: 50s luz, 20s eclipse)
-    if (firstEnemySpawned) {
-        eclipseTimer++;
-
-        if (eclipseTimer === 7100 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
-            showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
+    try {
+        if (dialogueTimer > 0) {
+            dialogueTimer--;
         }
 
-        if (eclipseTimer === 7160) {
-            isEclipse = true;
-            
-            // Spawn inmediato de 2 enemigos al comenzar el eclipse
-            let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
-            let edgeY = Math.floor(Math.random() * world.height);
-            enemies.push(new Enemy(world, edgeX, edgeY));
-            
-            let edgeX2 = Math.random() > 0.5 ? 0 : world.width - 1;
-            let edgeY2 = Math.floor(Math.random() * world.height);
-            enemies.push(new Enemy(world, edgeX2, edgeY2));
+        let eclipseWarning = eclipseTimer > 7100 && eclipseTimer < 7160; // Aviso 50s antes del eclipse
+        
+        // Auto-select book branch (Twitch 24/7 Mode)
+        if (agent.bookFound && agent.branches.length < 3) {
+            let branchName = 'ASTRONOMY';
+            if (agent.pickedBookBranch === 1) branchName = 'BIOLOGY';
+            if (agent.pickedBookBranch === 2) branchName = 'BLACKSMITH';
+            selectBranch(branchName);
+            agent.bookFound = false; // Reset to avoid infinite loop
+            bookSpawned = false; // Allow a new book to spawn later
+            bookCooldownTimer = 180; // 90 seconds cooldown after reading
+        }
 
-            if (!agent.branches.includes('ASTRONOMY')) {
-                showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
+        agent.update(enemies, eclipseWarning);
+
+        if (wolf) wolf.update(agent, enemies);
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            enemies[i].update(agent, wolf);
+            if (enemies[i].hp <= 0) {
+                enemies.splice(i, 1);
             }
         }
-        if (eclipseTimer >= 7200) {
-            isEclipse = false;
-            eclipseTimer = 0;
-        }
-    }
 
-    if (agent.branches.length > 0) {
-        spawnTimer++;
-        const MAX_ENEMIES = isEclipse ? 6 : 4; // Límite: 4 normal, 6 en eclipse
-        let spawnRate = isEclipse ? 40 : 120; // Normal: 1 cada 60s | Eclipse: 1 cada 20s
-        if (spawnTimer >= spawnRate && enemies.length < MAX_ENEMIES) {
-            spawnTimer = 0;
-            let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
-            let edgeY = Math.floor(Math.random() * world.height);
-            enemies.push(new Enemy(world, edgeX, edgeY));
-            firstEnemySpawned = true;
-        } else if (spawnTimer >= spawnRate) {
-            spawnTimer = 0; // Resetear igual aunque no spawneemos
+        // Eclipse logic (Ciclo de 70 segundos: 50s luz, 20s eclipse)
+        if (firstEnemySpawned) {
+            eclipseTimer++;
+
+            if (eclipseTimer === 7100 && agent.branches.includes('ASTRONOMY') && agent.hasTelescope) {
+                showDialogue("¡Un eclipse se acerca! Rápido, a prepararnos.", 15);
+            }
+
+            if (eclipseTimer === 7160) {
+                isEclipse = true;
+                
+                // Spawn inmediato de 2 enemigos al comenzar el eclipse
+                let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
+                let edgeY = Math.floor(Math.random() * world.height);
+                enemies.push(new Enemy(world, edgeX, edgeY));
+                
+                let edgeX2 = Math.random() > 0.5 ? 0 : world.width - 1;
+                let edgeY2 = Math.floor(Math.random() * world.height);
+                enemies.push(new Enemy(world, edgeX2, edgeY2));
+
+                if (!agent.branches.includes('ASTRONOMY')) {
+                    showDialogue("¡Oh no! Un eclipse... De haber estudiado astronomía lo hubiese sabido.", 15);
+                }
+            }
+            if (eclipseTimer >= 7200) {
+                isEclipse = false;
+                eclipseTimer = 0;
+            }
         }
-    }
-    
-    // Book spawning
-    if (agent.branches.length < 3) {
-        if (agent.homeStage === 3 && !bookSpawned) {
-            if (bookCooldownTimer > 0) bookCooldownTimer--;
-            if (bookCooldownTimer === 0) {
-                let emptyX = Math.floor(Math.random() * world.width);
-                let emptyY = Math.floor(Math.random() * world.height);
-                if (world.getCell(emptyX, emptyY).type === RESOURCES.EMPTY) {
-                    const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
-                    if (availableBranches.length > 0) {
-                        const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];
-                        world.setCell(emptyX, emptyY, RESOURCES.BOOK);
-                        let branchId = 0;
-                        if (randomBranch === 'BIOLOGY') branchId = 1;
-                        if (randomBranch === 'BLACKSMITH') branchId = 2;
-                        world.getCell(emptyX, emptyY).capacity = branchId;
-                        bookSpawned = true;
+
+        if (agent.branches.length > 0) {
+            spawnTimer++;
+            const MAX_ENEMIES = isEclipse ? 6 : 4; // Límite: 4 normal, 6 en eclipse
+            let spawnRate = isEclipse ? 40 : 120; // Normal: 1 cada 60s | Eclipse: 1 cada 20s
+            if (spawnTimer >= spawnRate && enemies.length < MAX_ENEMIES) {
+                spawnTimer = 0;
+                let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
+                let edgeY = Math.floor(Math.random() * world.height);
+                enemies.push(new Enemy(world, edgeX, edgeY));
+                firstEnemySpawned = true;
+            } else if (spawnTimer >= spawnRate) {
+                spawnTimer = 0; // Resetear igual aunque no spawneemos
+            }
+        }
+        
+        // Book spawning
+        if (agent.branches.length < 3) {
+            if (agent.homeStage === 3 && !bookSpawned) {
+                if (bookCooldownTimer > 0) bookCooldownTimer--;
+                if (bookCooldownTimer === 0) {
+                    let emptyX = Math.floor(Math.random() * world.width);
+                    let emptyY = Math.floor(Math.random() * world.height);
+                    let targetCell = world.getCell(emptyX, emptyY);
+                    if (targetCell && targetCell.type === RESOURCES.EMPTY) {
+                        const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
+                        if (availableBranches.length > 0) {
+                            const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];
+                            world.setCell(emptyX, emptyY, RESOURCES.BOOK);
+                            let branchId = 0;
+                            if (randomBranch === 'BIOLOGY') branchId = 1;
+                            if (randomBranch === 'BLACKSMITH') branchId = 2;
+                            world.getCell(emptyX, emptyY).capacity = branchId;
+                            bookSpawned = true;
+                        }
+                    } else {
+                        bookCooldownTimer = 1; // Try again next tick
                     }
-                } else {
-                    bookCooldownTimer = 1; // Try again next tick
                 }
             }
         }
-    }
 
-    world.regenLoop(agent);
-    agent.updateEmotion(enemies);
-    
-    updateUI();
+        world.regenLoop(agent);
+        agent.updateEmotion(enemies);
+        
+        updateUI();
+    } catch (err) {
+        console.error('Error in runTick:', err);
+    }
 }
 
 function gameLoop(timestamp) {

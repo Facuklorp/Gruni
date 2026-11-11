@@ -76,6 +76,9 @@ export class Agent {
         this.dx = 1;
         this.animationTimer = 0;
         this.lastGathered = null;
+        this.actionTimer = 0;
+        this.actionType = null;
+        this.isActioning = false;
     }
 
     update(enemies, eclipseWarning = false) {
@@ -138,11 +141,9 @@ export class Agent {
             this.actionType = 'ATTACK';
         } else if (this.actionTimer > 0) {
             this.isActioning = true;
+            // Preservar actionType activo ('BUILD', 'MINE', 'CHOP') mientras actionTimer > 0
         } else if (this.state === STATES.GATHERING) {
             this.actionType = (this.lastGathered === 'ROCK') ? 'MINE' : 'CHOP';
-        } else if (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE || 
-                   this.state === STATES.BUILDING_TELESCOPE || this.state === STATES.BUILDING_WALL) {
-            this.actionType = 'BUILD';
         } else {
             this.actionType = null;
         }
@@ -329,8 +330,22 @@ export class Agent {
                         this.emergencyMission = null;
                     }
                 }
+
+                // Tareas de tiempo libre cuando la casa está en perfectas condiciones
+                if (!enemyThreat && totalCap >= 40) {
+                    if (!this.emergencyMission || this.emergencyMission === 'RESTORE_HOUSE') {
+                        if (this.homeStage < 3) {
+                            this.emergencyMission = 'BUILD_HOUSE';
+                        } else if (this.branches.includes('ASTRONOMY') && !this.hasTelescope) {
+                            this.emergencyMission = 'BUILD_TELESCOPE';
+                        } else {
+                            this.emergencyMission = 'BUILD_WALLS';
+                        }
+                    }
+                }
             }
-        } else {
+        }
+    } else {
             // Auto-reconnect with existing 2x2 house in current zone if any
             const currentZoneId = this.world.currentZone ? this.world.currentZone.id : 'pradera';
             for (let y = 0; y < this.world.height - 1; y++) {
@@ -349,20 +364,6 @@ export class Agent {
                     }
                 }
                 if (this.home) break;
-            }
-                
-                // Tareas de tiempo libre cuando la casa está en perfectas condiciones
-                if (!enemyThreat && totalCap >= 40) {
-                    if (!this.emergencyMission || this.emergencyMission === 'RESTORE_HOUSE') {
-                        if (this.homeStage < 3) {
-                            this.emergencyMission = 'BUILD_HOUSE';
-                        } else if (this.branches.includes('ASTRONOMY') && !this.hasTelescope) {
-                            this.emergencyMission = 'BUILD_TELESCOPE';
-                        } else {
-                            this.emergencyMission = 'BUILD_WALLS';
-                        }
-                    }
-                }
             }
         }
 
@@ -448,12 +449,45 @@ export class Agent {
                     return;
                 }
             } else if (this.emergencyMission === 'BUILD_HOUSE') {
+                const currentZoneId = this.world.currentZone ? this.world.currentZone.id : 'pradera';
+                const homeZoneId = this.home ? (this.home.zoneId || 'pradera') : null;
+                // Si la casa registrada está en otra zona, no intentar construirla en coordenadas locales de esta zona
+                if (this.home && homeZoneId && homeZoneId !== currentZoneId) {
+                    this.emergencyMission = null;
+                    this.state = STATES.WANDERING;
+                    this.target = null;
+                    return;
+                }
+
                 if (this.inventory.wood < 3) {
                     let w = findNearestAccessible(this.x, this.y, [RESOURCES.WOOD, RESOURCES.BUSH], ix, iy);
-                    if (w) { this.state = STATES.SEEK_WOOD; this.target = w; return; }
+                    if (w) { 
+                        this.state = STATES.SEEK_WOOD; 
+                        this.target = w; 
+                        return; 
+                    } else {
+                        // Si no hay madera accesible, intentar recolectar roca si falta o deambular
+                        if (this.inventory.rock < 3) {
+                            let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
+                            if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                        }
+                        this.emergencyMission = null;
+                        this.state = STATES.WANDERING;
+                        this.target = null;
+                        return;
+                    }
                 } else if (this.inventory.rock < 3) {
                     let r = findNearestAccessible(this.x, this.y, RESOURCES.ROCK, ix, iy);
-                    if (r) { this.state = STATES.SEEK_ROCK; this.target = r; return; }
+                    if (r) { 
+                        this.state = STATES.SEEK_ROCK; 
+                        this.target = r; 
+                        return; 
+                    } else {
+                        this.emergencyMission = null;
+                        this.state = STATES.WANDERING;
+                        this.target = null;
+                        return;
+                    }
                 } else {
                     if (this.homeStage === 0) {
                         let empty = this.world.findNearest2x2Empty(this.x, this.y);
@@ -475,7 +509,9 @@ export class Agent {
                     }
                 }
             } else if (this.emergencyMission === 'RESTORE_HOUSE') {
-                if (!this.home) {
+                const currentZoneId = this.world.currentZone ? this.world.currentZone.id : 'pradera';
+                const homeZoneId = this.home ? (this.home.zoneId || 'pradera') : null;
+                if (!this.home || (homeZoneId && homeZoneId !== currentZoneId)) {
                     this.emergencyMission = null;
                     return;
                 }
@@ -615,6 +651,19 @@ export class Agent {
 
         if (this.state !== STATES.WANDERING && this.target) {
             let dist = Math.abs(this.x - this.target.x) + Math.abs(this.y - this.target.y);
+            
+            // Si el objetivo es una casa (2x2), la distancia es la mínima a cualquiera de sus 4 casilleros
+            const isTargetHouse = (this.state === STATES.BUILDING_HOUSE || this.state === STATES.RESTORING_HOUSE ||
+                (this.home && this.target.x === this.home.x && this.target.y === this.home.y));
+            if (isTargetHouse) {
+                let hx = this.target.x, hy = this.target.y;
+                dist = Math.min(
+                    Math.abs(this.x - hx) + Math.abs(this.y - hy),
+                    Math.abs(this.x - (hx + 1)) + Math.abs(this.y - hy),
+                    Math.abs(this.x - hx) + Math.abs(this.y - (hy + 1)),
+                    Math.abs(this.x - (hx + 1)) + Math.abs(this.y - (hy + 1))
+                );
+            }
             
             if (dist <= 1) {
                 this.ignoreTarget = null;
@@ -761,18 +810,26 @@ export class Agent {
                 }
                 this.target = null;
             } else {
-                this.moveTowards(this.target.x, this.target.y);
+                this.moveTowards(this.target.x, this.target.y, isTargetHouse);
             }
         } else {
             this.wander();
         }
     }
 
-    findPathStep(tx, ty) {
+    findPathStep(tx, ty, is2x2 = false) {
         if (this.x === tx && this.y === ty) return null;
 
         const targetWalkable = this.tryStep(tx, ty);
         const isGoal = (gx, gy) => {
+            if (is2x2) {
+                return (
+                    (Math.abs(gx - tx) + Math.abs(gy - ty) <= 1) ||
+                    (Math.abs(gx - (tx + 1)) + Math.abs(gy - ty) <= 1) ||
+                    (Math.abs(gx - tx) + Math.abs(gy - (ty + 1)) <= 1) ||
+                    (Math.abs(gx - (tx + 1)) + Math.abs(gy - (ty + 1)) <= 1)
+                );
+            }
             if (targetWalkable) return gx === tx && gy === ty;
             return Math.abs(gx - tx) + Math.abs(gy - ty) <= 1;
         };
@@ -850,9 +907,9 @@ export class Agent {
         return null;
     }
 
-    moveTowards(tx, ty) {
+    moveTowards(tx, ty, is2x2 = false) {
         // Intentar paso inteligente con pathfinding para esquivar murallas, ramas y obstáculos
-        const step = this.findPathStep(tx, ty);
+        const step = this.findPathStep(tx, ty, is2x2);
         if (step) {
             this.x = step.x;
             this.y = step.y;
@@ -920,6 +977,11 @@ export class Agent {
             }
             this.wanderTimer = 6;
             this.stuckTimer = 0;
+            this.actionTimer = 0;
+            this.actionType = null;
+            this.state = STATES.WANDERING;
+            this.target = null;
+            this.emergencyMission = null;
         }
         this.wander();
     }
