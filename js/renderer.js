@@ -1516,11 +1516,11 @@ export class Renderer {
                 return a.x - b.x;
             });
 
-            // Tamaño calibrado para ajuste perfecto de rombos (34px con solapamiento milimétrico sin huecos)
-            const drawW = 34.0;
+            // Tamaño calibrado para ajuste perfecto de rombos (con solapamiento milimétrico sin huecos ni bordes)
+            const drawW = 33.2;
             const drawH = drawW * (160.0 / 256.0);
             const anchorX = drawW / 2.0;
-            const anchorY = drawH * (94.0 / 160.0);
+            const anchorY = drawH * (92.0 / 160.0);
 
             for (const item of cellsToDraw) {
                 const { cx, cy } = this.getIsoBase(item.x, item.y);
