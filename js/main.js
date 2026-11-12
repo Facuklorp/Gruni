@@ -579,6 +579,8 @@ function loadGame() {
             world.loadZone(data.agent.currentZoneId);
         }
 
+        agent.ensureSafePosition();
+
         firstEnemySpawned = !!data.firstEnemySpawned;
         eclipseTimer = data.eclipseTimer || 0;
         isEclipse = !!data.isEclipse;
@@ -753,8 +755,14 @@ minimapZones.forEach(zoneEl => {
         const targetZoneId = zoneEl.dataset.zone;
         if (targetZoneId && targetZoneId !== world.currentZoneId) {
             world.loadZone(targetZoneId);
-            agent.x = Math.floor(world.width / 2);
-            agent.y = Math.floor(world.height / 2);
+            if (targetZoneId === 'playa') {
+                agent.x = 19;
+                agent.y = 12;
+            } else {
+                agent.x = Math.floor(world.width / 2);
+                agent.y = Math.floor(world.height / 2);
+            }
+            agent.ensureSafePosition();
             agent.renderX = agent.x;
             agent.renderY = agent.y;
             agent.path = [];
@@ -868,10 +876,18 @@ function runTick() {
             let spawnRate = isEclipse ? 40 : 120; // Normal: 1 cada 60s | Eclipse: 1 cada 20s
             if (spawnTimer >= spawnRate && enemies.length < MAX_ENEMIES) {
                 spawnTimer = 0;
-                let edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
-                let edgeY = Math.floor(Math.random() * world.height);
-                enemies.push(new Enemy(world, edgeX, edgeY));
-                firstEnemySpawned = true;
+                let attempts = 0;
+                let edgeX, edgeY;
+                do {
+                    edgeX = Math.random() > 0.5 ? 0 : world.width - 1;
+                    edgeY = Math.floor(Math.random() * world.height);
+                    attempts++;
+                } while (attempts < 20 && !world.isWalkableLand(edgeX, edgeY));
+                
+                if (world.isWalkableLand(edgeX, edgeY)) {
+                    enemies.push(new Enemy(world, edgeX, edgeY));
+                    firstEnemySpawned = true;
+                }
             } else if (spawnTimer >= spawnRate) {
                 spawnTimer = 0; // Resetear igual aunque no spawneemos
             }
@@ -885,7 +901,7 @@ function runTick() {
                     let emptyX = Math.floor(Math.random() * world.width);
                     let emptyY = Math.floor(Math.random() * world.height);
                     let targetCell = world.getCell(emptyX, emptyY);
-                    if (targetCell && targetCell.type === RESOURCES.EMPTY) {
+                    if (targetCell && targetCell.type === RESOURCES.EMPTY && world.isWalkableLand(emptyX, emptyY)) {
                         const availableBranches = ['ASTRONOMY', 'BIOLOGY', 'BLACKSMITH'].filter(b => !agent.branches.includes(b));
                         if (availableBranches.length > 0) {
                             const randomBranch = availableBranches[Math.floor(Math.random() * availableBranches.length)];

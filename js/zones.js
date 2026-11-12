@@ -40,7 +40,7 @@ export const ZONES = {
     },
     playa: {
         id: 'playa', name: 'Playa', width: 39, height: 39,
-        background: 'bg_playa', defaultBiome: 'WATER_BIOME',
+        background: 'bg_playa', defaultBiome: 'SAND',
         mapData: null, connections: { north: 'aldea_campo', east: 'desierto' }
     },
     cementerio_animales: {

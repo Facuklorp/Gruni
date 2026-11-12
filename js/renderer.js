@@ -176,7 +176,7 @@ export class Renderer {
         // ── HUELLAS (FOOTPRINTS) EN EL DESIERTO / NIEVE ────────────────────────
         if (agent) {
             const currentCell = world.getCell(Math.floor(agent.x), Math.floor(agent.y));
-            if (currentCell && (currentCell.biome === BIOMES.DESERT || currentCell.biome === BIOMES.SNOW || currentCell.biome === BIOMES.WATER_BIOME || currentCell.biome === BIOMES.SAND)) {
+            if (currentCell && currentCell.type !== RESOURCES.WATER && currentCell.groundType !== 'WATER' && (currentCell.biome === BIOMES.DESERT || currentCell.biome === BIOMES.SNOW || currentCell.biome === BIOMES.SAND)) {
                 const dist = Math.hypot(agent.x - this.lastFootprintX, agent.y - this.lastFootprintY);
                 if (dist > 0.15) { // Reducido: Dejar huellas más seguido
                     const ax = agent.renderX !== undefined ? agent.renderX : agent.x;
@@ -1073,6 +1073,8 @@ export class Renderer {
             tileLayer = 0;
             if (zoneId === 'bosque_rio' && (h % 7 === 0)) {
                 tileKey = 'tile_water_lily';
+            } else if (zoneId === 'playa') {
+                tileKey = null; // En la playa el mar se muestra con la ilustración continua del fondo
             } else {
                 tileKey = (h & 1) ? 'tile_water_1' : 'tile_water_2';
             }
@@ -1251,10 +1253,12 @@ export class Renderer {
                     }
                     cell.groundColor = [r, g, b];
 
-                    const isWaterPixel = (cell.type === RESOURCES.WATER) || (hasRealWater && (
-                        (b > r + 15 && b > g - 20 && b > 75 && r < 145) ||
-                        (b > 125 && g > 105 && r < 115)
-                    ));
+                    const isWaterPixel = (cell.type === RESOURCES.WATER) || (cell.groundType === 'WATER') ||
+                        (zoneId === 'playa' && world.isPlayaSea && world.isPlayaSea(x, y)) ||
+                        (hasRealWater && (
+                            (b > r + 15 && b > g - 20 && b > 75 && r < 145) ||
+                            (b > 125 && g > 105 && r < 115)
+                        ));
                     const isGreenGrass = !isWaterPixel && (g > r + 6 && g > b + 16 && g > 45);
                     const isDirtRoad = !isWaterPixel && !isGreenGrass && (r > g + 8 && r > b + 18 && r > 75);
 

@@ -86,6 +86,25 @@ export class World {
         return true;
     }
 
+    isPlayaSea(x, y) {
+        return (y >= 26) ||
+               (y === 25 && x <= 36) ||
+               (y === 24 && x <= 34) ||
+               (y === 23 && (x <= 12 || (x >= 20 && x <= 32))) ||
+               (y === 22 && x <= 9) ||
+               (y === 21 && x <= 6) ||
+               (y === 20 && x <= 5) ||
+               (y === 19 && x <= 0);
+    }
+
+    isWalkableLand(x, y) {
+        let cell = this.getCell(x, y);
+        if (!cell) return false;
+        if (cell.type === RESOURCES.WATER || cell.groundType === 'WATER') return false;
+        if (this.currentZoneId === 'playa' && this.isPlayaSea(x, y)) return false;
+        return true;
+    }
+
     generateCanonicalCell(zoneId, x, y, rng) {
         // ── 1. Pradera (Centro - Spawn de Gruni) ─────────────────────────────
         if (zoneId === 'pradera') {
@@ -176,8 +195,8 @@ export class World {
 
         // ── 8. Playa (Suroeste) ──────────────────────────────────────────────
         if (zoneId === 'playa') {
-            // Océano en franja exterior
-            if (x < 5 || y > 33) return RESOURCES.WATER;
+            // Océano/mar en la costa suroeste (fiel a Playa.jpg)
+            if (this.isPlayaSea(x, y)) return RESOURCES.WATER;
             let rVal = rng();
             if (rVal < 0.05) return RESOURCES.FOOD; // Palmeras playeras
             if (rVal < 0.08) return RESOURCES.WOOD;
@@ -230,8 +249,13 @@ export class World {
                 else if (type === RESOURCES.ROCK)  capacity = Math.floor(rng() * 3) + 1;
                 else if (type === RESOURCES.WATER) capacity = 5;
 
+                let groundType = (type === RESOURCES.WATER || (zoneId === 'playa' && this.isPlayaSea(x, y))) ? 'WATER' : 'LAND';
+                if (type === RESOURCES.WATER || groundType === 'WATER') {
+                    biome = BIOMES.WATER_BIOME;
+                }
+
                 const terrainVariant = Math.floor(rng() * 4);
-                row.push({ type, capacity, terrainVariant, biome });
+                row.push({ type, capacity, terrainVariant, biome, groundType });
             }
             newGrid.push(row);
         }
@@ -260,10 +284,27 @@ export class World {
                     type,
                     capacity,
                     terrainVariant,
-                    biome
+                    biome,
+                    groundType: (type === RESOURCES.WATER) ? 'WATER' : 'LAND'
                 }))
             );
         }
+
+        // Sanitizar y garantizar que el océano de la Playa sea siempre agua infranqueable
+        if (this.grids['playa']) {
+            for (let y = 0; y < this.height; y++) {
+                for (let x = 0; x < this.width; x++) {
+                    if (this.isPlayaSea(x, y)) {
+                        let c = this.grids['playa'][y][x];
+                        c.type = RESOURCES.WATER;
+                        c.groundType = 'WATER';
+                        c.capacity = 5;
+                        c.biome = BIOMES.WATER_BIOME;
+                    }
+                }
+            }
+        }
+
         if (data.currentZoneId && ZONES[data.currentZoneId]) {
             this.loadZone(data.currentZoneId);
         }
@@ -282,6 +323,10 @@ export class World {
         if (direction === 'west') agent.x = this.width - 1;
         if (direction === 'south') agent.y = 0;
         if (direction === 'north') agent.y = this.height - 1;
+        
+        if (agent.ensureSafePosition) {
+            agent.ensureSafePosition();
+        }
         
         agent.renderX = agent.x;
         agent.renderY = agent.y;
@@ -308,6 +353,10 @@ export class World {
 
     setCell(x, y, type, capacity = null) {
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            // El mar abierto de la playa es permanente e infranqueable
+            if (this.currentZoneId === 'playa' && this.isPlayaSea(x, y) && type !== RESOURCES.WATER) {
+                return;
+            }
             let cap = capacity;
             if (cap === null) {
                 if (type === RESOURCES.HOUSE) {
@@ -322,12 +371,28 @@ export class World {
                     cap = (type === RESOURCES.EMPTY || type === RESOURCES.BRIDGE || type === RESOURCES.TELESCOPE || type === RESOURCES.BOOK || type === RESOURCES.WOOD_EMPTY || type === RESOURCES.FOOD_EMPTY || type === RESOURCES.BUSH_EMPTY || type === RESOURCES.ROCK_EMPTY) ? 0 : Math.floor(Math.random() * 3) + 1;
                 }
             }
-            let tv = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x].terrainVariant : Math.floor(Math.random() * 4);
-            // Preservar el bioma existente; si no existe, recalcularlo por distancia al centro
-            let existingBiome = (this.grid[y] && this.grid[y][x] && this.grid[y][x].biome !== undefined)
-                ? this.grid[y][x].biome
-                : BIOMES.GRASS;
-            this.grid[y][x] = { type: type, capacity: cap, terrainVariant: tv, biome: existingBiome };
+            let existingCell = (this.grid[y] && this.grid[y][x]) ? this.grid[y][x] : null;
+            let tv = existingCell ? existingCell.terrainVariant : Math.floor(Math.random() * 4);
+            let existingBiome = (existingCell && existingCell.biome !== undefined)
+                ? existingCell.biome
+                : (type === RESOURCES.WATER ? BIOMES.WATER_BIOME : BIOMES.GRASS);
+            let existingGroundType = (type === RESOURCES.WATER || (this.currentZoneId === 'playa' && this.isPlayaSea(x, y)))
+                ? 'WATER'
+                : (existingCell && existingCell.groundType ? existingCell.groundType : 'LAND');
+            let existingTileKey = existingCell ? existingCell.tileKey : null;
+            let existingTileLayer = existingCell && existingCell.tileLayer !== undefined ? existingCell.tileLayer : 2;
+            let existingTileFlip = existingCell ? !!existingCell.tileFlip : false;
+
+            this.grid[y][x] = {
+                type: type,
+                capacity: cap,
+                terrainVariant: tv,
+                biome: existingBiome,
+                groundType: existingGroundType,
+                tileKey: existingTileKey,
+                tileLayer: existingTileLayer,
+                tileFlip: existingTileFlip
+            };
         }
     }
 
@@ -374,11 +439,15 @@ export class World {
         let nearest = null;
         let minDistance = Infinity;
 
-        // Helper: verifica que ninguna de las 4 celdas 2x2 sea agua
+        // Helper: verifica que ninguna de las 4 celdas 2x2 sea agua o mar
         const noWater = (x, y) => {
-            for (let dy = 0; dy < 2; dy++)
-                for (let dx = 0; dx < 2; dx++)
-                    if (this.grid[y+dy][x+dx].type === RESOURCES.WATER) return false;
+            for (let dy = 0; dy < 2; dy++) {
+                for (let dx = 0; dx < 2; dx++) {
+                    let c = this.grid[y+dy][x+dx];
+                    if (c.type === RESOURCES.WATER || c.groundType === 'WATER') return false;
+                    if (this.currentZoneId === 'playa' && this.isPlayaSea(x+dx, y+dy)) return false;
+                }
+            }
             return true;
         };
 
@@ -444,7 +513,7 @@ export class World {
                 }
             }
 
-            if (this.grid[y][x].type === RESOURCES.EMPTY) {
+            if (this.grid[y][x].type === RESOURCES.EMPTY && this.isWalkableLand(x, y)) {
                 const r = Math.random();
                 let type = RESOURCES.FOOD;
                 if (r < 0.30) type = RESOURCES.WOOD;
@@ -459,6 +528,10 @@ export class World {
                 // Desaparecen con el tiempo
                 if (Math.random() < 0.7) {
                     this.grid[y][x].type = RESOURCES.EMPTY;
+                    if (this.currentZoneId === 'playa' && this.isPlayaSea(x, y)) {
+                        this.grid[y][x].type = RESOURCES.WATER;
+                        this.grid[y][x].groundType = 'WATER';
+                    }
                 }
             }
         }

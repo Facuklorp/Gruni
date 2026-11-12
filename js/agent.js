@@ -24,7 +24,11 @@ export class Agent {
         this.x = Math.floor(this.world.width / 2);
         this.y = Math.floor(this.world.height / 2);
         // Find safe spawn
-        while (this.world.grid[this.y] && this.world.grid[this.y][this.x] && (this.world.grid[this.y][this.x].type === RESOURCES.WATER || this.world.grid[this.y][this.x].type === RESOURCES.ROCK)) {
+        while (this.world.grid[this.y] && this.world.grid[this.y][this.x] && 
+              (this.world.grid[this.y][this.x].type === RESOURCES.WATER || 
+               this.world.grid[this.y][this.x].groundType === 'WATER' ||
+               (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(this.x, this.y)) ||
+               this.world.grid[this.y][this.x].type === RESOURCES.ROCK)) {
             this.x++;
             if (this.x >= this.world.width) { this.x = 0; this.y++; }
             if (this.y >= this.world.height) { this.x = 0; this.y = 0; break; }
@@ -81,7 +85,43 @@ export class Agent {
         this.isActioning = false;
     }
 
+    ensureSafePosition() {
+        if (!this.world || !this.world.grid) return;
+        let cell = this.world.getCell(this.x, this.y);
+        let inWater = !cell || cell.type === RESOURCES.WATER || cell.groundType === 'WATER' ||
+            (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(this.x, this.y));
+        if (inWater) {
+            // Si Gruni quedó en el agua/mar, recolocarlo de inmediato en tierra firme segura
+            let safeX = (this.world.currentZoneId === 'playa') ? 19 : Math.floor(this.world.width / 2);
+            let safeY = (this.world.currentZoneId === 'playa') ? 12 : Math.floor(this.world.height / 2);
+            let bestDist = Infinity;
+            for (let cy = 0; cy < this.world.height; cy++) {
+                for (let cx = 0; cx < this.world.width; cx++) {
+                    let c = this.world.getCell(cx, cy);
+                    if (c && c.type !== RESOURCES.WATER && c.groundType !== 'WATER') {
+                        if (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(cx, cy)) continue;
+                        let d = Math.abs(cx - this.x) + Math.abs(cy - this.y);
+                        if (d < bestDist) {
+                            bestDist = d;
+                            safeX = cx;
+                            safeY = cy;
+                        }
+                    }
+                }
+            }
+            this.x = safeX;
+            this.y = safeY;
+            this.renderX = safeX;
+            this.renderY = safeY;
+            this.target = null;
+            this.path = [];
+            this.stuckTimer = 0;
+            this.state = STATES.WANDERING;
+        }
+    }
+
     update(enemies, eclipseWarning = false) {
+        this.ensureSafePosition();
         this.animationTimer++;
         this.isAttacking = false;
         this.isActioning = false;
@@ -250,7 +290,12 @@ export class Agent {
                 for (let tx = 0; tx < this.world.width; tx++) {
                     if (tx === ignX && ty === ignY) continue;
                     if (this.inaccessibleTargets.some(t => t.x === tx && t.y === ty)) continue;
-                    if (types.includes(this.world.grid[ty][tx].type)) {
+                    let targetCell = this.world.grid[ty][tx];
+                    if (!types.includes(RESOURCES.WATER)) {
+                        if (targetCell.type === RESOURCES.WATER || targetCell.groundType === 'WATER') continue;
+                        if (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(tx, ty)) continue;
+                    }
+                    if (types.includes(targetCell.type)) {
                         let dist = Math.abs(tx - x) + Math.abs(ty - y);
                         if (dist < minDist) { minDist = dist; nearest = {x: tx, y: ty}; }
                     }
@@ -946,7 +991,21 @@ export class Agent {
                     if (!this.emergencyMission) this.emergencyMission = 'PICKAXE';
                     return;
                 }
-            } else if (cell && cell.type === RESOURCES.WATER) {
+            } else if (cell && (cell.type === RESOURCES.WATER || cell.groundType === 'WATER' || (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(nx, ny)))) {
+                // En la playa / mar abierto NO se construyen puentes sobre el océano
+                if (this.world.currentZoneId === 'playa') {
+                    if (this.target) {
+                        this.ignoreTarget = { x: this.target.x, y: this.target.y };
+                        this.inaccessibleTargets.push({ x: this.target.x, y: this.target.y });
+                        if (this.state === STATES.SEEK_BOOK) {
+                            this.inaccessibleBooks.push({ x: this.target.x, y: this.target.y });
+                        }
+                        this.target = null;
+                    }
+                    this.wanderTimer = 8;
+                    this.stuckTimer = 0;
+                    return;
+                }
                 if (this.inventory.wood > 0) {
                     this.inventory.wood--;
                     this.inventory.bridges++;
@@ -997,7 +1056,8 @@ export class Agent {
         let cell = this.world.getCell(nx, ny);
         if (!cell) return true;
         if (cell.type === RESOURCES.ROCK) return false;
-        if (cell.type === RESOURCES.WATER) return false;
+        if (cell.type === RESOURCES.WATER || cell.groundType === 'WATER') return false;
+        if (this.world.currentZoneId === 'playa' && this.world.isPlayaSea && this.world.isPlayaSea(nx, ny)) return false;
         if (cell.type === RESOURCES.WALL) return false; // Bloquea murallas sólidas (se debe usar el portón)
         if (cell.type === RESOURCES.WOOD_EMPTY || cell.type === RESOURCES.FOOD_EMPTY) return false; // Bloquea ramas y troncos caídos
         if (cell.type === RESOURCES.HOUSE) return false; // Bloquea paredes de la casa
