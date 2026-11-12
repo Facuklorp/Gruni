@@ -1,7 +1,7 @@
 // js/main.js
-import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261110d';
-import { Agent, STATES } from './agent.js?v=20261110d';
-import { Renderer } from './renderer.js?v=20261110d';
+import { World, CELL_SIZE, RESOURCES, ISO_W, ISO_H, ZOOM } from './world.js?v=20261111pers';
+import { Agent, STATES } from './agent.js?v=20261111pers';
+import { Renderer } from './renderer.js?v=20261111pers';
 import { ParticleSystem } from './particles.js?v=20261108a';
 import { Wolf } from './wolf.js?v=20261108a';
 import { Enemy } from './enemy.js?v=20261108a';
@@ -519,6 +519,96 @@ function selectBranch(branch) {
     }
 }
 
+// ─── Persistencia del Mundo y Agente (Guardado y Carga Canónicos) ────────────
+const SAVE_KEY = 'gruni_world_save_v1';
+let autoSaveTickCounter = 0;
+
+function saveGame() {
+    try {
+        const data = {
+            version: 1,
+            savedAt: Date.now(),
+            world: world.serialize(),
+            agent: agent.serialize(),
+            firstEnemySpawned,
+            eclipseTimer,
+            isEclipse,
+            wolf: wolf ? { x: wolf.x, y: wolf.y, hp: wolf.hp } : null
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Error al guardar partida:', e);
+    }
+}
+
+function restoreBranches() {
+    if (!agent.branches || agent.branches.length === 0) return;
+    let text = [];
+    if (agent.branches.includes('ASTRONOMY')) text.push('🔭 Astronomía');
+    if (agent.branches.includes('BIOLOGY')) text.push('🐺 Biología');
+    if (agent.branches.includes('BLACKSMITH')) text.push('⚒️ Herrería');
+    if (branchText) branchText.innerText = text.join(' | ');
+
+    const knowledgeLog = document.getElementById('knowledge-log');
+    const knowledgeList = document.getElementById('knowledge-list');
+    if (knowledgeLog && knowledgeList) {
+        knowledgeLog.style.display = 'block';
+        knowledgeList.innerHTML = '';
+        agent.branches.forEach(b => {
+            let desc = BRANCH_DESCRIPTIONS[b] || b;
+            let li = document.createElement('li');
+            li.innerText = desc;
+            li.style.marginBottom = '5px';
+            knowledgeList.appendChild(li);
+        });
+        lastBranchesCount = agent.branches.length;
+    }
+}
+
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || !data.world || !data.agent) return false;
+
+        world.deserialize(data.world);
+        agent.deserialize(data.agent);
+
+        if (data.agent.currentZoneId && world.grids[data.agent.currentZoneId]) {
+            world.loadZone(data.agent.currentZoneId);
+        }
+
+        firstEnemySpawned = !!data.firstEnemySpawned;
+        eclipseTimer = data.eclipseTimer || 0;
+        isEclipse = !!data.isEclipse;
+
+        restoreBranches();
+
+        if (agent.branches.includes('BIOLOGY')) {
+            const wx = (data.wolf && data.wolf.x !== undefined) ? data.wolf.x : agent.x;
+            const wy = (data.wolf && data.wolf.y !== undefined) ? data.wolf.y : agent.y;
+            wolf = new Wolf(world, wx, wy);
+            if (data.wolf && data.wolf.hp !== undefined) wolf.hp = data.wolf.hp;
+        }
+
+        updateMinimap();
+        updateUI();
+        console.log('✅ Mundo persistente cargado con éxito.');
+        return true;
+    } catch (e) {
+        console.warn('Error al cargar partida guardada:', e);
+        return false;
+    }
+}
+
+function resetGame() {
+    if (confirm('¿Estás seguro de que quieres reiniciar el mundo de Gruni e iniciar una Nueva Era? Esto restaurará el mundo canónico y reiniciará a Gruni.')) {
+        localStorage.removeItem(SAVE_KEY);
+        window.location.reload();
+    }
+}
+
 function updateUI() {
     barHunger.style.width = `${agent.hunger}%`;
     barThirst.style.width = `${agent.thirst}%`;
@@ -816,6 +906,12 @@ function runTick() {
         world.regenLoop(agent);
         agent.updateEmotion(enemies);
         
+        autoSaveTickCounter++;
+        if (autoSaveTickCounter >= 20) {
+            autoSaveTickCounter = 0;
+            saveGame();
+        }
+
         updateUI();
     } catch (err) {
         console.error('Error in runTick:', err);
@@ -891,7 +987,22 @@ timerWorker.onmessage = function(e) {
 // Iniciar el bucle
 loadAssets().then(() => {
     renderer.initImages(IMAGES);
-    window.game = { world, agent, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, getEnemies: () => enemies, setEnemies: (val) => enemies = val, getWolf: () => wolf, setWolf: (val) => wolf = val, Enemy, Wolf, RESOURCES, STATES };
+    loadGame();
+    window.game = { 
+        world, 
+        agent, 
+        getEnemies: () => enemies, 
+        setEnemies: (val) => enemies = val, 
+        getWolf: () => wolf, 
+        setWolf: (val) => wolf = val, 
+        Enemy, 
+        Wolf, 
+        RESOURCES, 
+        STATES,
+        saveGame,
+        loadGame,
+        resetGame
+    };
     
     // Actualizar UI inicialmente
     updateUI();
@@ -901,6 +1012,23 @@ loadAssets().then(() => {
     
     requestAnimationFrame(gameLoop);
 });
+
+// Guardado en cierre o cambio de pestaña
+window.addEventListener('beforeunload', () => {
+    saveGame();
+});
+
+window.addEventListener('pagehide', () => {
+    saveGame();
+});
+
+const btnResetWorld = document.getElementById('btn-reset-world');
+if (btnResetWorld) {
+    btnResetWorld.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetGame();
+    });
+}
 
 // Lógica para mover la cámara (panning)
 let isDraggingMap = false;

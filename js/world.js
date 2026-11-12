@@ -39,6 +39,25 @@ export const BIOMES = {
     PINE:        5
 };
 
+function hashString(str) {
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+}
+
+function createSeededRandom(seed) {
+    let s = (typeof seed === 'number' ? seed : hashString(String(seed))) >>> 0;
+    return function() {
+        s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 export class World {
     constructor(initialZoneId = 'pradera') {
         this.grids = {};
@@ -57,17 +76,135 @@ export class World {
         if (!this.grids[zoneId]) this.generateWorld(zoneId);
         this.grid = this.grids[zoneId];
         
-        let display = document.getElementById('current-zone-display');
-        if (display) {
-            display.innerText = 'Zona: ' + this.currentZone.name;
+        if (typeof document !== 'undefined') {
+            let display = document.getElementById('current-zone-display');
+            if (display) {
+                display.innerText = 'Zona: ' + this.currentZone.name;
+            }
         }
         
         return true;
     }
 
+    generateCanonicalCell(zoneId, x, y, rng) {
+        // ── 1. Pradera (Centro - Spawn de Gruni) ─────────────────────────────
+        if (zoneId === 'pradera') {
+            // Claro central limpio para el spawn y la casa de Gruni
+            if (x >= 16 && x <= 22 && y >= 16 && y <= 22) {
+                return RESOURCES.EMPTY;
+            }
+            // Arroyo serpenteante de agua dulce al este
+            let streamCenter = 29 + Math.sin(y * 0.28) * 2;
+            if (Math.abs(x - streamCenter) < 1.1) {
+                // Paso o vado natural de tierra en y = 19
+                if (y !== 19 && y !== 20) return RESOURCES.WATER;
+            }
+            let rVal = rng();
+            if (rVal < 0.055) return RESOURCES.WOOD;
+            if (rVal < 0.075) return RESOURCES.ROCK;
+            if (rVal < 0.095) return RESOURCES.FOOD;
+            if (rVal < 0.115) return RESOURCES.BUSH;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 2. Desierto (Sur) ────────────────────────────────────────────────
+        if (zoneId === 'desierto') {
+            // Oasis central-oeste con agua y vegetación
+            let distOasis = Math.hypot(x - 13, y - 18);
+            if (distOasis < 2.2) return RESOURCES.WATER;
+            if (distOasis < 3.8 && rng() < 0.6) return RESOURCES.FOOD; // Palmeras datileras
+            let rVal = rng();
+            if (rVal < 0.05) return RESOURCES.ROCK; // Más rocas
+            if (rVal < 0.08) return RESOURCES.WOOD; // Cáctus / árboles secos
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 3. Bosque y Río (Este) ───────────────────────────────────────────
+        if (zoneId === 'bosque_rio') {
+            // Gran río central de norte a sur
+            let riverCenter = 19 + Math.sin(y * 0.22) * 2.5;
+            if (Math.abs(x - riverCenter) < 1.4) {
+                if (y !== 18 && y !== 19) return RESOURCES.WATER; // Vado para cruzar
+            }
+            let rVal = rng();
+            if (rVal < 0.09) return RESOURCES.WOOD; // Bosque tupido
+            if (rVal < 0.11) return RESOURCES.FOOD;
+            if (rVal < 0.13) return RESOURCES.ROCK;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 4. Aldea y Campo (Oeste) ─────────────────────────────────────────
+        if (zoneId === 'aldea_campo') {
+            // Pozo de agua de la aldea en el centro
+            if (Math.hypot(x - 19, y - 19) < 1.4) return RESOURCES.WATER;
+            // Caminos cruzados de la aldea
+            if (Math.abs(x - 19) <= 1 || Math.abs(y - 19) <= 1) return RESOURCES.EMPTY;
+            let rVal = rng();
+            if (rVal < 0.06) return RESOURCES.FOOD; // Huertos y cultivos
+            if (rVal < 0.09) return RESOURCES.WOOD;
+            if (rVal < 0.11) return RESOURCES.ROCK;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 5. Bosque Mágico (Noreste) ───────────────────────────────────────
+        if (zoneId === 'bosque_magico') {
+            let rVal = rng();
+            if (rVal < 0.035) return RESOURCES.MAGIC_TREE;
+            if (rVal < 0.09) return RESOURCES.WOOD;
+            if (rVal < 0.11) return RESOURCES.FOOD;
+            if (rVal < 0.13) return RESOURCES.ROCK;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 6. Montañas Nevadas (Norte) ──────────────────────────────────────
+        if (zoneId === 'montanas_nevadas') {
+            let rVal = rng();
+            if (rVal < 0.075) return RESOURCES.ROCK; // Formaciones rocosas altas
+            if (rVal < 0.12) return RESOURCES.WOOD; // Pinos de montaña
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 7. Zonas de Hielo (Noroeste) ────────────────────────────────────
+        if (zoneId === 'zonas_hielo') {
+            let distLake = Math.hypot(x - 20, y - 20);
+            if (distLake < 3.8 && rng() < 0.75) return RESOURCES.WATER; // Lago helado
+            let rVal = rng();
+            if (rVal < 0.06) return RESOURCES.ROCK;
+            if (rVal < 0.10) return RESOURCES.WOOD;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 8. Playa (Suroeste) ──────────────────────────────────────────────
+        if (zoneId === 'playa') {
+            // Océano en franja exterior
+            if (x < 5 || y > 33) return RESOURCES.WATER;
+            let rVal = rng();
+            if (rVal < 0.05) return RESOURCES.FOOD; // Palmeras playeras
+            if (rVal < 0.08) return RESOURCES.WOOD;
+            if (rVal < 0.10) return RESOURCES.ROCK;
+            return RESOURCES.EMPTY;
+        }
+
+        // ── 9. Cementerio de Animales (Sureste) ──────────────────────────────
+        if (zoneId === 'cementerio_animales') {
+            let rVal = rng();
+            if (rVal < 0.085) return RESOURCES.ROCK; // Rocas y restos
+            if (rVal < 0.115) return RESOURCES.WOOD; // Madera marchita
+            return RESOURCES.EMPTY;
+        }
+
+        let rVal = rng();
+        if (rVal < 0.05) return RESOURCES.WOOD;
+        if (rVal < 0.02) return RESOURCES.ROCK;
+        if (rVal < 0.02) return RESOURCES.FOOD;
+        return RESOURCES.EMPTY;
+    }
+
     generateWorld(zoneId) {
         let zone = ZONES[zoneId];
         let newGrid = [];
+        const rng = createSeededRandom('gruni_canonical_zone_' + zoneId);
+
         for (let y = 0; y < this.height; y++) {
             let row = [];
             for (let x = 0; x < this.width; x++) {
@@ -83,25 +220,54 @@ export class World {
                     type = RESOURCES[cellData.t] || RESOURCES.EMPTY;
                     biome = BIOMES[cellData.b] !== undefined ? BIOMES[cellData.b] : biome;
                 } else {
-                    if (Math.random() < 0.05) type = RESOURCES.WOOD;
-                    else if (Math.random() < 0.02) type = RESOURCES.ROCK;
-                    else if (Math.random() < 0.02) type = RESOURCES.FOOD;
+                    type = this.generateCanonicalCell(zoneId, x, y, rng);
                 }
                 
-                
                 let capacity = 0;
-                if      (type === RESOURCES.WOOD)  capacity = Math.floor(Math.random() * 2) + 3; // 3 a 4 (Fase 1 completa)
-                else if (type === RESOURCES.FOOD)  capacity = Math.floor(Math.random() * 2) + 2;
+                if      (type === RESOURCES.WOOD)  capacity = Math.floor(rng() * 2) + 3; // 3 a 4 (Fase 1 completa)
+                else if (type === RESOURCES.FOOD)  capacity = Math.floor(rng() * 2) + 2;
                 else if (type === RESOURCES.BUSH)  capacity = 1;
-                else if (type === RESOURCES.ROCK)  capacity = Math.floor(Math.random() * 3) + 1;
+                else if (type === RESOURCES.ROCK)  capacity = Math.floor(rng() * 3) + 1;
                 else if (type === RESOURCES.WATER) capacity = 5;
 
-                const terrainVariant = Math.floor(Math.random() * 4);
+                const terrainVariant = Math.floor(rng() * 4);
                 row.push({ type, capacity, terrainVariant, biome });
             }
             newGrid.push(row);
         }
         this.grids[zoneId] = newGrid;
+    }
+
+    serialize() {
+        const serializedGrids = {};
+        for (const [zId, grid] of Object.entries(this.grids)) {
+            serializedGrids[zId] = grid.map(row => 
+                row.map(cell => [cell.type, cell.capacity, cell.terrainVariant, cell.biome])
+            );
+        }
+        return {
+            currentZoneId: this.currentZoneId,
+            grids: serializedGrids
+        };
+    }
+
+    deserialize(data) {
+        if (!data || !data.grids) return false;
+        this.grids = {};
+        for (const [zId, gridData] of Object.entries(data.grids)) {
+            this.grids[zId] = gridData.map(row => 
+                row.map(([type, capacity, terrainVariant, biome]) => ({
+                    type,
+                    capacity,
+                    terrainVariant,
+                    biome
+                }))
+            );
+        }
+        if (data.currentZoneId && ZONES[data.currentZoneId]) {
+            this.loadZone(data.currentZoneId);
+        }
+        return true;
     }
 
 

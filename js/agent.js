@@ -1101,4 +1101,63 @@ export class Agent {
             this.inventory.wood = Math.min(this.inventory.wood + Math.min(clearedWood, 10), 25);
         }
     }
+
+    serialize() {
+        return {
+            x: this.x,
+            y: this.y,
+            hunger: this.hunger,
+            thirst: this.thirst,
+            hp: this.hp,
+            maxHp: this.maxHp,
+            applesEaten: this.applesEaten,
+            inventory: { ...this.inventory },
+            swordDurability: this.swordDurability,
+            craftedFirstPickaxe: this.craftedFirstPickaxe,
+            craftedFirstSword: this.craftedFirstSword,
+            craftedFirstBridge: this.craftedFirstBridge,
+            home: this.home ? { ...this.home } : null,
+            homeStage: this.homeStage,
+            branches: [...this.branches],
+            hasTelescope: this.hasTelescope,
+            bookFound: this.bookFound,
+            currentZoneId: this.world.currentZoneId
+        };
+    }
+
+    deserialize(data) {
+        if (!data) return;
+        if (data.x !== undefined) this.x = data.x;
+        if (data.y !== undefined) this.y = data.y;
+        if (data.hunger !== undefined) this.hunger = data.hunger;
+        if (data.thirst !== undefined) this.thirst = data.thirst;
+        if (data.hp !== undefined) this.hp = data.hp;
+        if (data.maxHp !== undefined) this.maxHp = data.maxHp;
+        if (data.applesEaten !== undefined) this.applesEaten = data.applesEaten;
+        if (data.inventory) this.inventory = { ...data.inventory };
+        if (data.swordDurability !== undefined) this.swordDurability = data.swordDurability;
+        if (data.craftedFirstPickaxe !== undefined) this.craftedFirstPickaxe = data.craftedFirstPickaxe;
+        if (data.craftedFirstSword !== undefined) this.craftedFirstSword = data.craftedFirstSword;
+        if (data.craftedFirstBridge !== undefined) this.craftedFirstBridge = data.craftedFirstBridge;
+        if (data.home !== undefined) this.home = data.home ? { ...data.home } : null;
+        if (data.homeStage !== undefined) this.homeStage = data.homeStage;
+        if (Array.isArray(data.branches)) this.branches = [...data.branches];
+        if (data.hasTelescope !== undefined) this.hasTelescope = data.hasTelescope;
+        if (data.bookFound !== undefined) this.bookFound = data.bookFound;
+
+        this.renderX = this.x;
+        this.renderY = this.y;
+        this.path = [];
+        this.target = null;
+        this.state = STATES.WANDERING;
+        this.actionTimer = 0;
+        this.actionType = null;
+        this.isActioning = false;
+        this.isAttacking = false;
+        this.wanderTimer = 0;
+        this.inaccessibleBooks = [];
+        this.inaccessibleTargets = [];
+        this.ignoreTarget = null;
+        this.emergencyMission = null;
+    }
 }
